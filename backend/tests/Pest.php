@@ -1,5 +1,17 @@
 <?php
 
+$envPath = dirname(__DIR__).'/.env';
+
+if (! file_exists($envPath)) {
+    file_put_contents($envPath, '');
+
+    register_shutdown_function(static function () use ($envPath): void {
+        if (file_exists($envPath) && filesize($envPath) === 0) {
+            @unlink($envPath);
+        }
+    });
+}
+
 pest()->extend(Tests\DuskTestCase::class)
 //  ->use(Illuminate\Foundation\Testing\DatabaseMigrations::class)
     ->in('Browser');

@@ -102,6 +102,13 @@ export default function CampaignShow({ campaign, available_roles }: CampaignShow
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <Button
+                        asChild
+                        variant="outline"
+                        className="border-amber-500/60 text-sm text-amber-200 hover:bg-amber-500/10"
+                    >
+                        <Link href={route('campaigns.sessions.index', { campaign: campaign.id })}>Session workspace</Link>
+                    </Button>
                     <Button asChild variant="outline" className="border-zinc-700 text-sm">
                         <Link href={route('campaigns.edit', campaign.id)}>Edit campaign</Link>
                     </Button>

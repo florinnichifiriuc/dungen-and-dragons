@@ -52,6 +52,13 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
 - Inertia-powered campaign pages cover index, create, show, and edit flows with flash messaging, roster management, and assignment/invitation forms.
 - Pest feature tests assert manager-only creation rules and validation, while Laravel Dusk verifies the end-to-end UI flow for spinning up a campaign through the browser.
 
+## Session Workspace
+- Sessions belong to campaigns and optionally link back to processed region turns, capturing agenda, summary, location, and recording metadata in UTC.
+- Collaborative notes support GM/player/public visibility with pinning controls, while dice rolls are logged through a deterministic `DiceRoller` service that evaluates `NdM±X` expressions.
+- Initiative entries track combat order with auto-rolling support and “current turn” toggles so parties can manage encounters without leaving the workspace.
+- Inertia pages provide a session index, scheduling form, and rich workspace view with note editor, dice log, and initiative board styled for the project’s D&D aesthetic.
+- Pest feature coverage exercises session CRUD, note permissions, dice logging, and initiative management; a Dusk scenario walks through scheduling a session and collaborating in the workspace UI.
+
 ## Architectural Choice
 **Laravel + Inertia React Monolith**: Recommended after weighing feedback from Laravel and React experts.
 - *Laravel Expert POV*: Inertia keeps routing, middleware, validation, and authentication in a single Laravel codebase, simplifying Sanctum setup, SSR-friendly PDF exports, and queue-driven turn automation. It reduces deployment surface area and makes policy testing straightforward.

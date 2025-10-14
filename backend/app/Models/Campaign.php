@@ -98,4 +98,9 @@ class Campaign extends Model
     {
         return $this->hasMany(CampaignRoleAssignment::class);
     }
+
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(CampaignSession::class);
+    }
 }

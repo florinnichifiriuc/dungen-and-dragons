@@ -11,5 +11,6 @@
 | 2025-10-14 16:20 | Group Foundations | Created migrations, policies, scheduler stub, and Inertia UI for group and region management. |
 | 2025-10-14 18:40 | Campaign Foundations | Added campaign CRUD, role assignments, invitations, Inertia dashboards, and automated tests (Pest + Dusk). |
 | 2025-10-14 20:45 | Turn Scheduler API | Implemented region turn processing service, AI fallback summaries, Inertia workflows, and automated coverage (Pest + Dusk). |
+| 2025-10-15 13:40 | Session Workspace | Added session scheduling, notes, dice log, and initiative tracker with DiceRoller service, Inertia workspace UI, Pest specs, and Dusk journey. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.
