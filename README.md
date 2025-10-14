@@ -13,6 +13,12 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
 9. AI integrations: Ollama Gemma3 DM fallback, NPC conversation assistant, automated summaries.
 10. Localization-ready UI (en now, ro later) with dark/light modes using Tailwind + shadcn.
 
+## Monorepo Setup (Week 1 Kickoff)
+- **backend/** – Laravel 12 API service with Sail, Sanctum, and Pest 4 preconfigured. Run `cp backend/.env.example backend/.env` then `cd backend && composer install`. Start containers via `./vendor/bin/sail up` and run migrations inside Sail (`./vendor/bin/sail artisan migrate`).
+- **frontend/** – React 18 + TypeScript app bootstrapped with Vite, Tailwind CSS, shadcn-ready theme tokens, React Query, Zustand, and React Router. Install deps using `pnpm install` and start dev server with `pnpm dev`.
+- Shared tooling: `.editorconfig`, root `.gitignore`, Query Client + Router providers, and Tailwind design tokens for brand (Crimson/dark stone palette).
+- See `Tasks/Week 1` for detailed implementation notes and remaining checklist items (auth, group foundations next).
+
 ## Architectural Choice
 **REST API + React SPA (Vite, TypeScript)**: decouples backend (Laravel 12) from frontend for flexibility across multiple groups and AI services. REST endpoints support automation (turn processing) and integrations (Discord webhooks). Sanctum secures SPA tokens; React Query handles caching. Inertia skipped for SPA-first approach and microservice-friendly AI modules.
 

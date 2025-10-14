@@ -17,7 +17,7 @@
 - [ ] Finalize localization, accessibility, theming, and docs.
 
 ## In Progress
-- None yet.
+- Task 1 – Project Bootstrap (Laravel + React scaffolding, tooling)
 
 ## Completed
 - Initial architectural plan updated for multi-group, turn-based world.
