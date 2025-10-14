@@ -15,7 +15,7 @@
 - [ ] Finalize localization, accessibility, theming, and docs.
 
 ## In Progress
-- Task 3 – Group & World Foundations (group onboarding, world CRUD prep)
+- Task 3 – Group & World Foundations (group onboarding, world CRUD prep) – baseline groups/regions CRUD and scheduler stub ready for QA
 
 ## Completed
 - Initial architectural plan updated for multi-group, turn-based world.

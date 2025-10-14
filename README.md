@@ -37,6 +37,13 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
   - **Player:** `player@example.com` / `password`
 - CSRF tokens, flash messages, and the signed-in user object are shared through the Inertia middleware so layouts can surface state (e.g., logout form in the dashboard header).
 
+## Group & Region Foundations
+- Groups represent collaborative parties with role-aware memberships (`owner`, `dungeon-master`, `player`). Creators are auto-promoted to owners and may assign additional DMs through the dashboard.
+- Regions belong to groups and may be linked to a Dungeon Master (owner or DM). Each region stores a turn configuration that tracks cadence in hours (currently 6h or 24h) and the next scheduled turn timestamp.
+- Turn scheduling data is stored in UTC using the `turn_configurations` table. Front-end forms accept UTC `datetime-local` values so multi-region teams stay aligned with the project-wide UTC convention.
+- A `TurnScheduler` service stub manages configuration updates and provides a dedicated seam for future automation (e.g., queueing background jobs when `next_turn_at` elapses).
+- Inertia pages now include: group index/dashboard, creation & edit flows, plus region assignment forms styled with Tailwind + shadcn primitives.
+
 ## Architectural Choice
 **Laravel + Inertia React Monolith**: Recommended after weighing feedback from Laravel and React experts.
 - *Laravel Expert POV*: Inertia keeps routing, middleware, validation, and authentication in a single Laravel codebase, simplifying Sanctum setup, SSR-friendly PDF exports, and queue-driven turn automation. It reduces deployment surface area and makes policy testing straightforward.

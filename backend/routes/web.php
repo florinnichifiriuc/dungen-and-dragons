@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\GroupController;
+use App\Http\Controllers\RegionController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -19,5 +21,7 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
+    Route::resource('groups', GroupController::class);
+    Route::resource('groups.regions', RegionController::class)->except(['index'])->scoped();
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
