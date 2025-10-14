@@ -1,7 +1,7 @@
 # Task Plan
 
 ## Backlog
-- [ ] Establish Laravel + React monorepo with Sail, Sanctum, and SPA scaffolding.
+- [ ] Establish Laravel + Inertia React workspace with Sail, Sanctum, and asset pipeline.
 - [ ] Implement user auth with email/password and OAuth (Google, Discord).
 - [ ] Create group management (create/join/roles) and policies.
 - [ ] Build world + region CRUD with configurable turn durations and DM assignments.
@@ -17,7 +17,7 @@
 - [ ] Finalize localization, accessibility, theming, and docs.
 
 ## In Progress
-- Task 1 – Project Bootstrap (Laravel + React scaffolding, tooling)
+- Task 1 – Project Bootstrap (Laravel + Inertia React scaffolding, tooling)
 
 ## Completed
 - Initial architectural plan updated for multi-group, turn-based world.

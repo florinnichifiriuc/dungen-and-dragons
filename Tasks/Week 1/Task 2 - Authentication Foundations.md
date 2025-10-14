@@ -6,12 +6,12 @@
 **Related Backlog Items:** Implement user auth with email/password and OAuth (Google, Discord)
 
 ## Objective
-Provide secure authentication for the platform by configuring Laravel Sanctum for SPA token auth, preparing OAuth integration points, and exposing REST endpoints for registration, login, logout, and user profile retrieval. Align frontend with React Query mutations and persistent auth state.
+Provide secure authentication for the platform by configuring Laravel Sanctum for session/SPA auth, preparing OAuth integration points, and exposing controllers for registration, login, logout, and user profile retrieval. Align the Inertia frontend with shared props for the authenticated user and reusable form components.
 
 ## Deliverables
 - Laravel auth controllers, routes, and form requests for email/password flows.
 - Sanctum configuration with stateful domains and CSRF protection.
-- React services/hooks for auth actions and protected route handling.
+- Inertia pages/components for auth forms with shared props for the authenticated user.
 - Test coverage via Pest feature tests and Vitest/Playwright smoke tests (deferred for Week 1).
 
 ## Implementation Checklist
@@ -19,7 +19,7 @@ Provide secure authentication for the platform by configuring Laravel Sanctum fo
 - [ ] Create Auth controllers (RegisterController, LoginController, LogoutController, MeController).
 - [ ] Write FormRequest validation rules and responses.
 - [ ] Seed default admin/GM account for demos.
-- [ ] Frontend: set up auth API client, React Query mutations, context/store for user session.
+- [ ] Inertia pages: set up auth forms, validation error rendering, and shared auth props.
 - [ ] Update documentation (README auth section, PROGRESS_LOG entry).
 
 ## Log

@@ -3,14 +3,14 @@
 **Status:** In Progress  
 **Owner:** Engineering  
 **Dependencies:** None  
-**Related Backlog Items:** Establish Laravel + React monorepo with Sail, Sanctum, and SPA scaffolding
+**Related Backlog Items:** Establish Laravel + Inertia React workspace with Sail, Sanctum, and asset pipeline
 
 ## Objective
-Set up the monorepo structure combining Laravel 12 API backend and React 18 + TypeScript + Vite frontend with Tailwind and shadcn/ui foundations. Ensure developer tooling (Sail, Docker, linting, formatting) and baseline CI scripts are in place. Document turn-based world assumptions and initialize configuration for UTC handling.
+Set up the Laravel 12 application to serve both the API and the React 18 UI via Inertia.js and Vite. Ensure developer tooling (Sail, Docker, Tailwind, shadcn/ui tokens) and baseline CI scripts are in place. Document turn-based world assumptions and initialize configuration for UTC handling.
 
 ## Deliverables
 - Laravel backend application configured with Sanctum, Sail, Pest, and initial modules (users, groups namespaces).
-- React frontend scaffolded with Vite, Tailwind CSS, shadcn/ui, React Query, and routing setup.
+- Inertia-powered React frontend scaffolded within Laravel resources with Vite, Tailwind CSS, and shadcn/ui-ready tokens.
 - Shared `.editorconfig`, linting configs, and package scripts.
 - Updated documentation: README quickstart, TASK_PLAN status, PROGRESS_LOG entry.
 
@@ -19,20 +19,21 @@ Set up the monorepo structure combining Laravel 12 API backend and React 18 + Ty
 - [x] Initialize Laravel application within `/backend` with Sail, Sanctum, Pest.
 - [ ] Configure database connection (MySQL via Sail) and timezone defaults (UTC).
 - [ ] Install and configure Laravel Breeze API scaffolding? (defer). For now ensure Sanctum ready.
-- [x] Initialize React frontend `/frontend` with Vite + TypeScript template.
+- [x] Integrate React + Inertia scaffolding within Laravel resources using Vite + TypeScript.
 - [x] Add Tailwind CSS + shadcn/ui configuration (dark mode default to class).
-- [x] Install React Router, React Query, Zustand, Axios, ESLint/Prettier.
+- [x] Install React, Zustand, Axios, shadcn/ui utilities, and supporting dependencies.
 - [x] Configure workspace-level tooling (root README quickstart update, scripts, husky optional).
-- [ ] Verify dev servers start (Sail, Vite) – document commands.
+- [ ] Verify dev servers start (Sail, Vite via `npm run dev`) – document commands.
 
 ## Implementation Notes
 - Use Composer 2 and PHP 8.3 base image via Sail.
-- Sanctum SPA guard will secure API endpoints for React app served from same domain (via Vite proxy in dev).
-- Keep backend/frontend separated but plan for shared DTOs later.
+- Sanctum SPA guard will secure API endpoints and Inertia responses served from the same Laravel app.
+- Keep API routes and Inertia pages co-located while still exposing `/routes/api.php` for future decoupled clients.
 
 ## Log
 - **2025-10-14 04:20 UTC** – Created `Tasks/Week 1` structure and drafted bootstrap checklist.
 - **2025-10-14 04:55 UTC** – Generated Laravel 12 backend with Sail, Sanctum, Pest 4; updated timezone config to read `APP_TIMEZONE`.
-- **2025-10-14 05:40 UTC** – Scaffolded React 18 + Vite app, installed Tailwind, shadcn-ready theme tokens, Query Client provider, routing shell.
+- **2025-10-14 05:40 UTC** – Scaffolded React 18 + Vite shell (prior iteration). Will be superseded by Inertia integration.
 - **2025-10-14 06:05 UTC** – Added shared tooling (.editorconfig, .gitignore) and updated README/TASK_PLAN; pending container start verification.
-- **2025-10-14 06:25 UTC** – Validated frontend TypeScript build via `pnpm run build`; Sail startup validation still outstanding.
+- **2025-10-14 06:25 UTC** – Validated standalone frontend build (deprecated).
+- **2025-10-14 11:45 UTC** – Replaced standalone SPA with Inertia-driven React inside Laravel; installed dependencies and updated middleware/routes.

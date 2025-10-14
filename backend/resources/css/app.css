@@ -1,11 +1,19 @@
-@import 'tailwindcss';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
+:root {
+    color-scheme: dark;
+}
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+body {
+    font-family: theme('fontFamily.sans');
+}
+
+.hero-gradient {
+    background: radial-gradient(circle at 20% 20%, rgba(248, 113, 113, 0.35), transparent 55%),
+        radial-gradient(circle at 80% 10%, rgba(96, 165, 250, 0.3), transparent 60%),
+        radial-gradient(circle at 50% 80%, rgba(45, 212, 191, 0.18), transparent 65%),
+        radial-gradient(circle at 10% 80%, rgba(236, 72, 153, 0.25), transparent 60%),
+        #020617;
 }
