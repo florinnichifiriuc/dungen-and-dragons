@@ -18,6 +18,25 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
 - Shared tooling: `.editorconfig`, root `.gitignore`, Tailwind design tokens for the brand palette, and progress/task logs under `Tasks/`.
 - See `Tasks/Week 1` for detailed implementation notes and remaining checklist items (auth, group foundations next).
 
+## Local Development (Sail + Vite)
+1. `cd backend` and copy the example environment file (`cp .env.example .env`). Update credentials if you change the Sail defaults (`DB_DATABASE=dungen`, `DB_USERNAME=sail`, `DB_PASSWORD=password`).
+2. Install dependencies: `composer install` and `npm install`.
+3. Generate an application key: `php artisan key:generate`.
+4. Boot the Docker stack: `./vendor/bin/sail up -d`. The app will be available at `http://localhost` using the `APP_PORT` (default 80) and Vite hot reload on `http://localhost:5173`.
+5. Run migrations once the database container is healthy: `./vendor/bin/sail artisan migrate`.
+6. Start the Vite dev server inside the Sail container (or locally with Node 20+): `./vendor/bin/sail npm run dev -- --host`. You should see compiled assets in the terminal confirming that the React + Inertia shell loads.
+7. To stop the stack, run `./vendor/bin/sail down`. When resuming work, repeat steps 4 and 6.
+
+> Tip: If Docker isn't available (e.g., CI or Codespaces), you can still run `php artisan serve` and `npm run dev -- --host` locally with a MySQL service, but Sail is the supported baseline for collaborative environments.
+
+## Authentication & Demo Accounts
+- Email/password flows are powered by Sanctum session authentication. Inertia routes `/login`, `/register`, and `/dashboard` provide the UI built with Tailwind + shadcn components.
+- REST helper `GET /api/v1/auth/me` (Sanctum protected) surfaces the authenticated user payload for future SPA/mobile clients.
+- Demo users created by the database seeder:
+  - **GM:** `gm@example.com` / `password`
+  - **Player:** `player@example.com` / `password`
+- CSRF tokens, flash messages, and the signed-in user object are shared through the Inertia middleware so layouts can surface state (e.g., logout form in the dashboard header).
+
 ## Architectural Choice
 **Laravel + Inertia React Monolith**: Recommended after weighing feedback from Laravel and React experts.
 - *Laravel Expert POV*: Inertia keeps routing, middleware, validation, and authentication in a single Laravel codebase, simplifying Sanctum setup, SSR-friendly PDF exports, and queue-driven turn automation. It reduces deployment surface area and makes policy testing straightforward.

@@ -1,8 +1,6 @@
 # Task Plan
 
 ## Backlog
-- [ ] Establish Laravel + Inertia React workspace with Sail, Sanctum, and asset pipeline.
-- [ ] Implement user auth with email/password and OAuth (Google, Discord).
 - [ ] Create group management (create/join/roles) and policies.
 - [ ] Build world + region CRUD with configurable turn durations and DM assignments.
 - [ ] Implement campaign CRUD with group invitations and role assignments.
@@ -17,7 +15,9 @@
 - [ ] Finalize localization, accessibility, theming, and docs.
 
 ## In Progress
-- Task 1 – Project Bootstrap (Laravel + Inertia React scaffolding, tooling)
+- Task 3 – Group & World Foundations (group onboarding, world CRUD prep)
 
 ## Completed
 - Initial architectural plan updated for multi-group, turn-based world.
+- Task 1 – Project Bootstrap (Laravel + Inertia React scaffolding, tooling)
+- Task 2 – Authentication Foundations (Sanctum controllers, Inertia auth UI)

@@ -10,10 +10,6 @@ interface FeatureCard {
     icon: ComponentType<SVGProps<SVGSVGElement>>;
 }
 
-interface WelcomeProps {
-    authIntent?: 'login' | 'register';
-}
-
 const features: FeatureCard[] = [
     {
         title: 'Launch Session',
@@ -41,8 +37,8 @@ const features: FeatureCard[] = [
     },
 ];
 
-export default function Welcome({ authIntent }: WelcomeProps) {
-    const heroCtaLabel = authIntent === 'login' ? 'Continue Session' : authIntent === 'register' ? 'Create Account' : 'Get Started';
+export default function Welcome() {
+    const heroCtaLabel = 'Create Account';
 
     return (
         <>
