@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    color-scheme: dark;
+}
+
+body {
+    font-family: theme('fontFamily.sans');
+}
+
+.hero-gradient {
+    background: radial-gradient(circle at 20% 20%, rgba(248, 113, 113, 0.35), transparent 55%),
+        radial-gradient(circle at 80% 10%, rgba(96, 165, 250, 0.3), transparent 60%),
+        radial-gradient(circle at 50% 80%, rgba(45, 212, 191, 0.18), transparent 65%),
+        radial-gradient(circle at 10% 80%, rgba(236, 72, 153, 0.25), transparent 60%),
+        #020617;
+}
