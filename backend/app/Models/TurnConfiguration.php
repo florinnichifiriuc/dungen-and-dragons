@@ -17,6 +17,15 @@ class TurnConfiguration extends Model
         'region_id',
         'turn_duration_hours',
         'next_turn_at',
+        'last_processed_at',
+    ];
+
+    /**
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'next_turn_at' => 'immutable_datetime',
+        'last_processed_at' => 'immutable_datetime',
     ];
 
     /**
@@ -25,5 +34,16 @@ class TurnConfiguration extends Model
     public function region(): BelongsTo
     {
         return $this->belongsTo(Region::class);
+    }
+
+    public function isDue(?\Carbon\CarbonImmutable $reference = null): bool
+    {
+        $reference ??= \Carbon\CarbonImmutable::now('UTC');
+
+        if ($this->next_turn_at === null) {
+            return true;
+        }
+
+        return $this->next_turn_at->lessThanOrEqualTo($reference);
     }
 }

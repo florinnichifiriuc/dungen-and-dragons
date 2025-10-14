@@ -40,9 +40,17 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
 ## Group & Region Foundations
 - Groups represent collaborative parties with role-aware memberships (`owner`, `dungeon-master`, `player`). Creators are auto-promoted to owners and may assign additional DMs through the dashboard.
 - Regions belong to groups and may be linked to a Dungeon Master (owner or DM). Each region stores a turn configuration that tracks cadence in hours (currently 6h or 24h) and the next scheduled turn timestamp.
+- Turn processing is available from the group dashboard, capturing summaries for each completed window and optionally generating AI fallback chronicles when the Dungeon Master is unavailable.
 - Turn scheduling data is stored in UTC using the `turn_configurations` table. Front-end forms accept UTC `datetime-local` values so multi-region teams stay aligned with the project-wide UTC convention.
 - A `TurnScheduler` service stub manages configuration updates and provides a dedicated seam for future automation (e.g., queueing background jobs when `next_turn_at` elapses).
 - Inertia pages now include: group index/dashboard, creation & edit flows, plus region assignment forms styled with Tailwind + shadcn primitives.
+
+## Campaign Foundations
+- Campaigns capture multi-session story arcs per group with configurable timezone, cadence, and optional region focus. Creation auto-generates a unique slug and assigns the creator as Game Master via `campaign_role_assignments`.
+- Role assignments support polymorphic assignees (users now, groups later) and enforce group membership/manager permissions through policies and validation helpers.
+- Invitation records log pending group or email invites with token + expiry placeholders for future acceptance flows.
+- Inertia-powered campaign pages cover index, create, show, and edit flows with flash messaging, roster management, and assignment/invitation forms.
+- Pest feature tests assert manager-only creation rules and validation, while Laravel Dusk verifies the end-to-end UI flow for spinning up a campaign through the browser.
 
 ## Architectural Choice
 **Laravel + Inertia React Monolith**: Recommended after weighing feedback from Laravel and React experts.

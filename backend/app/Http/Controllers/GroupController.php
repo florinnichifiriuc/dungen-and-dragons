@@ -75,7 +75,11 @@ class GroupController extends Controller
             'memberships.user:id,name,email',
             'regions.dungeonMaster:id,name',
             'regions.turnConfiguration',
+            'regions.turns.processedBy:id,name',
+            'campaigns:id,group_id,title,status',
         ]);
+
+        $user = auth()->user();
 
         $members = $group->memberships->map(fn (GroupMembership $membership) => [
             'id' => $membership->user->id,
@@ -84,18 +88,45 @@ class GroupController extends Controller
             'role' => $membership->role,
         ])->values();
 
-        $regions = $group->regions->map(fn ($region) => [
-            'id' => $region->id,
-            'name' => $region->name,
-            'summary' => $region->summary,
-            'dungeon_master' => $region->dungeonMaster ? [
-                'id' => $region->dungeonMaster->id,
-                'name' => $region->dungeonMaster->name,
-            ] : null,
-            'turn_configuration' => $region->turnConfiguration ? [
-                'turn_duration_hours' => $region->turnConfiguration->turn_duration_hours,
-                'next_turn_at' => optional($region->turnConfiguration->next_turn_at)->toAtomString(),
-            ] : null,
+        $regions = $group->regions->map(function ($region) use ($user) {
+            $configuration = $region->turnConfiguration;
+
+            return [
+                'id' => $region->id,
+                'name' => $region->name,
+                'summary' => $region->summary,
+                'dungeon_master' => $region->dungeonMaster ? [
+                    'id' => $region->dungeonMaster->id,
+                    'name' => $region->dungeonMaster->name,
+                ] : null,
+                'turn_configuration' => $configuration ? [
+                    'turn_duration_hours' => $configuration->turn_duration_hours,
+                    'next_turn_at' => optional($configuration->next_turn_at)->toAtomString(),
+                    'last_processed_at' => optional($configuration->last_processed_at)->toAtomString(),
+                    'is_due' => $configuration->isDue(),
+                ] : null,
+                'recent_turns' => $region->turns
+                    ->sortByDesc('number')
+                    ->take(3)
+                    ->map(fn ($turn) => [
+                        'id' => $turn->id,
+                        'number' => $turn->number,
+                        'processed_at' => optional($turn->processed_at)->toAtomString(),
+                        'used_ai_fallback' => $turn->used_ai_fallback,
+                        'summary' => $turn->summary,
+                        'processed_by' => $turn->processedBy ? [
+                            'id' => $turn->processedBy->id,
+                            'name' => $turn->processedBy->name,
+                        ] : null,
+                    ])->values(),
+                'can_process_turn' => $configuration && $user ? $user->can('update', $configuration) : false,
+            ];
+        })->values();
+
+        $campaigns = $group->campaigns->map(fn ($campaign) => [
+            'id' => $campaign->id,
+            'title' => $campaign->title,
+            'status' => $campaign->status,
         ])->values();
 
         return Inertia::render('Groups/Show', [
@@ -105,6 +136,7 @@ class GroupController extends Controller
                 'description' => $group->description,
                 'members' => $members,
                 'regions' => $regions,
+                'campaigns' => $campaigns,
             ],
         ]);
     }

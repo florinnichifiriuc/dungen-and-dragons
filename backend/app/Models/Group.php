@@ -55,4 +55,12 @@ class Group extends Model
     {
         return $this->hasMany(Region::class);
     }
+
+    /**
+     * Campaigns launched by the group.
+     */
+    public function campaigns(): HasMany
+    {
+        return $this->hasMany(Campaign::class);
+    }
 }

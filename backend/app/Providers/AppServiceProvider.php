@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Campaign;
 use App\Models\Group;
 use App\Models\Region;
 use App\Models\TurnConfiguration;
+use App\Policies\CampaignPolicy;
 use App\Policies\GroupPolicy;
 use App\Policies\RegionPolicy;
 use App\Policies\TurnConfigurationPolicy;
@@ -27,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Group::class, GroupPolicy::class);
+        Gate::policy(Campaign::class, CampaignPolicy::class);
         Gate::policy(Region::class, RegionPolicy::class);
         Gate::policy(TurnConfiguration::class, TurnConfigurationPolicy::class);
     }
