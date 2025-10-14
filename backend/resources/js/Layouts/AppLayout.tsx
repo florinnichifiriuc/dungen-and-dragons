@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 
 export default function AppLayout({ children }: PropsWithChildren) {
     const { props } = usePage();
+    const flash = props.flash as { success?: string; error?: string } | undefined;
     const user = props.auth?.user;
 
     return (
@@ -30,7 +31,19 @@ export default function AppLayout({ children }: PropsWithChildren) {
                     </div>
                 </div>
             </header>
-            <main className="mx-auto max-w-7xl px-6 py-10">{children}</main>
+            <main className="mx-auto max-w-7xl px-6 py-10 space-y-6">
+                {flash?.success && (
+                    <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                        {flash.success}
+                    </div>
+                )}
+                {flash?.error && (
+                    <div className="rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+                        {flash.error}
+                    </div>
+                )}
+                <div>{children}</div>
+            </main>
         </div>
     );
 }

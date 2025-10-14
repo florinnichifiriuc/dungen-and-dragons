@@ -4,8 +4,7 @@
 - [ ] Create group management (create/join/roles) and policies.
 - [ ] Build world + region CRUD with configurable turn durations and DM assignments.
 - [ ] Implement campaign CRUD with group invitations and role assignments.
-- [ ] Develop turn scheduler service and API (process turn, AI fallback).
-- [ ] Create session workspace (notes, initiative, dice, map, recordings).
+- [x] Develop turn scheduler service and API (process turn, AI fallback).
 - [ ] Implement modular tile map system (tile templates, axial coordinates, map tile CRUD).
 - [ ] Integrate Laravel Reverb for realtime initiative, chat, map tokens.
 - [ ] Build task board with turn-based due dates and Kanban UI.
@@ -15,9 +14,13 @@
 - [ ] Finalize localization, accessibility, theming, and docs.
 
 ## In Progress
-- Task 3 – Group & World Foundations (group onboarding, world CRUD prep)
+- _None_
 
 ## Completed
 - Initial architectural plan updated for multi-group, turn-based world.
 - Task 1 – Project Bootstrap (Laravel + Inertia React scaffolding, tooling)
 - Task 2 – Authentication Foundations (Sanctum controllers, Inertia auth UI)
+- Task 3 – Group & World Foundations (group onboarding, world CRUD prep) – baseline groups/regions CRUD and scheduler stub ready for QA
+- Task 4 – Campaign Management Foundations (campaign CRUD, invitations, role assignments)
+- Task 5 – Turn Scheduler API (region turn processing, AI fallback summaries)
+- Task 6 – Session Workspace (session scheduling, collaborative notes/dice, initiative tracker)

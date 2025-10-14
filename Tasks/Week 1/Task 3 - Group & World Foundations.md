@@ -1,6 +1,6 @@
 # Task 3 – Group & World Foundations
 
-**Status:** Not Started  
+**Status:** In Progress
 **Owner:** Engineering  
 **Dependencies:** Task 1, Task 2  
 **Related Backlog Items:** Create group management (create/join/roles) and policies; Build world + region CRUD with configurable turn durations and DM assignments
@@ -16,11 +16,11 @@ Implement baseline backend structures for groups, regions, and configurable turn
 - Updated documentation and progress log entries.
 
 ## Implementation Checklist
-- [ ] Design migrations and models for groups, memberships, regions, turn configs.
-- [ ] Implement policies ensuring GM/DM privileges.
-- [ ] Expose REST API endpoints with validation.
-- [ ] Inertia pages: create initial components using Tailwind + shadcn.
-- [ ] Document turn cadence handling and update TASK_PLAN status.
+- [x] Design migrations and models for groups, memberships, regions, turn configs.
+- [x] Implement policies ensuring GM/DM privileges.
+- [x] Expose REST API endpoints with validation.
+- [x] Inertia pages: create initial components using Tailwind + shadcn.
+- [x] Document turn cadence handling and update TASK_PLAN status.
 
 ## Log
-- _Pending update when task starts._
+- 2025-10-14 16:20 UTC – Added group/region migrations, policies, Inertia pages, and documented turn cadence workflow for scheduler stub.

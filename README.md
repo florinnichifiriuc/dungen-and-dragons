@@ -37,6 +37,28 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
   - **Player:** `player@example.com` / `password`
 - CSRF tokens, flash messages, and the signed-in user object are shared through the Inertia middleware so layouts can surface state (e.g., logout form in the dashboard header).
 
+## Group & Region Foundations
+- Groups represent collaborative parties with role-aware memberships (`owner`, `dungeon-master`, `player`). Creators are auto-promoted to owners and may assign additional DMs through the dashboard.
+- Regions belong to groups and may be linked to a Dungeon Master (owner or DM). Each region stores a turn configuration that tracks cadence in hours (currently 6h or 24h) and the next scheduled turn timestamp.
+- Turn processing is available from the group dashboard, capturing summaries for each completed window and optionally generating AI fallback chronicles when the Dungeon Master is unavailable.
+- Turn scheduling data is stored in UTC using the `turn_configurations` table. Front-end forms accept UTC `datetime-local` values so multi-region teams stay aligned with the project-wide UTC convention.
+- A `TurnScheduler` service stub manages configuration updates and provides a dedicated seam for future automation (e.g., queueing background jobs when `next_turn_at` elapses).
+- Inertia pages now include: group index/dashboard, creation & edit flows, plus region assignment forms styled with Tailwind + shadcn primitives.
+
+## Campaign Foundations
+- Campaigns capture multi-session story arcs per group with configurable timezone, cadence, and optional region focus. Creation auto-generates a unique slug and assigns the creator as Game Master via `campaign_role_assignments`.
+- Role assignments support polymorphic assignees (users now, groups later) and enforce group membership/manager permissions through policies and validation helpers.
+- Invitation records log pending group or email invites with token + expiry placeholders for future acceptance flows.
+- Inertia-powered campaign pages cover index, create, show, and edit flows with flash messaging, roster management, and assignment/invitation forms.
+- Pest feature tests assert manager-only creation rules and validation, while Laravel Dusk verifies the end-to-end UI flow for spinning up a campaign through the browser.
+
+## Session Workspace
+- Sessions belong to campaigns and optionally link back to processed region turns, capturing agenda, summary, location, and recording metadata in UTC.
+- Collaborative notes support GM/player/public visibility with pinning controls, while dice rolls are logged through a deterministic `DiceRoller` service that evaluates `NdM±X` expressions.
+- Initiative entries track combat order with auto-rolling support and “current turn” toggles so parties can manage encounters without leaving the workspace.
+- Inertia pages provide a session index, scheduling form, and rich workspace view with note editor, dice log, and initiative board styled for the project’s D&D aesthetic.
+- Pest feature coverage exercises session CRUD, note permissions, dice logging, and initiative management; a Dusk scenario walks through scheduling a session and collaborating in the workspace UI.
+
 ## Architectural Choice
 **Laravel + Inertia React Monolith**: Recommended after weighing feedback from Laravel and React experts.
 - *Laravel Expert POV*: Inertia keeps routing, middleware, validation, and authentication in a single Laravel codebase, simplifying Sanctum setup, SSR-friendly PDF exports, and queue-driven turn automation. It reduces deployment surface area and makes policy testing straightforward.
