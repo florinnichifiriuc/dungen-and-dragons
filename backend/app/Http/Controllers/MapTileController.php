@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MapTileBroadcasted;
 use App\Http\Requests\MapTileStoreRequest;
 use App\Http\Requests\MapTileUpdateRequest;
 use App\Models\Group;
@@ -9,6 +10,7 @@ use App\Models\GroupMembership;
 use App\Models\Map;
 use App\Models\MapTile;
 use App\Models\TileTemplate;
+use App\Support\Broadcasting\MapTilePayload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
 
@@ -28,7 +30,7 @@ class MapTileController extends Controller
 
         $variant = $this->decodeJsonField($validated['variant'] ?? null);
 
-        $map->tiles()->create([
+        $tile = $map->tiles()->create([
             'tile_template_id' => $template->id,
             'q' => $validated['q'],
             'r' => $validated['r'],
@@ -37,6 +39,8 @@ class MapTileController extends Controller
             'variant' => $variant,
             'locked' => (bool) Arr::get($validated, 'locked', false),
         ]);
+
+        event(new MapTileBroadcasted($map, 'created', MapTilePayload::from($tile)));
 
         return redirect()->route('groups.maps.show', [$group, $map])->with('success', 'Tile placed.');
     }
@@ -94,6 +98,8 @@ class MapTileController extends Controller
             $tile->update($data);
         }
 
+        event(new MapTileBroadcasted($map, 'updated', MapTilePayload::from($tile->fresh())));
+
         return redirect()->route('groups.maps.show', [$group, $map])->with('success', 'Tile updated.');
     }
 
@@ -104,7 +110,13 @@ class MapTileController extends Controller
 
         $this->authorize('delete', $tile);
 
+        $tileId = (int) $tile->id;
+
         $tile->delete();
+
+        event(new MapTileBroadcasted($map, 'deleted', [
+            'id' => $tileId,
+        ]));
 
         return redirect()->route('groups.maps.show', [$group, $map])->with('success', 'Tile removed.');
     }

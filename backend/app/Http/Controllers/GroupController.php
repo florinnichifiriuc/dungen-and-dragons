@@ -130,6 +130,8 @@ class GroupController extends Controller
                 'world_id' => $region->world_id,
                 'name' => $region->name,
                 'summary' => $region->summary,
+                'ai_controlled' => (bool) $region->ai_controlled,
+                'ai_delegate_summary' => $region->ai_delegate_summary,
                 'dungeon_master' => $region->dungeonMaster ? [
                     'id' => $region->dungeonMaster->id,
                     'name' => $region->dungeonMaster->name,
@@ -155,6 +157,7 @@ class GroupController extends Controller
                         ] : null,
                     ])->values(),
                 'can_process_turn' => $configuration && $user ? $user->can('update', $configuration) : false,
+                'can_delegate_to_ai' => $user ? $user->can('delegateToAi', $region) : false,
             ];
         })->values();
 
@@ -172,6 +175,8 @@ class GroupController extends Controller
                         'id' => $region->id,
                         'name' => $region->name,
                         'summary' => $region->summary,
+                        'ai_controlled' => (bool) $region->ai_controlled,
+                        'ai_delegate_summary' => $region->ai_delegate_summary,
                         'dungeon_master' => $region->dungeonMaster ? [
                             'id' => $region->dungeonMaster->id,
                             'name' => $region->dungeonMaster->name,
@@ -197,6 +202,7 @@ class GroupController extends Controller
                                 ] : null,
                             ])->values(),
                         'can_process_turn' => $configuration && $user ? $user->can('update', $configuration) : false,
+                        'can_delegate_to_ai' => $user ? $user->can('delegateToAi', $region) : false,
                     ];
                 })->values(),
             ];

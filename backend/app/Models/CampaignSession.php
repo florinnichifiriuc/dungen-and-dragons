@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CampaignSession extends Model
@@ -65,5 +66,10 @@ class CampaignSession extends Model
     public function initiativeEntries(): HasMany
     {
         return $this->hasMany(InitiativeEntry::class)->orderBy('order_index');
+    }
+
+    public function aiRequests(): MorphMany
+    {
+        return $this->morphMany(AiRequest::class, 'context');
     }
 }

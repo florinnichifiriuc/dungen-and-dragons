@@ -1,4 +1,4 @@
-import { FormEvent } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 
@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { getEcho } from '@/lib/realtime';
 
 function formatDateTime(value: string | null): string {
     if (!value) {
@@ -81,7 +82,56 @@ type SessionShowProps = {
         can_manage: boolean;
         can_delete: boolean;
     };
+    ai_dialogues: AiDialogueEntry[];
 };
+
+type SessionNoteEventPayload = {
+    note: Partial<SessionNoteResource> & { id: number; visibility?: string };
+};
+
+type DiceRollEventPayload = {
+    roll: Partial<DiceRollResource> & { id: number };
+};
+
+type InitiativeEventPayload = {
+    entry: Partial<InitiativeEntryResource> & { id: number };
+    entries: InitiativeEntryResource[];
+};
+
+type AiDialogueEntry = {
+    id: string;
+    npc_name: string | null;
+    tone: string | null;
+    prompt: string;
+    reply: string | null;
+    status: string;
+    created_at: string | null;
+};
+
+const parseIsoTimestamp = (value: string | null): number => {
+    if (!value) {
+        return 0;
+    }
+
+    const parsed = Date.parse(value);
+
+    return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const orderNotes = (items: SessionNoteResource[]): SessionNoteResource[] =>
+    [...items].sort((a, b) => {
+        if (a.is_pinned !== b.is_pinned) {
+            return a.is_pinned ? -1 : 1;
+        }
+
+        return parseIsoTimestamp(b.created_at ?? null) - parseIsoTimestamp(a.created_at ?? null);
+    });
+
+const orderDiceRolls = (items: DiceRollResource[]): DiceRollResource[] =>
+    [...items].sort((a, b) => parseIsoTimestamp(b.created_at ?? null) - parseIsoTimestamp(a.created_at ?? null));
+
+const orderInitiativeEntries = (items: InitiativeEntryResource[]): InitiativeEntryResource[] =>
+    [...items].sort((a, b) => a.order_index - b.order_index);
 
 const visibilityLabels: Record<string, string> = {
     gm: 'GM only',
@@ -99,12 +149,41 @@ export default function SessionShow({
     initiative,
     note_visibilities: noteVisibilities,
     permissions,
+    ai_dialogues: aiDialogues,
 }: SessionShowProps) {
     const page = usePage();
     const currentUserId = (page.props.auth?.user?.id as number | undefined) ?? null;
     const defaultVisibility = noteVisibilities.includes('players')
         ? 'players'
         : noteVisibilities[0] ?? 'players';
+
+    const [noteFeed, setNoteFeed] = useState<SessionNoteResource[]>(() => orderNotes(notes));
+    const [diceLog, setDiceLog] = useState<DiceRollResource[]>(() => orderDiceRolls(diceRolls));
+    const [initiativeFeed, setInitiativeFeed] = useState<InitiativeEntryResource[]>(() => orderInitiativeEntries(initiative));
+    const [npcDialogueLog, setNpcDialogueLog] = useState<AiDialogueEntry[]>(() => [...aiDialogues]);
+    const [npcForm, setNpcForm] = useState({
+        npcName: '',
+        tone: '',
+        prompt: '',
+    });
+    const [npcSubmitting, setNpcSubmitting] = useState(false);
+    const [npcError, setNpcError] = useState<string | null>(null);
+
+    useEffect(() => {
+        setNoteFeed(orderNotes(notes));
+    }, [notes]);
+
+    useEffect(() => {
+        setDiceLog(orderDiceRolls(diceRolls));
+    }, [diceRolls]);
+
+    useEffect(() => {
+        setInitiativeFeed(orderInitiativeEntries(initiative));
+    }, [initiative]);
+
+    useEffect(() => {
+        setNpcDialogueLog(aiDialogues);
+    }, [aiDialogues]);
 
     const noteForm = useForm({
         content: '',
@@ -122,6 +201,166 @@ export default function SessionShow({
         initiative: '',
         is_current: false,
     });
+
+    const handleNpcSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (npcSubmitting) {
+            return;
+        }
+
+        if (!npcForm.npcName || !npcForm.prompt) {
+            setNpcError('Provide an NPC name and a player prompt.');
+            return;
+        }
+
+        setNpcError(null);
+        setNpcSubmitting(true);
+
+        try {
+            const csrf = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content ?? '';
+            const response = await fetch(route('api.campaigns.sessions.npc-dialogue', [campaign.id, session.id]), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                },
+                body: JSON.stringify({
+                    npc_name: npcForm.npcName,
+                    prompt: npcForm.prompt,
+                    tone: npcForm.tone || undefined,
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => null);
+                const message =
+                    (error && typeof error.message === 'string' && error.message) ||
+                    'The NPC could not be reached. Try again shortly.';
+
+                throw new Error(message);
+            }
+
+            const payload = (await response.json()) as {
+                request_id: string;
+                status: string;
+                reply: string;
+                created_at: string | null;
+            };
+
+            const entry: AiDialogueEntry = {
+                id: payload.request_id,
+                npc_name: npcForm.npcName,
+                tone: npcForm.tone || null,
+                prompt: npcForm.prompt,
+                reply: payload.reply,
+                status: payload.status,
+                created_at: payload.created_at,
+            };
+
+            setNpcDialogueLog((current) => [entry, ...current].slice(0, 10));
+            setNpcForm({ npcName: '', tone: '', prompt: '' });
+        } catch (error) {
+            setNpcError(error instanceof Error ? error.message : 'Unable to contact the NPC right now.');
+        } finally {
+            setNpcSubmitting(false);
+        }
+    };
+
+    useEffect(() => {
+        const echo = getEcho();
+
+        if (!echo) {
+            return;
+        }
+
+        const baseChannel = `campaigns.${campaign.id}.sessions.${session.id}.workspace`;
+        const channel = echo.private(baseChannel);
+
+        const handleNoteUpsert = (payload: SessionNoteEventPayload) => {
+            if (!payload.note || payload.note.content === undefined) {
+                return;
+            }
+
+            const incoming = payload.note as SessionNoteResource;
+
+            setNoteFeed((current) =>
+                orderNotes([
+                    ...current.filter((noteItem) => noteItem.id !== incoming.id),
+                    incoming,
+                ]),
+            );
+        };
+
+        const handleNoteDelete = (payload: SessionNoteEventPayload) => {
+            setNoteFeed((current) => current.filter((noteItem) => noteItem.id !== payload.note.id));
+        };
+
+        channel.listen('.session-note.created', handleNoteUpsert);
+        channel.listen('.session-note.updated', handleNoteUpsert);
+        channel.listen('.session-note.deleted', handleNoteDelete);
+
+        const handleDiceCreated = (payload: DiceRollEventPayload) => {
+            if (!payload.roll || payload.roll.expression === undefined) {
+                return;
+            }
+
+            const incoming = payload.roll as DiceRollResource;
+
+            setDiceLog((current) =>
+                orderDiceRolls([
+                    ...current.filter((roll) => roll.id !== incoming.id),
+                    incoming,
+                ]),
+            );
+        };
+
+        const handleDiceDeleted = (payload: DiceRollEventPayload) => {
+            setDiceLog((current) => current.filter((roll) => roll.id !== payload.roll.id));
+        };
+
+        channel.listen('.dice-roll.created', handleDiceCreated);
+        channel.listen('.dice-roll.deleted', handleDiceDeleted);
+
+        const handleInitiative = (payload: InitiativeEventPayload) => {
+            if (Array.isArray(payload.entries)) {
+                setInitiativeFeed(orderInitiativeEntries(payload.entries));
+            }
+        };
+
+        channel.listen('.initiative-entry.created', handleInitiative);
+        channel.listen('.initiative-entry.updated', handleInitiative);
+        channel.listen('.initiative-entry.deleted', handleInitiative);
+
+        let gmChannel: ReturnType<typeof echo.private> | null = null;
+
+        if (permissions.can_manage) {
+            gmChannel = echo.private(`${baseChannel}.gms`);
+            gmChannel.listen('.session-note.created', handleNoteUpsert);
+            gmChannel.listen('.session-note.updated', handleNoteUpsert);
+            gmChannel.listen('.session-note.deleted', handleNoteDelete);
+        }
+
+        return () => {
+            channel.stopListening('.session-note.created');
+            channel.stopListening('.session-note.updated');
+            channel.stopListening('.session-note.deleted');
+            channel.stopListening('.dice-roll.created');
+            channel.stopListening('.dice-roll.deleted');
+            channel.stopListening('.initiative-entry.created');
+            channel.stopListening('.initiative-entry.updated');
+            channel.stopListening('.initiative-entry.deleted');
+            echo.leave(baseChannel);
+
+            if (gmChannel) {
+                gmChannel.stopListening('.session-note.created');
+                gmChannel.stopListening('.session-note.updated');
+                gmChannel.stopListening('.session-note.deleted');
+                echo.leave(`${baseChannel}.gms`);
+            }
+        };
+    }, [campaign.id, session.id, permissions.can_manage]);
 
     const submitNote = (event: FormEvent) => {
         event.preventDefault();
@@ -391,10 +630,10 @@ export default function SessionShow({
                             </form>
 
                             <div className="mt-6 space-y-4">
-                                {notes.length === 0 ? (
+                                {noteFeed.length === 0 ? (
                                     <p className="text-sm text-zinc-500">No notes yet. Start chronicling the tale!</p>
                                 ) : (
-                                    notes.map((note) => (
+                                    noteFeed.map((note) => (
                                         <article
                                             key={note.id}
                                             className="rounded-lg border border-zinc-800/80 bg-zinc-950/80 p-4 text-sm text-zinc-300"
@@ -463,10 +702,10 @@ export default function SessionShow({
                             </form>
 
                             <div className="mt-6 space-y-3">
-                                {diceRolls.length === 0 ? (
+                                {diceLog.length === 0 ? (
                                     <p className="text-sm text-zinc-500">No rolls yet. Cast the first die!</p>
                                 ) : (
-                                    diceRolls.map((roll) => (
+                                    diceLog.map((roll) => (
                                         <div
                                             key={roll.id}
                                             className="rounded-lg border border-zinc-800/80 bg-zinc-950/80 p-4 text-sm text-zinc-300"
@@ -562,10 +801,10 @@ export default function SessionShow({
                     )}
 
                     <div className="mt-6 space-y-3">
-                        {initiative.length === 0 ? (
+                        {initiativeFeed.length === 0 ? (
                             <p className="text-sm text-zinc-500">No participants queued yet.</p>
                         ) : (
-                            initiative.map((entry) => (
+                            initiativeFeed.map((entry) => (
                                 <div
                                     key={entry.id}
                                     className={`rounded-lg border p-4 text-sm ${
@@ -628,6 +867,96 @@ export default function SessionShow({
                     </div>
                 </section>
             </div>
+
+            <section className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
+                <header className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <h2 className="text-lg font-semibold text-zinc-100">NPC guide (Gemma3)</h2>
+                        <p className="text-xs text-zinc-500">
+                            Summon a quick in-character response from the Ollama-powered narrator to keep scenes moving.
+                        </p>
+                    </div>
+                </header>
+
+                <form onSubmit={handleNpcSubmit} className="mt-4 grid gap-4 md:grid-cols-[220px,1fr]">
+                    <div className="space-y-3">
+                        <div className="space-y-2">
+                            <Label htmlFor="npc-name" className="text-xs uppercase tracking-wide text-zinc-500">
+                                NPC name
+                            </Label>
+                            <Input
+                                id="npc-name"
+                                value={npcForm.npcName}
+                                onChange={(event) => setNpcForm((current) => ({ ...current, npcName: event.target.value }))}
+                                placeholder="E.g., Captain Mirela"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="npc-tone" className="text-xs uppercase tracking-wide text-zinc-500">
+                                Tone (optional)
+                            </Label>
+                            <Input
+                                id="npc-tone"
+                                value={npcForm.tone}
+                                onChange={(event) => setNpcForm((current) => ({ ...current, tone: event.target.value }))}
+                                placeholder="Stoic, reverent, frantic..."
+                            />
+                        </div>
+                        <Button type="submit" disabled={npcSubmitting}>
+                            {npcSubmitting ? 'Consulting Gemma…' : 'Ask the NPC'}
+                        </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="npc-prompt" className="text-xs uppercase tracking-wide text-zinc-500">
+                            Player prompt
+                        </Label>
+                        <Textarea
+                            id="npc-prompt"
+                            value={npcForm.prompt}
+                            onChange={(event) => setNpcForm((current) => ({ ...current, prompt: event.target.value }))}
+                            placeholder="Share what the players say or ask."
+                            rows={6}
+                            required
+                        />
+                    </div>
+                </form>
+
+                {npcError && <p className="mt-3 text-sm text-rose-300">{npcError}</p>}
+
+                <div className="mt-6 space-y-4">
+                    {npcDialogueLog.length === 0 ? (
+                        <p className="text-sm text-zinc-500">
+                            No NPC conversations yet. Summon a voice to guide your players.
+                        </p>
+                    ) : (
+                        npcDialogueLog.map((entry) => (
+                            <article
+                                key={entry.id}
+                                className="rounded-lg border border-zinc-800/80 bg-zinc-950/70 p-4 text-sm text-zinc-300"
+                            >
+                                <header className="mb-2 flex items-start justify-between gap-3">
+                                    <div>
+                                        <p className="font-semibold text-zinc-100">
+                                            {entry.npc_name ?? 'Unnamed NPC'}
+                                        </p>
+                                        <p className="text-xs text-zinc-500">
+                                            {formatDateTime(entry.created_at)}
+                                            {entry.tone ? ` • Tone: ${entry.tone}` : ''}
+                                        </p>
+                                    </div>
+                                    <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-[11px] uppercase tracking-wide text-indigo-300">
+                                        {entry.status}
+                                    </span>
+                                </header>
+                                <p className="text-xs text-zinc-500">Player prompt: {entry.prompt}</p>
+                                <p className="mt-3 whitespace-pre-wrap text-zinc-200">{entry.reply ?? 'Awaiting response...'}</p>
+                            </article>
+                        ))
+                    )}
+                </div>
+            </section>
         </AppLayout>
     );
 }

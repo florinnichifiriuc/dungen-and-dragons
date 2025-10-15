@@ -103,4 +103,9 @@ class Campaign extends Model
     {
         return $this->hasMany(CampaignSession::class);
     }
+
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(CampaignTask::class);
+    }
 }

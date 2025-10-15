@@ -1,5 +1,8 @@
 <?php
 
+use App\Events\DiceRollBroadcasted;
+use App\Events\InitiativeEntryBroadcasted;
+use App\Events\SessionNoteBroadcasted;
 use App\Models\Campaign;
 use App\Models\Group;
 use App\Models\GroupMembership;
@@ -8,6 +11,7 @@ use App\Models\SessionNote;
 use App\Models\User;
 use App\Services\DiceRoller;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 
 uses(RefreshDatabase::class);
 
@@ -85,6 +89,8 @@ it('allows party members to add notes while restricting gm-only visibility', fun
         'role' => GroupMembership::ROLE_PLAYER,
     ]);
 
+    Event::fake([SessionNoteBroadcasted::class]);
+
     $gmAttempt = $this->actingAs($player)->from(route('campaigns.sessions.show', [$campaign, $session]))->post(
         route('campaigns.sessions.notes.store', ['campaign' => $campaign, 'session' => $session]),
         [
@@ -107,6 +113,15 @@ it('allows party members to add notes while restricting gm-only visibility', fun
         'visibility' => SessionNote::VISIBILITY_PLAYERS,
         'campaign_session_id' => $session->id,
     ]);
+
+    Event::assertDispatched(SessionNoteBroadcasted::class, function (SessionNoteBroadcasted $event) use ($session) {
+        expect($event->session->is($session))->toBeTrue();
+        expect($event->action)->toBe('created');
+        expect($event->note['content'])->toBe('Battle plans ready.');
+
+        return true;
+    });
+    Event::assertDispatchedTimes(SessionNoteBroadcasted::class, 1);
 });
 
 it('records dice rolls using the dice roller service', function () {
@@ -124,6 +139,8 @@ it('records dice rolls using the dice roller service', function () {
 
     $this->instance(DiceRoller::class, $mock);
 
+    Event::fake([DiceRollBroadcasted::class]);
+
     $this->actingAs($manager)
         ->post(route('campaigns.sessions.dice-rolls.store', ['campaign' => $campaign, 'session' => $session]), [
             'expression' => '1d20+5',
@@ -135,6 +152,15 @@ it('records dice rolls using the dice roller service', function () {
         'expression' => '1D20+5',
         'result_total' => 17,
     ]);
+
+    Event::assertDispatched(DiceRollBroadcasted::class, function (DiceRollBroadcasted $event) use ($session) {
+        expect($event->session->is($session))->toBeTrue();
+        expect($event->action)->toBe('created');
+        expect($event->roll['result_total'])->toBe(17);
+
+        return true;
+    });
+    Event::assertDispatchedTimes(DiceRollBroadcasted::class, 1);
 });
 
 it('restricts initiative management to campaign managers', function () {
@@ -151,6 +177,8 @@ it('restricts initiative management to campaign managers', function () {
     ]);
     $this->instance(DiceRoller::class, $mock);
 
+    Event::fake([InitiativeEntryBroadcasted::class]);
+
     $this->actingAs($manager)
         ->post(route('campaigns.sessions.initiative.store', ['campaign' => $campaign, 'session' => $session]), [
             'name' => 'Sir Roland',
@@ -163,6 +191,15 @@ it('restricts initiative management to campaign managers', function () {
         'name' => 'Sir Roland',
         'initiative' => 12,
     ]);
+
+    Event::assertDispatched(InitiativeEntryBroadcasted::class, function (InitiativeEntryBroadcasted $event) use ($session) {
+        expect($event->session->is($session))->toBeTrue();
+        expect($event->action)->toBe('created');
+        expect($event->entries)->not->toBeEmpty();
+
+        return true;
+    });
+    Event::assertDispatchedTimes(InitiativeEntryBroadcasted::class, 1);
 
     $player = User::factory()->create();
     GroupMembership::create([

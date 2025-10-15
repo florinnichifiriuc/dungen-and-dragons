@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\InitiativeEntryBroadcasted;
 use App\Http\Requests\InitiativeEntryStoreRequest;
 use App\Http\Requests\InitiativeEntryUpdateRequest;
 use App\Models\Campaign;
 use App\Models\InitiativeEntry;
 use App\Models\CampaignSession;
 use App\Services\DiceRoller;
+use App\Support\Broadcasting\SessionWorkspacePayload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -57,6 +59,13 @@ class InitiativeEntryController extends Controller
                 ->update(['is_current' => false]);
         }
 
+        event(new InitiativeEntryBroadcasted(
+            $session,
+            'created',
+            SessionWorkspacePayload::initiativeEntry($entry->fresh()),
+            $this->initiativeSnapshot($session),
+        ));
+
         return redirect()
             ->route('campaigns.sessions.show', [$campaign, $session])
             ->with('success', 'Initiative entry added.');
@@ -82,6 +91,13 @@ class InitiativeEntryController extends Controller
                 ->update(['is_current' => false]);
         }
 
+        event(new InitiativeEntryBroadcasted(
+            $session,
+            'updated',
+            SessionWorkspacePayload::initiativeEntry($entry->fresh()),
+            $this->initiativeSnapshot($session),
+        ));
+
         return redirect()
             ->route('campaigns.sessions.show', [$campaign, $session])
             ->with('success', 'Initiative updated.');
@@ -93,7 +109,16 @@ class InitiativeEntryController extends Controller
         $this->ensureEntryBelongsToSession($session, $entry);
         $this->authorize('delete', $entry);
 
+        $entryId = (int) $entry->id;
+
         $entry->delete();
+
+        event(new InitiativeEntryBroadcasted(
+            $session,
+            'deleted',
+            ['id' => $entryId],
+            $this->initiativeSnapshot($session),
+        ));
 
         return redirect()
             ->route('campaigns.sessions.show', [$campaign, $session])
@@ -112,5 +137,17 @@ class InitiativeEntryController extends Controller
         if ($entry->campaign_session_id !== $session->id) {
             abort(404);
         }
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    protected function initiativeSnapshot(CampaignSession $session): array
+    {
+        return $session->initiativeEntries()
+            ->orderBy('order_index')
+            ->get()
+            ->map(fn (InitiativeEntry $initiative) => SessionWorkspacePayload::initiativeEntry($initiative))
+            ->all();
     }
 }

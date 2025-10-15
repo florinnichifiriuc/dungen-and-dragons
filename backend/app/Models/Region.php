@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Region extends Model
 {
@@ -19,9 +20,11 @@ class Region extends Model
         'group_id',
         'world_id',
         'dungeon_master_id',
+        'ai_controlled',
         'name',
         'summary',
         'description',
+        'ai_delegate_summary',
     ];
 
     /**
@@ -64,5 +67,10 @@ class Region extends Model
     public function maps(): HasMany
     {
         return $this->hasMany(Map::class);
+    }
+
+    public function aiRequests(): MorphMany
+    {
+        return $this->morphMany(AiRequest::class, 'context');
     }
 }

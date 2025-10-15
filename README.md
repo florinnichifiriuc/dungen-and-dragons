@@ -29,6 +29,23 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
 
 > Tip: If Docker isn't available (e.g., CI or Codespaces), you can still run `php artisan serve` and `npm run dev -- --host` locally with a MySQL service, but Sail is the supported baseline for collaborative environments.
 
+## Milestone Demo Flow Automation
+- Run `php artisan demo:milestones` to narrate the latest milestone at a human-paced cadence. The command reads from the shared `PROGRESS_LOG.md` so automation runs stay aligned with the project log.
+- Pass a milestone keyword (e.g., `php artisan demo:milestones "Campaign Foundations"`) to focus on a specific delivery, or append `--all` to replay the full history.
+- Adjust pacing when recording or running in CI with `--delay=<seconds>` (defaults to `1.1`). Provide `--delay=0` for fast local verification or automated tests.
+- Use `--source=path/to/log.md` when previewing unreleased notes or running unit tests against fixture data.
+
+## Real-time Collaboration (Laravel Reverb)
+- Configure the new `REVERB_*` and `VITE_REVERB_*` environment variables (defaults are included in `.env.example`) and run `php artisan reverb:start` alongside your usual Sail or Artisan server to boot the WebSocket service.
+- Session workspaces now stream notes, dice rolls, and initiative changes to subscribed players in real time so the combat tracker and chronicle stay in sync without page reloads.
+- Group map editors receive immediate tile placement, updates, and removals via the shared channel, keeping collaborative cartography and lock states consistent for multiple facilitators.
+
+## AI Services (Ollama Gemma3)
+- Copy the AI variables from `.env.example` (`AI_PROVIDER`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `OLLAMA_TIMEOUT`) and ensure an Ollama instance is running with the Gemma3 model pulled locally (`ollama pull gemma3`).
+- Region managers can request an AI Dungeon Master delegate from the group dashboard. Provide optional guidance in the “AI brief” field and the service will store a fresh takeover plan while marking the region as AI-controlled.
+- The session workspace ships with an “NPC guide” panel. Enter an NPC name, optional tone, and the player prompt to receive in-character dialogue generated via Ollama.
+- Turn processing still supports the “Request AI fallback narrator” option. When no summary is provided, Gemma3 crafts a concise chronicle and the request metadata is logged for later review in `ai_requests`.
+
 ## Authentication & Demo Accounts
 - Email/password flows are powered by Sanctum session authentication. Inertia routes `/login`, `/register`, and `/dashboard` provide the UI built with Tailwind + shadcn components.
 - REST helper `GET /api/v1/auth/me` (Sanctum protected) surfaces the authenticated user payload for future SPA/mobile clients.
@@ -180,7 +197,9 @@ Sessions & Tasks:
 - `POST /sessions/{id}/export` {format: pdf|md}
 - `GET /campaigns/{id}/tasks`
 - `POST /campaigns/{id}/tasks`
-- `PATCH /tasks/{id}`
+- `PATCH /campaigns/{id}/tasks/{task}`
+- `POST /campaigns/{id}/tasks/reorder`
+- `DELETE /campaigns/{id}/tasks/{task}`
 - `POST /tasks/{id}/updates`
 
 Realtime & Chat:
@@ -228,6 +247,13 @@ Pages & Components:
 - `Settings` (profile, notifications, OAuth links)
 
 Shared components: `TurnCountdown`, `RegionSelector`, `GroupInviteForm`, `AIStatusBadge`, `SessionExportButton`, `TimeConfigModal`, `PermissionBadge`.
+
+### Task Board Workflow
+
+- Kanban columns map to the canonical task statuses: **Backlog**, **Ready**, **In Progress**, **Review**, and **Completed**. Moving a card automatically updates its status and ordering.
+- Turn-based pacing: each card can be assigned a target `due_turn_number`. Badges surface whether the work is due this turn or in future turns so the party can pace deliverables.
+- Assignments: tasks can be assigned to any member of the owning group; assignees can self-progress cards even if they are not game masters.
+- Reordering: managers can nudge priority with *Move up/down* controls which synchronize the canonical column order server-side via `/campaigns/{id}/tasks/reorder`.
 
 ## Real-time (Laravel Reverb)
 - Presence channels: `presence-world.{worldId}` (participants viewing world), `presence-region.{regionId}` (DM coordination).

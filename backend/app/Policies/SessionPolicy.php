@@ -27,4 +27,9 @@ class SessionPolicy
     {
         return app(CampaignPolicy::class)->update($user, $session->campaign);
     }
+
+    public function npcDialogue(User $user, CampaignSession $session): bool
+    {
+        return $this->view($user, $session);
+    }
 }

@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\DiceRollBroadcasted;
 use App\Http\Requests\DiceRollStoreRequest;
 use App\Models\Campaign;
 use App\Models\DiceRoll;
 use App\Models\CampaignSession;
 use App\Services\DiceRoller;
+use App\Support\Broadcasting\SessionWorkspacePayload;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
@@ -36,7 +38,7 @@ class DiceRollController extends Controller
         /** @var Authenticatable $user */
         $user = $request->user();
 
-        $session->diceRolls()->create([
+        $roll = $session->diceRolls()->create([
             'campaign_id' => $campaign->id,
             'campaign_session_id' => $session->id,
             'roller_id' => $user?->getAuthIdentifier(),
@@ -47,6 +49,12 @@ class DiceRollController extends Controller
             ],
             'result_total' => $result['total'],
         ]);
+
+        event(new DiceRollBroadcasted(
+            $session,
+            'created',
+            SessionWorkspacePayload::diceRoll($roll),
+        ));
 
         return redirect()
             ->route('campaigns.sessions.show', [$campaign, $session])
@@ -59,7 +67,13 @@ class DiceRollController extends Controller
         $this->ensureRollBelongsToSession($session, $roll);
         $this->authorize('delete', $roll);
 
+        $payload = [
+            'id' => (int) $roll->id,
+        ];
+
         $roll->delete();
+
+        event(new DiceRollBroadcasted($session, 'deleted', $payload));
 
         return redirect()
             ->route('campaigns.sessions.show', [$campaign, $session])

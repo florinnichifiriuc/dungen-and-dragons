@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\MapTileBroadcasted;
 use App\Models\Group;
 use App\Models\GroupMembership;
 use App\Models\Map;
@@ -8,6 +9,7 @@ use App\Models\TileTemplate;
 use App\Models\User;
 use App\Models\World;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 
 uses(RefreshDatabase::class);
 
@@ -32,6 +34,8 @@ it('enforces unique coordinates per map', function () {
     $map = Map::factory()->for($group)->for($region)->create();
     $template = TileTemplate::factory()->for($group)->create();
 
+    Event::fake([MapTileBroadcasted::class]);
+
     $first = $this->actingAs($owner)->post(route('groups.maps.tiles.store', [$group, $map]), [
         'tile_template_id' => $template->id,
         'q' => 1,
@@ -40,6 +44,16 @@ it('enforces unique coordinates per map', function () {
     ]);
 
     $first->assertRedirect(route('groups.maps.show', [$group, $map]));
+
+    Event::assertDispatched(MapTileBroadcasted::class, function (MapTileBroadcasted $event) use ($map) {
+        expect($event->map->is($map))->toBeTrue();
+        expect($event->action)->toBe('created');
+        expect($event->tile['q'])->toBe(1);
+        expect($event->tile['r'])->toBe(2);
+
+        return true;
+    });
+    Event::assertDispatchedTimes(MapTileBroadcasted::class, 1);
 
     $second = $this->actingAs($owner)->post(route('groups.maps.tiles.store', [$group, $map]), [
         'tile_template_id' => $template->id,
@@ -83,6 +97,8 @@ it('allows owners to toggle lock state on tiles', function () {
     expect($tile->map_id)->toBe($map->id);
     expect($owner->can('update', $tile))->toBeTrue();
 
+    Event::fake([MapTileBroadcasted::class]);
+
     $response = $this->actingAs($owner)->patch(route('groups.maps.tiles.update', [$group->id, $map->id, $tile->id]), [
         'locked' => true,
     ]);
@@ -92,6 +108,15 @@ it('allows owners to toggle lock state on tiles', function () {
         'id' => $tile->id,
         'locked' => true,
     ]);
+
+    Event::assertDispatched(MapTileBroadcasted::class, function (MapTileBroadcasted $event) use ($map, $tile) {
+        expect($event->map->is($map))->toBeTrue();
+        expect($event->action)->toBe('updated');
+        expect($event->tile['id'])->toBe($tile->id);
+
+        return true;
+    });
+    Event::assertDispatchedTimes(MapTileBroadcasted::class, 1);
 });
 
 it('allows dungeon masters to update tile metadata', function () {
@@ -121,6 +146,8 @@ it('allows dungeon masters to update tile metadata', function () {
     expect($tile->map_id)->toBe($map->id);
     expect($dm->can('update', $tile))->toBeTrue();
 
+    Event::fake([MapTileBroadcasted::class]);
+
     $response = $this->actingAs($dm)->patch(route('groups.maps.tiles.update', [$group->id, $map->id, $tile->id]), [
         'tile_template_id' => $templateB->id,
         'elevation' => 3,
@@ -134,4 +161,13 @@ it('allows dungeon masters to update tile metadata', function () {
         'tile_template_id' => $templateB->id,
         'elevation' => 3,
     ]);
+
+    Event::assertDispatched(MapTileBroadcasted::class, function (MapTileBroadcasted $event) use ($map, $tile) {
+        expect($event->map->is($map))->toBeTrue();
+        expect($event->action)->toBe('updated');
+        expect($event->tile['id'])->toBe($tile->id);
+
+        return true;
+    });
+    Event::assertDispatchedTimes(MapTileBroadcasted::class, 1);
 });

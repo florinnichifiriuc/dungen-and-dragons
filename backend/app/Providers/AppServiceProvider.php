@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Campaign;
+use App\Models\CampaignTask;
 use App\Models\Group;
 use App\Models\GroupMembership;
 use App\Models\Region;
@@ -16,6 +17,7 @@ use App\Models\Map;
 use App\Models\MapTile;
 use App\Models\TileTemplate;
 use App\Policies\CampaignPolicy;
+use App\Policies\CampaignTaskPolicy;
 use App\Policies\DiceRollPolicy;
 use App\Policies\GroupPolicy;
 use App\Policies\GroupMembershipPolicy;
@@ -49,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Group::class, GroupPolicy::class);
         Gate::policy(GroupMembership::class, GroupMembershipPolicy::class);
         Gate::policy(Campaign::class, CampaignPolicy::class);
+        Gate::policy(CampaignTask::class, CampaignTaskPolicy::class);
         Gate::policy(Region::class, RegionPolicy::class);
         Gate::policy(TurnConfiguration::class, TurnConfigurationPolicy::class);
         Gate::policy(World::class, WorldPolicy::class);

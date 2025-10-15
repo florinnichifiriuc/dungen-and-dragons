@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AiRequest;
 use App\Models\Group;
 use App\Models\GroupMembership;
 use App\Models\Region;
@@ -9,6 +10,7 @@ use App\Models\World;
 use App\Services\TurnScheduler;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -59,6 +61,12 @@ it('supports ai fallback when no summary is provided', function () {
 
     app(TurnScheduler::class)->configure($region, 6, CarbonImmutable::now('UTC'));
 
+    Http::fake([
+        '*/api/chat' => Http::response([
+            'message' => ['content' => 'Stormbreak Vale thrived under vigilant spirits.'],
+        ], 200),
+    ]);
+
     $this->actingAs($user)->post(route('groups.regions.turns.store', [$group, $region]), [
         'use_ai_fallback' => true,
     ])->assertRedirect(route('groups.show', $group));
@@ -66,7 +74,14 @@ it('supports ai fallback when no summary is provided', function () {
     $turn = Turn::where('region_id', $region->id)->firstOrFail();
 
     expect($turn->used_ai_fallback)->toBeTrue();
-    expect($turn->summary)->not->toBeNull();
+    expect($turn->summary)->toBe('Stormbreak Vale thrived under vigilant spirits.');
+
+    $this->assertDatabaseHas('ai_requests', [
+        'request_type' => 'summary',
+        'context_type' => Region::class,
+        'context_id' => $region->id,
+        'status' => AiRequest::STATUS_COMPLETED,
+    ]);
 });
 
 it('prevents players from processing region turns', function () {

@@ -105,6 +105,13 @@ export default function CampaignShow({ campaign, available_roles }: CampaignShow
                     <Button
                         asChild
                         variant="outline"
+                        className="border-emerald-600/60 text-sm text-emerald-200 hover:bg-emerald-500/10"
+                    >
+                        <Link href={route('campaigns.tasks.index', campaign.id)}>Task board</Link>
+                    </Button>
+                    <Button
+                        asChild
+                        variant="outline"
                         className="border-amber-500/60 text-sm text-amber-200 hover:bg-amber-500/10"
                     >
                         <Link href={route('campaigns.sessions.index', { campaign: campaign.id })}>Session workspace</Link>

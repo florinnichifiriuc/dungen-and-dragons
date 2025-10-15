@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SessionNoteBroadcasted;
 use App\Http\Requests\SessionNoteStoreRequest;
 use App\Http\Requests\SessionNoteUpdateRequest;
 use App\Models\Campaign;
@@ -10,6 +11,7 @@ use App\Models\GroupMembership;
 use App\Models\CampaignSession;
 use App\Models\SessionNote;
 use App\Models\User;
+use App\Support\Broadcasting\SessionWorkspacePayload;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
@@ -38,13 +40,19 @@ class SessionNoteController extends Controller
             $isPinned = false;
         }
 
-        $session->notes()->create([
+        $note = $session->notes()->create([
             'campaign_id' => $campaign->id,
             'author_id' => $user->getAuthIdentifier(),
             'visibility' => $visibility,
             'is_pinned' => $isPinned,
             'content' => $request->string('content')->toString(),
         ]);
+
+        event(new SessionNoteBroadcasted(
+            $session,
+            'created',
+            SessionWorkspacePayload::note($note),
+        ));
 
         return redirect()
             ->route('campaigns.sessions.show', [$campaign, $session])
@@ -75,6 +83,12 @@ class SessionNoteController extends Controller
 
         $note->update($payload);
 
+        event(new SessionNoteBroadcasted(
+            $session,
+            'updated',
+            SessionWorkspacePayload::note($note->fresh()),
+        ));
+
         return redirect()
             ->route('campaigns.sessions.show', [$campaign, $session])
             ->with('success', 'Note updated.');
@@ -86,7 +100,14 @@ class SessionNoteController extends Controller
         $this->ensureNoteBelongsToSession($session, $note);
         $this->authorize('delete', $note);
 
+        $noteData = [
+            'id' => (int) $note->id,
+            'visibility' => $note->visibility,
+        ];
+
         $note->delete();
+
+        event(new SessionNoteBroadcasted($session, 'deleted', $noteData));
 
         return redirect()
             ->route('campaigns.sessions.show', [$campaign, $session])
