@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\MapFogUpdateRequest;
 use App\Http\Requests\MapStoreRequest;
 use App\Http\Requests\MapUpdateRequest;
 use App\Models\Group;
@@ -58,7 +59,10 @@ class MapController extends Controller
         $this->assertMapForGroup($group, $map);
         $this->authorize('view', $map);
 
-        $map->load(['tiles.tileTemplate:id,name,terrain_type,movement_cost,defense_bonus']);
+        $map->load([
+            'tiles.tileTemplate:id,name,terrain_type,movement_cost,defense_bonus',
+            'tokens:id,map_id,name,x,y,color,size,faction,initiative,status_effects,hit_points,temporary_hit_points,max_hit_points,z_index,hidden,gm_note',
+        ]);
 
         return Inertia::render('Maps/Show', [
             'group' => [
@@ -77,6 +81,9 @@ class MapController extends Controller
                     'id' => $map->region->id,
                     'name' => $map->region->name,
                 ] : null,
+                'fog' => [
+                    'hidden_tile_ids' => array_values(array_unique(Arr::get($map->fog_data ?? [], 'hidden_tile_ids', []))),
+                ],
             ],
             'tiles' => $map->tiles
                 ->sortBy(fn ($tile) => [$tile->q, $tile->r])
@@ -94,6 +101,30 @@ class MapController extends Controller
                         'movement_cost' => $tile->tileTemplate->movement_cost,
                         'defense_bonus' => $tile->tileTemplate->defense_bonus,
                     ],
+                ])->values(),
+            'tokens' => $map->tokens
+                ->sortBy([
+                    ['initiative', 'desc'],
+                    ['z_index', 'desc'],
+                    ['name', 'asc'],
+                    ['id', 'asc'],
+                ])
+                ->map(fn ($token) => [
+                    'id' => $token->id,
+                    'name' => $token->name,
+                    'x' => $token->x,
+                    'y' => $token->y,
+                    'color' => $token->color,
+                    'size' => $token->size,
+                    'faction' => $token->faction,
+                    'initiative' => $token->initiative,
+                    'status_effects' => $token->status_effects,
+                    'hit_points' => $token->hit_points,
+                    'temporary_hit_points' => $token->temporary_hit_points,
+                    'max_hit_points' => $token->max_hit_points,
+                    'z_index' => $token->z_index,
+                    'hidden' => (bool) $token->hidden,
+                    'gm_note' => $token->gm_note,
                 ])->values(),
             'tile_templates' => $group->tileTemplates()
                 ->orderBy('name')
@@ -156,6 +187,31 @@ class MapController extends Controller
         ]);
 
         return redirect()->route('groups.maps.show', [$group, $map])->with('success', 'Map updated.');
+    }
+
+    public function updateFog(MapFogUpdateRequest $request, Group $group, Map $map): RedirectResponse
+    {
+        $this->assertMapForGroup($group, $map);
+
+        $hiddenTileIds = collect($request->validated('hidden_tile_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($hiddenTileIds === []) {
+            $fogData = Arr::except($map->fog_data ?? [], ['hidden_tile_ids']);
+        } else {
+            $fogData = array_merge($map->fog_data ?? [], [
+                'hidden_tile_ids' => $hiddenTileIds,
+            ]);
+        }
+
+        $map->update([
+            'fog_data' => empty($fogData) ? null : $fogData,
+        ]);
+
+        return redirect()->route('groups.maps.show', [$group, $map])->with('success', 'Fog of war updated.');
     }
 
     public function destroy(Group $group, Map $map): RedirectResponse

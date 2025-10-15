@@ -83,6 +83,7 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
 - Session chronicle entries let players and GMs capture quick recaps with optional titles that display newest-first in the workspace and flow into exports for posterity.
 - Reward and loot ledger entries track treasure, experience, and story boons with type badges, recipient notes, and export support so spoils stay organized.
 - Initiative entries track combat order with auto-rolling support and “current turn” toggles so parties can manage encounters without leaving the workspace.
+- Map boards ship with fog-of-war controls and live token management, letting facilitators drop, color-code, hide, annotate creatures, and track initiative/status badges while updates broadcast in real time.
 - Inertia pages provide a session index, scheduling form, and rich workspace view with note editor, dice log, and initiative board styled for the project’s D&D aesthetic.
 - Session workspace exports campaigns to Markdown/PDF and lets managers upload or remove stored recordings alongside external links.
 - Pest feature coverage exercises session CRUD, note permissions, dice logging, and initiative management; a Dusk scenario walks through scheduling a session and collaborating in the workspace UI.
@@ -298,6 +299,10 @@ Shared components: `TurnCountdown`, `RegionSelector`, `GroupInviteForm`, `AIStat
 - **Grid model**: default hex axial coordinates (`q`,`r`) with optional square grid fallback. Each tile stores orientation (`pointy` or `flat`) and elevation for simple height effects.
 - **Template library**: ship with core terrain templates (grassland, mountain, water, road, settlement, dungeon entrance). Templates define edge profiles (e.g., road connectors) so adjacent tiles auto-snap when edges match. Users can clone templates, upload art, and adjust metadata without breaking existing boards.
 - **Placement UX**: TilePalette lists templates grouped by terrain; drag-and-drop snaps to nearest axial cell, previewing edge compatibility (highlight mismatches). TileInspector allows rotating, changing elevation, locking tiles (for finalized regions), or swapping template while preserving notes/tokens.
+- **Fog controls**: GM workspace shows hidden tile counts, reveal-all actions, and per-tile toggles that write to fog metadata so future realtime viewers and exports can respect visibility states.
+- **Layer priority controls**: Tokens accept signed z-index values so facilitators can tuck lairs or spell templates beneath highlighted combatants, with UI badges and resets to keep zero as the neutral layer.
+- **Faction badges & filters**: Categorize tokens as allied, hostile, neutral, or hazard with badge styling and GM-facing filters so crowded encounters stay readable at a glance.
+- **Vitality badges**: Capture current, maximum, and temporary hit points directly on tokens so facilitators can track combat pacing without leaving the map workspace.
 - **Extensibility**: MapTiles reference templates so adding new art or rules is additive. Variant JSON stores optional module data (resource yields, hazards) enabling future mechanics. Batch APIs allow import/export of tile layouts for reuse across campaigns.
 
 ## Dice Engine
@@ -377,11 +382,10 @@ Shared components: `TurnCountdown`, `RegionSelector`, `GroupInviteForm`, `AIStat
 - **AI availability (Ollama/Gemma3)**: fallback to manual DM queue; abstract provider.
 - **Discord integration**: optional; fallback to internal chat only.
 - **Session recording storage costs**: allow external link instead of upload.
-- **Map fog-of-war**: keep as nice-to-have.
+- **Map fog-of-war**: baseline toggle controls shipped; advanced per-player visibility can remain optional if time-constrained.
 - **Tile editor scope creep**: ship core hex templates first; defer advanced edge rules or per-player visibility if schedule slips.
 
 ## Nice-to-haves
-- Fog-of-war editor with player visibility toggles.
 - SRD monster import and bulk entity creation.
 - Markdown notes with `@mentions`, notifications, and AI-suggested tags.
 - Automated AI NPC scheduling per turn.
