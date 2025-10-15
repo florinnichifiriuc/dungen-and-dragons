@@ -74,7 +74,19 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
 - Collaborative notes support GM/player/public visibility with pinning controls, while dice rolls are logged through a deterministic `DiceRoller` service that evaluates `NdM±X` expressions.
 - Initiative entries track combat order with auto-rolling support and “current turn” toggles so parties can manage encounters without leaving the workspace.
 - Inertia pages provide a session index, scheduling form, and rich workspace view with note editor, dice log, and initiative board styled for the project’s D&D aesthetic.
+- Session workspace exports campaigns to Markdown/PDF and lets managers upload or remove stored recordings alongside external links.
 - Pest feature coverage exercises session CRUD, note permissions, dice logging, and initiative management; a Dusk scenario walks through scheduling a session and collaborating in the workspace UI.
+
+## Lore Codex
+- Campaign managers can chronicle characters, NPCs, monsters, relics, and locations in a dedicated lore codex with stat blocks, pronouncing guides, and visibility controls (GM, party, public).
+- Tags provide quick filtering by arc, faction, or motif. The codex index supports search, type filters, and tag chips so facilitators can focus on exactly the lore they need.
+- The campaign dashboard now surfaces total codex entries and the three most recent lore updates for rapid prep navigation.
+- Lore entries support Markdown descriptions, initiative defaults, and AI-controlled flags so automation hooks stay aware of the story world.
+
+## Accessibility & Localization
+- Player and GM experiences support English and Romanian translations. Navigation strings, preference forms, and layout chrome resolve through the shared `resources/lang/{locale}` dictionaries.
+- Authenticated users can visit **Preferences** to adjust language, timezone, theme (system, midnight dark, dawn light), font scale, and high-contrast focus outlines. Settings persist to the `users` table and cascade through middleware so PHP, Inertia, and Tailwind share the same configuration.
+- The global layout now includes skip links, adaptive theming, and high-contrast focus rings that meet WCAG contrast recommendations. Font scaling modifies the root size to assist low-vision players without breaking layout density.
 
 ## Architectural Choice
 **Laravel + Inertia React Monolith**: Recommended after weighing feedback from Laravel and React experts.
@@ -283,6 +295,7 @@ Shared components: `TurnCountdown`, `RegionSelector`, `GroupInviteForm`, `AIStat
 - Additional tests for `2d20kh1+5`, `3d10!`, `1d100rr1`.
 
 ## Search & Filters
+- `/search` provides a scoped global lookup across campaigns, sessions, notes, and tasks the user can access, with toggleable scopes and contextual metadata for quick navigation.
 - Full-text indexes on `campaign_entities`, `notes`, `tasks`.
 - Add composite indexes for `turns (campaign_id, processed_at)`, `sessions (campaign_id, session_date)`, `regions (world_id, status)`.
 - Add unique index `map_tiles (map_id, q, r)` to enforce snap grid and accelerate tile lookups.

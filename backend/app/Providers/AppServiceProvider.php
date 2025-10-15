@@ -10,6 +10,7 @@ use App\Models\Region;
 use App\Models\DiceRoll;
 use App\Models\InitiativeEntry;
 use App\Models\CampaignSession;
+use App\Models\CampaignEntity;
 use App\Models\SessionNote;
 use App\Models\TurnConfiguration;
 use App\Models\World;
@@ -30,6 +31,7 @@ use App\Policies\WorldPolicy;
 use App\Policies\MapPolicy;
 use App\Policies\MapTilePolicy;
 use App\Policies\TileTemplatePolicy;
+use App\Policies\CampaignEntityPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -62,5 +64,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Map::class, MapPolicy::class);
         Gate::policy(MapTile::class, MapTilePolicy::class);
         Gate::policy(TileTemplate::class, TileTemplatePolicy::class);
+        Gate::policy(CampaignEntity::class, CampaignEntityPolicy::class);
     }
 }

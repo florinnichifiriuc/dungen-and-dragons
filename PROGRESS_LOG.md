@@ -20,5 +20,9 @@
 | 2025-10-18 09:45 | Realtime Collaboration | Integrated Laravel Reverb websockets, broadcasting session workspace updates and live map tile edits with Echo-powered UI syncing. |
 | 2025-10-18 13:10 | Task Board Workflow | Delivered campaign Kanban board with turn-based due dates, assignment controls, and priority reordering backed by authorization and tests. |
 | 2025-10-19 10:20 | AI Services | Connected Ollama Gemma3 for turn summaries, AI DM delegation, and the session NPC guide with logged requests and coverage. |
+| 2025-10-20 09:15 | Search Infrastructure | Implemented scoped global search across campaigns, sessions, notes, and tasks with authorization-aware filtering and coverage. |
+| 2025-10-20 17:40 | Session Exports & Vault | Added Markdown/PDF session exports, Inertia UI download controls, and managed recording uploads with authorization-aware storage. |
+| 2025-10-21 11:10 | Accessibility & Localization | Delivered user preference persistence, localized navigation, adjustable theming, and accessibility enhancements with coverage. |
+| 2025-10-22 10:20 | Lore Codex & Tags | Shipped campaign lore entities with tagging, filters, stat blocks, dashboard highlights, and Pest coverage for the new codex workflows. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.

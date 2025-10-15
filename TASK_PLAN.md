@@ -8,9 +8,9 @@
 - [x] Integrate Laravel Reverb for realtime initiative, chat, map tokens.
 - [x] Build task board with turn-based due dates and Kanban UI.
 - [x] Implement AI services (Ollama Gemma3) for NPC and DM takeover workflows.
-- [ ] Add search/filter infrastructure across entities, tasks, notes.
-- [ ] Implement exports (Markdown/PDF) and session recording storage.
-- [ ] Finalize localization, accessibility, theming, and docs.
+- [x] Add search/filter infrastructure across entities, tasks, notes.
+- [x] Implement exports (Markdown/PDF) and session recording storage.
+- [x] Finalize localization, accessibility, theming, and docs.
 
 ## In Progress
 - _None_
@@ -30,3 +30,8 @@
 - Task 11 – Realtime Collaboration (Laravel Reverb broadcasting with Echo-powered session and map syncing)
 - Task 12 – Task Board Workflow (campaign Kanban lanes, turn due dates, assignments, and ordering controls)
 - Task 13 – AI Services (Ollama Gemma3 region delegation, NPC guide, and turn narration)
+- Task 14 – Global Search (campaign/session/task/note discovery with scoped filters)
+- Task 15 – Session Exports & Recording Vault (Markdown/PDF exports, recording storage UX)
+- Task 16 – Accessibility, Localization & Theming Polish (user preference middleware, localized UI shell, accessibility pass)
+- Task 17 – Lore Codex (campaign entity CRUD, codex pages, dashboard integration)
+- Task 18 – Lore Tags & Quick Reference (tagging, filters, codex summary highlights)

@@ -2,12 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root[data-color-scheme='dark'] {
     color-scheme: dark;
+}
+
+:root[data-color-scheme='light'] {
+    color-scheme: light;
 }
 
 body {
     font-family: theme('fontFamily.sans');
+}
+
+.high-contrast *:focus-visible {
+    outline: 3px solid theme('colors.amber.400');
+    outline-offset: 3px;
 }
 
 .hero-gradient {

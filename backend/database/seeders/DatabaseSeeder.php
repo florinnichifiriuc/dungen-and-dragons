@@ -19,12 +19,20 @@ class DatabaseSeeder extends Seeder
             'name' => 'Demo GM',
             'email' => 'gm@example.com',
             'password' => 'password',
+            'locale' => 'en',
+            'timezone' => 'UTC',
+            'theme' => 'dark',
         ]);
 
         User::factory()->create([
             'name' => 'Demo Player',
             'email' => 'player@example.com',
             'password' => 'password',
+            'locale' => 'ro',
+            'timezone' => 'Europe/Bucharest',
+            'theme' => 'light',
+            'high_contrast' => true,
+            'font_scale' => 110,
         ]);
     }
 }
