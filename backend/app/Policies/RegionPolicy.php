@@ -41,6 +41,11 @@ class RegionPolicy
         return $this->hasGroupRole($user, $region->group, [GroupMembership::ROLE_OWNER]);
     }
 
+    public function delegateToAi(User $user, Region $region): bool
+    {
+        return $this->hasGroupRole($user, $region->group);
+    }
+
     /**
      * Check if the user has the necessary group role.
      *

@@ -128,6 +128,10 @@ class SessionController extends Controller
             'notes.author:id,name',
             'diceRolls.roller:id,name',
             'initiativeEntries',
+            'aiRequests' => fn ($query) => $query
+                ->where('request_type', 'npc_dialogue')
+                ->latest()
+                ->limit(10),
         ]);
 
         $notes = $session->notes
@@ -180,6 +184,19 @@ class SessionController extends Controller
                 'order_index' => $entry->order_index,
             ]);
 
+        $aiDialogues = $session->aiRequests
+            ->sortByDesc('created_at')
+            ->values()
+            ->map(fn ($request) => [
+                'id' => $request->id,
+                'npc_name' => $request->meta['npc_name'] ?? null,
+                'tone' => $request->meta['tone'] ?? null,
+                'prompt' => $request->prompt,
+                'reply' => $request->response_text,
+                'status' => $request->status,
+                'created_at' => $request->created_at?->toIso8601String(),
+            ]);
+
         return Inertia::render('Sessions/Show', [
             'campaign' => [
                 'id' => $campaign->id,
@@ -207,6 +224,7 @@ class SessionController extends Controller
             'notes' => $notes,
             'dice_rolls' => $diceRolls,
             'initiative' => $initiativeEntries,
+            'ai_dialogues' => $aiDialogues,
             'note_visibilities' => SessionNote::visibilities(),
             'permissions' => [
                 'can_manage' => $isManager,

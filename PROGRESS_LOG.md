@@ -15,5 +15,10 @@
 | 2025-10-15 17:45 | Group Management | Introduced join codes, membership policies, Inertia roster controls, and Pest coverage for invitations, role changes, and leave flows. |
 | 2025-10-15 20:30 | Worlds & Regions CRUD | Added world hierarchies with pacing defaults, tied regions to worlds, refreshed Inertia dashboards, and expanded Pest coverage for world administration. |
 | 2025-10-16 13:40 | Modular Tile Maps | Delivered tile template library, map CRUD/editor flows, and Pest coverage for axial placement, uniqueness, and locking rules. |
+| 2025-10-16 21:00 | Process Update | Added recurring milestone demo flow automation requirement with human-speed, verbose console walkthroughs to showcase milestone deliverables. |
+| 2025-10-17 12:20 | Milestone Demo Automation | Implemented human-paced `demo:milestones` narration command with pacing controls, documentation, and automated tests. |
+| 2025-10-18 09:45 | Realtime Collaboration | Integrated Laravel Reverb websockets, broadcasting session workspace updates and live map tile edits with Echo-powered UI syncing. |
+| 2025-10-18 13:10 | Task Board Workflow | Delivered campaign Kanban board with turn-based due dates, assignment controls, and priority reordering backed by authorization and tests. |
+| 2025-10-19 10:20 | AI Services | Connected Ollama Gemma3 for turn summaries, AI DM delegation, and the session NPC guide with logged requests and coverage. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.

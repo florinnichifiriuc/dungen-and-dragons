@@ -20,6 +20,8 @@ type RegionSummary = {
     world_id: number | null;
     name: string;
     summary: string | null;
+    ai_controlled: boolean;
+    ai_delegate_summary: string | null;
     dungeon_master: { id: number; name: string } | null;
     turn_configuration: {
         turn_duration_hours: number;
@@ -36,6 +38,7 @@ type RegionSummary = {
         processed_by: { id: number; name: string } | null;
     }[];
     can_process_turn: boolean;
+    can_delegate_to_ai: boolean;
 };
 
 type WorldSummary = {
@@ -114,6 +117,8 @@ export default function GroupShow({ group, viewer_membership, permissions, join_
     const [removing, setRemoving] = useState<number | null>(null);
     const [removingTemplate, setRemovingTemplate] = useState<number | null>(null);
     const [removingMap, setRemovingMap] = useState<number | null>(null);
+    const [delegatingRegion, setDelegatingRegion] = useState<number | null>(null);
+    const [aiFocus, setAiFocus] = useState<Record<number, string>>({});
 
     const manageMembers = permissions.manage_members;
     const promoteToOwner = permissions.promote_to_owner;
@@ -163,6 +168,22 @@ export default function GroupShow({ group, viewer_membership, permissions, join_
         router.delete(route('groups.maps.destroy', [group.id, map.id]), {
             preserveScroll: true,
             onFinish: () => setRemovingMap(null),
+        });
+    };
+
+    const handleAiDelegate = (event: FormEvent<HTMLFormElement>, region: RegionSummary) => {
+        event.preventDefault();
+        setDelegatingRegion(region.id);
+        router.post(route('groups.regions.ai-delegate.store', [group.id, region.id]), {
+            focus: aiFocus[region.id] ?? '',
+        }, {
+            preserveScroll: true,
+            onFinish: () => setDelegatingRegion(null),
+            onSuccess: () =>
+                setAiFocus((current) => ({
+                    ...current,
+                    [region.id]: '',
+                })),
         });
     };
 
@@ -440,6 +461,11 @@ export default function GroupShow({ group, viewer_membership, permissions, join_
                                                                     DM unassigned
                                                                 </p>
                                                             )}
+                                                            {region.ai_controlled && (
+                                                                <p className="mt-1 text-[11px] uppercase tracking-wide text-emerald-300">
+                                                                    AI steward active
+                                                                </p>
+                                                            )}
                                                         </div>
                                                         <div className="flex items-center gap-2">
                                                             <Button asChild variant="outline" size="sm" className="border-indigo-400/40 text-indigo-200">
@@ -483,6 +509,47 @@ export default function GroupShow({ group, viewer_membership, permissions, join_
                                                             </dd>
                                                         </div>
                                                     </dl>
+
+                                                    {region.can_delegate_to_ai && (
+                                                        <form
+                                                            onSubmit={(event) => handleAiDelegate(event, region)}
+                                                            className="mt-4 flex flex-col gap-3 rounded-lg border border-indigo-500/20 bg-indigo-500/5 p-3 sm:flex-row sm:items-end"
+                                                        >
+                                                            <div className="flex-1 space-y-2">
+                                                                <Label
+                                                                    htmlFor={`ai-brief-${region.id}`}
+                                                                    className="text-xs uppercase tracking-wide text-indigo-200"
+                                                                >
+                                                                    AI brief (optional)
+                                                                </Label>
+                                                                <Input
+                                                                    id={`ai-brief-${region.id}`}
+                                                                    value={aiFocus[region.id] ?? ''}
+                                                                    onChange={(event) =>
+                                                                        setAiFocus((current) => ({
+                                                                            ...current,
+                                                                            [region.id]: event.target.value,
+                                                                        }))
+                                                                    }
+                                                                    placeholder="Key beats or safety tools to highlight"
+                                                                />
+                                                            </div>
+                                                            <Button type="submit" size="sm" disabled={delegatingRegion === region.id}>
+                                                                {delegatingRegion === region.id
+                                                                    ? 'Summoning AI...'
+                                                                    : region.ai_controlled
+                                                                    ? 'Refresh AI plan'
+                                                                    : 'Assign AI DM'}
+                                                            </Button>
+                                                        </form>
+                                                    )}
+
+                                                    {region.ai_delegate_summary && (
+                                                        <div className="mt-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+                                                            <p className="text-[11px] uppercase tracking-wide text-emerald-300">Latest AI directive</p>
+                                                            <p className="mt-2 whitespace-pre-wrap text-sm text-emerald-200">{region.ai_delegate_summary}</p>
+                                                        </div>
+                                                    )}
 
                                                     {region.recent_turns.length > 0 && (
                                                         <div className="mt-4 border-t border-zinc-800 pt-4">

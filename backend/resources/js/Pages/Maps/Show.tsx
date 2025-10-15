@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { getEcho } from '@/lib/realtime';
 
 type TileTemplateOption = {
     id: number;
@@ -57,6 +58,23 @@ type TileDraft = {
     variant: string;
 };
 
+type MapTileEventPayload = {
+    tile: Partial<MapTileSummary> & { id: number };
+};
+
+const orderTiles = (items: MapTileSummary[]): MapTileSummary[] =>
+    [...items].sort((a, b) => {
+        if (a.q !== b.q) {
+            return a.q - b.q;
+        }
+
+        if (a.r !== b.r) {
+            return a.r - b.r;
+        }
+
+        return a.id - b.id;
+    });
+
 export default function MapShow({ group, map, tiles, tile_templates }: MapShowProps) {
     const createForm = useForm<CreateTileForm>({
         tile_template_id: tile_templates[0]?.id ?? '',
@@ -67,9 +85,14 @@ export default function MapShow({ group, map, tiles, tile_templates }: MapShowPr
         locked: false,
     });
 
+    const [liveTiles, setLiveTiles] = useState<MapTileSummary[]>(() => orderTiles(tiles));
     const [tileEdits, setTileEdits] = useState<Record<number, TileDraft>>({});
     const [updatingTile, setUpdatingTile] = useState<number | null>(null);
     const [removingTile, setRemovingTile] = useState<number | null>(null);
+
+    useEffect(() => {
+        setLiveTiles(orderTiles(tiles));
+    }, [tiles]);
 
     useEffect(() => {
         if (tile_templates.length > 0 && createForm.data.tile_template_id === '') {
@@ -79,7 +102,7 @@ export default function MapShow({ group, map, tiles, tile_templates }: MapShowPr
 
     useEffect(() => {
         const drafts: Record<number, TileDraft> = {};
-        tiles.forEach((tile) => {
+        liveTiles.forEach((tile) => {
             drafts[tile.id] = {
                 tile_template_id: tile.template.id,
                 elevation: tile.elevation,
@@ -87,7 +110,54 @@ export default function MapShow({ group, map, tiles, tile_templates }: MapShowPr
             };
         });
         setTileEdits(drafts);
-    }, [tiles]);
+    }, [liveTiles]);
+
+    useEffect(() => {
+        const echo = getEcho();
+
+        if (!echo) {
+            return;
+        }
+
+        const channelName = `groups.${group.id}.maps.${map.id}`;
+        const channel = echo.private(channelName);
+
+        const upsertTile = (incoming: MapTileSummary) => {
+            setLiveTiles((current) =>
+                orderTiles([
+                    ...current.filter((existing) => existing.id !== incoming.id),
+                    incoming,
+                ]),
+            );
+        };
+
+        const handleCreatedOrUpdated = (payload: MapTileEventPayload) => {
+            if (
+                payload.tile.q === undefined ||
+                payload.tile.r === undefined ||
+                payload.tile.template === undefined
+            ) {
+                return;
+            }
+
+            upsertTile(payload.tile as MapTileSummary);
+        };
+
+        const handleDeleted = (payload: MapTileEventPayload) => {
+            setLiveTiles((current) => current.filter((tile) => tile.id !== payload.tile.id));
+        };
+
+        channel.listen('.map-tile.created', handleCreatedOrUpdated);
+        channel.listen('.map-tile.updated', handleCreatedOrUpdated);
+        channel.listen('.map-tile.deleted', handleDeleted);
+
+        return () => {
+            channel.stopListening('.map-tile.created');
+            channel.stopListening('.map-tile.updated');
+            channel.stopListening('.map-tile.deleted');
+            echo.leave(channelName);
+        };
+    }, [group.id, map.id]);
 
     const handleCreate = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -180,7 +250,7 @@ export default function MapShow({ group, map, tiles, tile_templates }: MapShowPr
                                 {map.region ? `Region: ${map.region.name}` : 'Unassigned region'}
                             </p>
                             <p className="mt-1 text-xs uppercase tracking-wide text-zinc-500">
-                                {tiles.length} tiles · {map.gm_only ? 'GM only' : 'Visible to party'}
+                                {liveTiles.length} tiles · {map.gm_only ? 'GM only' : 'Visible to party'}
                             </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -301,16 +371,16 @@ export default function MapShow({ group, map, tiles, tile_templates }: MapShowPr
                 <section className="mx-auto max-w-4xl space-y-4">
                     <header className="flex items-center justify-between">
                         <h2 className="text-lg font-semibold text-zinc-100">Placed tiles</h2>
-                        <span className="text-xs uppercase tracking-wide text-zinc-500">{tiles.length} total</span>
+                        <span className="text-xs uppercase tracking-wide text-zinc-500">{liveTiles.length} total</span>
                     </header>
 
-                    {tiles.length === 0 ? (
+                    {liveTiles.length === 0 ? (
                         <p className="rounded-lg border border-dashed border-zinc-800 bg-zinc-950/40 p-4 text-sm text-zinc-400">
                             No tiles placed yet. Drop a template above to start charting the region.
                         </p>
                     ) : (
                         <div className="space-y-4">
-                            {tiles.map((tile) => {
+                            {liveTiles.map((tile) => {
                                 const draft = tileEdits[tile.id];
 
                                 return (
