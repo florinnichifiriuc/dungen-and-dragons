@@ -51,6 +51,8 @@ it('allows dungeon masters to place tokens and broadcasts the payload', function
         'faction' => MapToken::FACTION_HOSTILE,
         'initiative' => 21,
         'status_effects' => 'Blessed by Tiamat',
+        'status_conditions' => ['frightened', 'poisoned'],
+        'status_condition_durations' => ['frightened' => 3, 'poisoned' => 2],
         'hit_points' => 187,
         'temporary_hit_points' => 12,
         'max_hit_points' => 220,
@@ -71,6 +73,8 @@ it('allows dungeon masters to place tokens and broadcasts the payload', function
         'faction' => MapToken::FACTION_HOSTILE,
         'initiative' => 21,
         'status_effects' => 'Blessed by Tiamat',
+        'status_conditions' => json_encode(['frightened', 'poisoned']),
+        'status_condition_durations' => json_encode(['frightened' => 3, 'poisoned' => 2]),
         'hit_points' => 187,
         'temporary_hit_points' => 12,
         'max_hit_points' => 220,
@@ -85,6 +89,8 @@ it('allows dungeon masters to place tokens and broadcasts the payload', function
         expect($event->token['faction'])->toBe(MapToken::FACTION_HOSTILE);
         expect($event->token['initiative'])->toBe(21);
         expect($event->token['status_effects'])->toBe('Blessed by Tiamat');
+        expect($event->token['status_conditions'])->toBe(['frightened', 'poisoned']);
+        expect($event->token['status_condition_durations'])->toBe(['frightened' => 3, 'poisoned' => 2]);
         expect($event->token['hit_points'])->toBe(187);
         expect($event->token['temporary_hit_points'])->toBe(12);
         expect($event->token['max_hit_points'])->toBe(220);
@@ -146,6 +152,8 @@ it('allows owners to adjust token coordinates and notes', function () {
         'y' => 3,
         'initiative' => 15,
         'status_effects' => 'Restrained by vines',
+        'status_conditions' => ['restrained', 'blinded'],
+        'status_condition_durations' => ['restrained' => 4, 'blinded' => 1],
         'hit_points' => -3,
         'temporary_hit_points' => 5,
         'max_hit_points' => 45,
@@ -162,6 +170,8 @@ it('allows owners to adjust token coordinates and notes', function () {
         'y' => 3,
         'initiative' => 15,
         'status_effects' => 'Restrained by vines',
+        'status_conditions' => json_encode(['blinded', 'restrained']),
+        'status_condition_durations' => json_encode(['blinded' => 1, 'restrained' => 4]),
         'hit_points' => -3,
         'temporary_hit_points' => 5,
         'max_hit_points' => 45,
@@ -178,9 +188,51 @@ it('allows owners to adjust token coordinates and notes', function () {
         expect($event->token['faction'])->toBe(MapToken::FACTION_ALLIED);
         expect($event->token['initiative'])->toBe(15);
         expect($event->token['hit_points'])->toBe(-3);
+        expect($event->token['status_conditions'])->toBe(['blinded', 'restrained']);
+        expect($event->token['status_condition_durations'])->toBe(['blinded' => 1, 'restrained' => 4]);
         expect($event->token['temporary_hit_points'])->toBe(5);
         expect($event->token['max_hit_points'])->toBe(45);
         expect($event->token['z_index'])->toBe(-2);
+
+        return true;
+    });
+});
+
+it('normalizes condition duration payloads to active presets within bounds', function () {
+    [$group, $owner] = createGroupWithOwnerForTokens();
+    $world = World::factory()->for($group)->create();
+    $region = \App\Models\Region::factory()->for($world)->create();
+    $map = Map::factory()->for($group)->for($region)->create();
+
+    $token = MapToken::factory()->for($map)->create([
+        'status_conditions' => ['frightened'],
+        'status_condition_durations' => ['frightened' => 4],
+    ]);
+
+    Event::fake([MapTokenBroadcasted::class]);
+
+    $response = $this->actingAs($owner)->patch(route('groups.maps.tokens.update', [$group, $map, $token]), [
+        'status_conditions' => ['charmed'],
+        'status_condition_durations' => [
+            'charmed' => 18,
+            'frightened' => 6,
+            'poisoned' => 0,
+        ],
+    ]);
+
+    $response->assertRedirect(route('groups.maps.show', [$group, $map]));
+
+    $this->assertDatabaseHas('map_tokens', [
+        'id' => $token->id,
+        'status_conditions' => json_encode(['charmed']),
+        'status_condition_durations' => json_encode(['charmed' => 18]),
+    ]);
+
+    Event::assertDispatched(MapTokenBroadcasted::class, function (MapTokenBroadcasted $event) use ($map, $token) {
+        expect($event->map->is($map))->toBeTrue();
+        expect($event->token['id'])->toBe($token->id);
+        expect($event->token['status_conditions'])->toBe(['charmed']);
+        expect($event->token['status_condition_durations'])->toBe(['charmed' => 18]);
 
         return true;
     });
@@ -229,6 +281,7 @@ it('allows encounter builders to clear initiative and status metadata', function
     $token = MapToken::factory()->for($map)->create([
         'initiative' => 12,
         'status_effects' => 'Paralyzed',
+        'status_conditions' => ['paralyzed'],
         'hit_points' => 3,
         'temporary_hit_points' => 7,
         'max_hit_points' => 25,
@@ -238,6 +291,7 @@ it('allows encounter builders to clear initiative and status metadata', function
     $response = $this->actingAs($owner)->patch(route('groups.maps.tokens.update', [$group, $map, $token]), [
         'initiative' => null,
         'status_effects' => '',
+        'status_conditions' => [],
         'hit_points' => '',
         'temporary_hit_points' => '',
         'max_hit_points' => '',
@@ -250,6 +304,7 @@ it('allows encounter builders to clear initiative and status metadata', function
         'id' => $token->id,
         'initiative' => null,
         'status_effects' => null,
+        'status_conditions' => null,
         'hit_points' => null,
         'temporary_hit_points' => null,
         'max_hit_points' => null,

@@ -28,6 +28,10 @@ class MapTokenStoreRequest extends FormRequest
             'faction' => ['nullable', Rule::in(MapToken::FACTIONS)],
             'initiative' => ['nullable', 'integer', 'between:-50,50'],
             'status_effects' => ['nullable', 'string', 'max:255'],
+            'status_conditions' => ['nullable', 'array'],
+            'status_conditions.*' => ['string', Rule::in(MapToken::CONDITIONS)],
+            'status_condition_durations' => ['nullable', 'array'],
+            'status_condition_durations.*' => ['nullable', 'integer', 'between:1,'.MapToken::MAX_CONDITION_DURATION],
             'hit_points' => ['nullable', 'integer', 'between:-999,999'],
             'temporary_hit_points' => ['nullable', 'integer', 'between:0,999'],
             'max_hit_points' => ['nullable', 'integer', 'between:1,999'],
@@ -47,6 +51,18 @@ class MapTokenStoreRequest extends FormRequest
 
         if ($this->exists('faction') && $this->input('faction') === '') {
             $this->merge(['faction' => null]);
+        }
+
+        $durations = $this->input('status_condition_durations');
+
+        if (is_array($durations)) {
+            foreach ($durations as $condition => $value) {
+                if ($value === '') {
+                    $durations[$condition] = null;
+                }
+            }
+
+            $this->merge(['status_condition_durations' => $durations]);
         }
     }
 }

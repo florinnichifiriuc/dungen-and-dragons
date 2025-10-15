@@ -26,6 +26,26 @@ class MapToken extends Model
         self::FACTION_HAZARD,
     ];
 
+    public const CONDITIONS = [
+        'blinded',
+        'charmed',
+        'deafened',
+        'frightened',
+        'grappled',
+        'incapacitated',
+        'invisible',
+        'paralyzed',
+        'petrified',
+        'poisoned',
+        'prone',
+        'restrained',
+        'stunned',
+        'unconscious',
+        'exhaustion',
+    ];
+
+    public const MAX_CONDITION_DURATION = 20;
+
     /**
      * @var array<int, string>
      */
@@ -41,6 +61,8 @@ class MapToken extends Model
         'faction',
         'initiative',
         'status_effects',
+        'status_conditions',
+        'status_condition_durations',
         'hit_points',
         'temporary_hit_points',
         'max_hit_points',
@@ -59,6 +81,8 @@ class MapToken extends Model
         'hit_points' => 'integer',
         'temporary_hit_points' => 'integer',
         'max_hit_points' => 'integer',
+        'status_conditions' => 'array',
+        'status_condition_durations' => 'array',
     ];
 
     /**
@@ -66,6 +90,8 @@ class MapToken extends Model
      */
     protected $attributes = [
         'faction' => self::FACTION_NEUTRAL,
+        'status_conditions' => [],
+        'status_condition_durations' => [],
     ];
 
     public function map(): BelongsTo

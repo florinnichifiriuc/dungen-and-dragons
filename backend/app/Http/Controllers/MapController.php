@@ -7,8 +7,10 @@ use App\Http\Requests\MapStoreRequest;
 use App\Http\Requests\MapUpdateRequest;
 use App\Models\Group;
 use App\Models\Map;
+use App\Models\MapToken;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -61,7 +63,7 @@ class MapController extends Controller
 
         $map->load([
             'tiles.tileTemplate:id,name,terrain_type,movement_cost,defense_bonus',
-            'tokens:id,map_id,name,x,y,color,size,faction,initiative,status_effects,hit_points,temporary_hit_points,max_hit_points,z_index,hidden,gm_note',
+            'tokens:id,map_id,name,x,y,color,size,faction,initiative,status_effects,status_conditions,status_condition_durations,hit_points,temporary_hit_points,max_hit_points,z_index,hidden,gm_note',
         ]);
 
         return Inertia::render('Maps/Show', [
@@ -119,6 +121,8 @@ class MapController extends Controller
                     'faction' => $token->faction,
                     'initiative' => $token->initiative,
                     'status_effects' => $token->status_effects,
+                    'status_conditions' => $token->status_conditions ?? [],
+                    'status_condition_durations' => $token->status_condition_durations ?? [],
                     'hit_points' => $token->hit_points,
                     'temporary_hit_points' => $token->temporary_hit_points,
                     'max_hit_points' => $token->max_hit_points,
@@ -136,6 +140,11 @@ class MapController extends Controller
                     'movement_cost' => $template->movement_cost,
                     'defense_bonus' => $template->defense_bonus,
                 ]),
+            'token_conditions' => collect(MapToken::CONDITIONS)
+                ->map(fn ($condition) => [
+                    'value' => $condition,
+                    'label' => Str::title(str_replace('_', ' ', $condition)),
+                ])->values(),
         ]);
     }
 

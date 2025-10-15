@@ -30,6 +30,27 @@ class MapTokenFactory extends Factory
             $hitPoints = min($hitPoints, $maxHitPoints);
         }
 
+        $conditions = $this->faker->optional()->randomElements(
+            MapToken::CONDITIONS,
+            $this->faker->numberBetween(1, 3),
+        );
+
+        $conditionDurations = null;
+
+        if ($conditions) {
+            $conditionDurations = [];
+
+            foreach ($conditions as $condition) {
+                if ($this->faker->boolean(60)) {
+                    $conditionDurations[$condition] = $this->faker->numberBetween(1, MapToken::MAX_CONDITION_DURATION);
+                }
+            }
+
+            if ($conditionDurations === []) {
+                $conditionDurations = null;
+            }
+        }
+
         return [
             'map_id' => Map::factory(),
             'name' => $this->faker->words(2, true),
@@ -40,6 +61,8 @@ class MapTokenFactory extends Factory
             'faction' => $this->faker->randomElement($factions),
             'initiative' => $this->faker->optional(0.6)->numberBetween(-5, 30),
             'status_effects' => $this->faker->optional()->words(3, true),
+            'status_conditions' => $conditions,
+            'status_condition_durations' => $conditionDurations,
             'hit_points' => $hitPoints,
             'temporary_hit_points' => $this->faker->optional()->numberBetween(0, 25),
             'max_hit_points' => $maxHitPoints,

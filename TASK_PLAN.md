@@ -45,3 +45,5 @@
 - Task 27 – Token Layer Priority Controls (z-index layering controls for tokens, UI badges, and coverage)
 - Task 28 – Token Factions & Filters (faction badges, GM filters, and coverage for encounter clarity)
 - Task 29 – Token Vitality Tracking (hit point, max, and temporary health badges with realtime syncing)
+- Task 30 – Token Condition Presets (structured condition toggles, realtime badges, and validation)
+- Task 31 – Token Condition Timers (preset duration inputs, realtime syncing, and badge readouts)
