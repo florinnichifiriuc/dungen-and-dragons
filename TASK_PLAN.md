@@ -3,7 +3,6 @@
 ## Backlog
 - [x] Create group management (create/join/roles) and policies.
 - [x] Establish milestone demo flow automation that runs at a human reading pace with verbose console narration to showcase completed work for each milestone.
-- [ ] Implement campaign CRUD with group invitations and role assignments.
 - [x] Develop turn scheduler service and API (process turn, AI fallback).
 - [x] Integrate Laravel Reverb for realtime initiative, chat, map tokens.
 - [x] Build task board with turn-based due dates and Kanban UI.
@@ -35,3 +34,8 @@
 - Task 16 – Accessibility, Localization & Theming Polish (user preference middleware, localized UI shell, accessibility pass)
 - Task 17 – Lore Codex (campaign entity CRUD, codex pages, dashboard integration)
 - Task 18 – Lore Tags & Quick Reference (tagging, filters, codex summary highlights)
+- Task 19 – Quest Log & Progress Tracking (quest CRUD, progress updates, dashboard + search integration)
+- Task 20 – Campaign Invitation Acceptance (shareable invitation links, acceptance UI, policy enforcement)
+- Task 21 – Session RSVP & Attendance Roster (session attendance tracking, RSVP UI, export integration)
+- Task 22 – Session Chronicle & Recap Log (session recap journal, workspace UI, export integration)
+- Task 23 – Session Rewards & Loot Ledger (reward tracking ledger, workspace UI, export integration)

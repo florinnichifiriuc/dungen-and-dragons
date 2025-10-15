@@ -24,5 +24,10 @@
 | 2025-10-20 17:40 | Session Exports & Vault | Added Markdown/PDF session exports, Inertia UI download controls, and managed recording uploads with authorization-aware storage. |
 | 2025-10-21 11:10 | Accessibility & Localization | Delivered user preference persistence, localized navigation, adjustable theming, and accessibility enhancements with coverage. |
 | 2025-10-22 10:20 | Lore Codex & Tags | Shipped campaign lore entities with tagging, filters, stat blocks, dashboard highlights, and Pest coverage for the new codex workflows. |
+| 2025-10-23 11:45 | Quest Log & Progress Tracking | Implemented campaign quest CRUD, progress journals, dashboard surfacing, and global search integration with Pest coverage. |
+| 2025-10-23 15:10 | Campaign Invitations | Delivered shareable campaign invitation acceptance flows with policy checks, automatic assignments, and group syncing. |
+| 2025-10-23 19:05 | Session Attendance | Added RSVP roster with policies, session workspace UI, export integration, and automated tests so parties can coordinate participation. |
+| 2025-10-24 12:05 | Session Recaps | Introduced recap journal persistence, workspace composer, export support, and tests so parties can chronicle each gathering. |
+| 2025-10-24 17:55 | Session Rewards Ledger | Added reward ledger persistence, workspace logging UI, export coverage, and tests so treasure, boons, and XP stay organized. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.

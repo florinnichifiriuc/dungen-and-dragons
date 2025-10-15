@@ -118,4 +118,9 @@ class Campaign extends Model
     {
         return $this->hasMany(Tag::class);
     }
+
+    public function quests(): HasMany
+    {
+        return $this->hasMany(CampaignQuest::class);
+    }
 }

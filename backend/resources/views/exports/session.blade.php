@@ -122,6 +122,41 @@
     </div>
 
     <div class="section">
+        <h2>Rewards & Loot Ledger</h2>
+        @forelse($rewards as $reward)
+            <div class="note-card">
+                <h3>{{ $reward['title'] }}@if($reward['quantity']) ×{{ $reward['quantity'] }}@endif</h3>
+                <p class="muted">
+                    {{ \Illuminate\Support\Str::headline($reward['reward_type']) }} •
+                    Logged by {{ $reward['recorder']['name'] }}
+                    • {{ $format($reward['recorded_at']) ?? 'Unknown time' }}
+                    @if($reward['awarded_to'])
+                        • Awarded to {{ $reward['awarded_to'] }}
+                    @endif
+                </p>
+                @if($reward['notes'])
+                    <p>{!! nl2br(e($reward['notes'])) !!}</p>
+                @endif
+            </div>
+        @empty
+            <p class="muted">No rewards or loot have been logged for this session.</p>
+        @endforelse
+    </div>
+
+    <div class="section">
+        <h2>Session Recaps</h2>
+        @forelse($recaps as $recap)
+            <div class="note-card">
+                <h3>{{ $recap['title'] ?? ($recap['author']['name'] . ' recap') }}</h3>
+                <p class="muted">{{ $recap['author']['name'] }} • {{ $format($recap['created_at']) ?? 'Unknown time' }}</p>
+                <p>{!! nl2br(e($recap['body'])) !!}</p>
+            </div>
+        @empty
+            <p class="muted">No recaps recorded yet.</p>
+        @endforelse
+    </div>
+
+    <div class="section">
         <h2>Notes</h2>
         @forelse($notes as $note)
             <div class="note-card">

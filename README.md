@@ -35,6 +35,12 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
 - Adjust pacing when recording or running in CI with `--delay=<seconds>` (defaults to `1.1`). Provide `--delay=0` for fast local verification or automated tests.
 - Use `--source=path/to/log.md` when previewing unreleased notes or running unit tests against fixture data.
 
+## Quest Log & Progress Tracking
+- Every campaign now includes a quest log with priority/status filters and progress journaling so story arcs stay visible alongside the task board.
+- Quests can be tied to regions, assigned a target turn, and archived when they conclude; summaries flow back into the campaign dashboard spotlight.
+- Party members can log updates with timestamps while GMs and quest authors moderate entries to keep the ledger clean.
+- Global search includes quests, letting you jump directly into a storyline from anywhere in the app.
+
 ## Real-time Collaboration (Laravel Reverb)
 - Configure the new `REVERB_*` and `VITE_REVERB_*` environment variables (defaults are included in `.env.example`) and run `php artisan reverb:start` alongside your usual Sail or Artisan server to boot the WebSocket service.
 - Session workspaces now stream notes, dice rolls, and initiative changes to subscribed players in real time so the combat tracker and chronicle stay in sync without page reloads.
@@ -67,11 +73,15 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
 - Role assignments support polymorphic assignees (users now, groups later) and enforce group membership/manager permissions through policies and validation helpers.
 - Invitation records log pending group or email invites with token + expiry placeholders for future acceptance flows.
 - Inertia-powered campaign pages cover index, create, show, and edit flows with flash messaging, roster management, and assignment/invitation forms.
+- Invitation tokens now generate shareable acceptance links. Invited users or group managers can review the campaign context, accept the role, and automatically gain campaign access (with group membership syncing for individual invites).
 - Pest feature tests assert manager-only creation rules and validation, while Laravel Dusk verifies the end-to-end UI flow for spinning up a campaign through the browser.
 
 ## Session Workspace
 - Sessions belong to campaigns and optionally link back to processed region turns, capturing agenda, summary, location, and recording metadata in UTC.
 - Collaborative notes support GM/player/public visibility with pinning controls, while dice rolls are logged through a deterministic `DiceRoller` service that evaluates `NdM±X` expressions.
+- Attendance rosters let members RSVP with joining/tentative/unavailable statuses, jot arrival notes, and review party counts before game time; responses are also included in Markdown/PDF exports.
+- Session chronicle entries let players and GMs capture quick recaps with optional titles that display newest-first in the workspace and flow into exports for posterity.
+- Reward and loot ledger entries track treasure, experience, and story boons with type badges, recipient notes, and export support so spoils stay organized.
 - Initiative entries track combat order with auto-rolling support and “current turn” toggles so parties can manage encounters without leaving the workspace.
 - Inertia pages provide a session index, scheduling form, and rich workspace view with note editor, dice log, and initiative board styled for the project’s D&D aesthetic.
 - Session workspace exports campaigns to Markdown/PDF and lets managers upload or remove stored recordings alongside external links.

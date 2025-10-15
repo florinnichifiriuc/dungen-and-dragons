@@ -1,4 +1,4 @@
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useState } from 'react';
 
 import { Head, Link, useForm } from '@inertiajs/react';
 
@@ -31,6 +31,7 @@ type CampaignInvitation = {
     email: string | null;
     group: { id: number; name: string } | null;
     expires_at: string | null;
+    accept_url: string | null;
 };
 
 type CampaignPayload = {
@@ -49,6 +50,9 @@ type CampaignPayload = {
     invitations: CampaignInvitation[];
     entities_count: number;
     recent_entities: { id: number; name: string; entity_type: string }[];
+    quests_count: number;
+    spotlight_quests: { id: number; title: string; status: string; priority: string }[];
+    can_manage: boolean;
 };
 
 type CampaignShowProps = {
@@ -71,7 +75,29 @@ const entityTypeLabels: Record<string, string> = {
     location: 'Location',
 };
 
+const questStatusLabels: Record<string, string> = {
+    planned: 'Planned',
+    active: 'Active',
+    completed: 'Completed',
+    failed: 'Failed',
+};
+
+const questPriorityLabels: Record<string, string> = {
+    critical: 'Critical',
+    high: 'High',
+    standard: 'Standard',
+    low: 'Low',
+};
+
+const questPriorityStyles: Record<string, string> = {
+    critical: 'bg-rose-500/20 text-rose-100',
+    high: 'bg-amber-500/20 text-amber-100',
+    standard: 'bg-zinc-700/40 text-zinc-200',
+    low: 'bg-zinc-800 text-zinc-300',
+};
+
 export default function CampaignShow({ campaign, available_roles }: CampaignShowProps) {
+    const [copiedInvitationId, setCopiedInvitationId] = useState<number | null>(null);
     const roleForm = useForm({
         assignee_type: 'user',
         assignee_id: '',
@@ -101,6 +127,25 @@ export default function CampaignShow({ campaign, available_roles }: CampaignShow
         });
     };
 
+    const copyInvitationLink = async (invitation: CampaignInvitation) => {
+        if (!invitation.accept_url) {
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(invitation.accept_url);
+            setCopiedInvitationId(invitation.id);
+
+            setTimeout(() => {
+                setCopiedInvitationId((current) => (current === invitation.id ? null : current));
+            }, 2500);
+        } catch (error) {
+            console.error('Unable to copy invitation link', error);
+        }
+    };
+
+    const canManage = campaign.can_manage;
+
     return (
         <AppLayout>
             <Head title={campaign.title} />
@@ -125,6 +170,13 @@ export default function CampaignShow({ campaign, available_roles }: CampaignShow
                         className="border-purple-600/60 text-sm text-purple-200 hover:bg-purple-500/10"
                     >
                         <Link href={route('campaigns.entities.index', campaign.id)}>Lore codex</Link>
+                    </Button>
+                    <Button
+                        asChild
+                        variant="outline"
+                        className="border-sky-600/60 text-sm text-sky-200 hover:bg-sky-500/10"
+                    >
+                        <Link href={route('campaigns.quests.index', campaign.id)}>Quest log</Link>
                     </Button>
                     <Button
                         asChild
@@ -223,6 +275,49 @@ export default function CampaignShow({ campaign, available_roles }: CampaignShow
 
                     <article className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
                         <header className="flex items-center justify-between">
+                            <h2 className="text-lg font-semibold text-zinc-100">Quest log</h2>
+                            <span className="text-xs uppercase tracking-wide text-zinc-500">
+                                {campaign.quests_count} active quest{campaign.quests_count === 1 ? '' : 's'}
+                            </span>
+                        </header>
+
+                        {campaign.quests_count === 0 ? (
+                            <p className="mt-4 rounded-lg border border-dashed border-zinc-800 bg-zinc-900/40 p-4 text-sm text-zinc-400">
+                                No quests recorded yet. Capture threads so each turn has a clear objective and stakes.
+                            </p>
+                        ) : (
+                            <ul className="mt-4 space-y-3">
+                                {campaign.spotlight_quests.map((quest) => (
+                                    <li
+                                        key={quest.id}
+                                        className="flex flex-col gap-3 rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                                    >
+                                        <div>
+                                            <p className="text-sm font-medium text-zinc-100">{quest.title}</p>
+                                            <p className="text-xs uppercase tracking-wide text-zinc-500">
+                                                {questStatusLabels[quest.status] ?? quest.status} quest
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${questPriorityStyles[quest.priority] ?? 'bg-zinc-800 text-zinc-200'}`}>
+                                                {questPriorityLabels[quest.priority] ?? quest.priority}
+                                            </span>
+                                            <Button
+                                                asChild
+                                                variant="outline"
+                                                className="border-sky-500/40 text-xs text-sky-200 hover:bg-sky-500/10"
+                                            >
+                                                <Link href={route('campaigns.quests.show', [campaign.id, quest.id])}>Open</Link>
+                                            </Button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </article>
+
+                    <article className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
+                        <header className="flex items-center justify-between">
                             <h2 className="text-lg font-semibold text-zinc-100">Party roster</h2>
                             <span className="text-xs uppercase tracking-wide text-zinc-500">{campaign.members.length} members</span>
                         </header>
@@ -264,14 +359,16 @@ export default function CampaignShow({ campaign, available_roles }: CampaignShow
                                             <span className="text-xs font-semibold uppercase tracking-wide text-indigo-300">
                                                 {roleLabels[assignment.role] ?? assignment.role}
                                             </span>
-                                            <Link
-                                                as="button"
-                                                method="delete"
-                                                href={route('campaigns.assignments.destroy', [campaign.id, assignment.id])}
-                                                className="text-xs text-rose-300 hover:text-rose-200"
-                                            >
-                                                Remove
-                                            </Link>
+                                            {canManage && (
+                                                <Link
+                                                    as="button"
+                                                    method="delete"
+                                                    href={route('campaigns.assignments.destroy', [campaign.id, assignment.id])}
+                                                    className="text-xs text-rose-300 hover:text-rose-200"
+                                                >
+                                                    Remove
+                                                </Link>
+                                            )}
                                         </div>
                                     </li>
                                 ))
@@ -281,7 +378,8 @@ export default function CampaignShow({ campaign, available_roles }: CampaignShow
                 </section>
 
                 <section className="space-y-6">
-                    <form onSubmit={submitRole} className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
+                    {canManage && (
+                        <form onSubmit={submitRole} className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
                         <header className="mb-4">
                             <h2 className="text-lg font-semibold text-zinc-100">Assign a role</h2>
                             <p className="mt-1 text-sm text-zinc-400">Link an existing group member to the campaign.</p>
@@ -334,13 +432,15 @@ export default function CampaignShow({ campaign, available_roles }: CampaignShow
                             </Button>
                             <InputError message={roleForm.errors.assignee_type} />
                         </div>
-                    </form>
+                        </form>
+                    )}
 
-                    <form onSubmit={submitInvitation} className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
-                        <header className="mb-4">
-                            <h2 className="text-lg font-semibold text-zinc-100">Send invitation</h2>
-                            <p className="mt-1 text-sm text-zinc-400">Invite another group or external player via email.</p>
-                        </header>
+                    {canManage && (
+                        <form onSubmit={submitInvitation} className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
+                            <header className="mb-4">
+                                <h2 className="text-lg font-semibold text-zinc-100">Send invitation</h2>
+                                <p className="mt-1 text-sm text-zinc-400">Invite another group or external player via email.</p>
+                            </header>
 
                         <div className="space-y-4">
                             <div className="space-y-2">
@@ -385,46 +485,67 @@ export default function CampaignShow({ campaign, available_roles }: CampaignShow
                             </div>
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between">
-                            <Button type="submit" disabled={invitationForm.processing}>
-                                Record invitation
-                            </Button>
-                            <InputError message={invitationForm.errors.group_id} />
-                        </div>
-                    </form>
+                            <div className="mt-4 flex items-center justify-between">
+                                <Button type="submit" disabled={invitationForm.processing}>
+                                    Record invitation
+                                </Button>
+                                <InputError message={invitationForm.errors.group_id} />
+                            </div>
+                        </form>
+                    )}
 
-                    <article className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
-                        <header className="flex items-center justify-between">
-                            <h2 className="text-lg font-semibold text-zinc-100">Pending invitations</h2>
-                            <span className="text-xs uppercase tracking-wide text-zinc-500">{campaign.invitations.length}</span>
-                        </header>
-                        <ul className="mt-4 space-y-3">
-                            {campaign.invitations.length === 0 ? (
-                                <li className="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/40 p-4 text-sm text-zinc-400">
-                                    No invitations recorded.
-                                </li>
-                            ) : (
-                                campaign.invitations.map((invitation) => (
-                                    <li key={invitation.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3">
-                                        <div>
-                                            <p className="font-medium text-zinc-100">
-                                                {invitation.group ? invitation.group.name : invitation.email}
-                                            </p>
-                                            <p className="text-xs text-zinc-500">{invitation.expires_at ? new Date(invitation.expires_at).toLocaleString() : 'No expiry'}</p>
-                                        </div>
-                                        <Link
-                                            as="button"
-                                            method="delete"
-                                            href={route('campaigns.invitations.destroy', [campaign.id, invitation.id])}
-                                            className="text-xs text-rose-300 hover:text-rose-200"
-                                        >
-                                            Revoke
-                                        </Link>
+                    {canManage && (
+                        <article className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
+                            <header className="flex items-center justify-between">
+                                <h2 className="text-lg font-semibold text-zinc-100">Pending invitations</h2>
+                                <span className="text-xs uppercase tracking-wide text-zinc-500">{campaign.invitations.length}</span>
+                            </header>
+                            <ul className="mt-4 space-y-3">
+                                {campaign.invitations.length === 0 ? (
+                                    <li className="rounded-lg border border-dashed border-zinc-800 bg-zinc-900/40 p-4 text-sm text-zinc-400">
+                                        No invitations recorded.
                                     </li>
-                                ))
-                            )}
-                        </ul>
-                    </article>
+                                ) : (
+                                    campaign.invitations.map((invitation) => (
+                                        <li key={invitation.id} className="space-y-2 rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3">
+                                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                                <div>
+                                                    <p className="font-medium text-zinc-100">
+                                                        {invitation.group ? invitation.group.name : invitation.email}
+                                                    </p>
+                                                    <p className="text-xs uppercase tracking-wide text-amber-400/80">{roleLabels[invitation.role] ?? invitation.role}</p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    {invitation.accept_url ? (
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="border-emerald-600/60 text-emerald-200 hover:bg-emerald-500/10"
+                                                            onClick={() => copyInvitationLink(invitation)}
+                                                        >
+                                                            {copiedInvitationId === invitation.id ? 'Link copied!' : 'Copy link'}
+                                                        </Button>
+                                                    ) : null}
+                                                    <Link
+                                                        as="button"
+                                                        method="delete"
+                                                        href={route('campaigns.invitations.destroy', [campaign.id, invitation.id])}
+                                                        className="text-xs text-rose-300 hover:text-rose-200"
+                                                    >
+                                                        Revoke
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-zinc-500">
+                                                {invitation.expires_at ? new Date(invitation.expires_at).toLocaleString() : 'No expiry'}
+                                            </p>
+                                        </li>
+                                    ))
+                                )}
+                            </ul>
+                        </article>
+                    )}
                 </section>
             </div>
         </AppLayout>

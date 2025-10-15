@@ -8,9 +8,13 @@ use App\Http\Requests\SessionUpdateRequest;
 use App\Models\Campaign;
 use App\Models\CampaignSession;
 use App\Models\SessionNote;
+use App\Models\SessionRecap;
+use App\Models\SessionReward;
 use App\Models\Turn;
+use App\Models\SessionAttendance;
 use App\Models\User;
 use App\Policies\CampaignPolicy;
+use App\Policies\SessionPolicy;
 use App\Services\SessionExportService;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\RedirectResponse;
@@ -133,6 +137,9 @@ class SessionController extends Controller
 
         /** @var CampaignPolicy $campaignPolicy */
         $campaignPolicy = app(CampaignPolicy::class);
+        /** @var SessionPolicy $sessionPolicy */
+        $sessionPolicy = app(SessionPolicy::class);
+
         $isManager = $campaignPolicy->update($user, $campaign);
 
         $session->load([
@@ -141,6 +148,9 @@ class SessionController extends Controller
             'notes.author:id,name',
             'diceRolls.roller:id,name',
             'initiativeEntries',
+            'attendances.user:id,name',
+            'recaps.author:id,name',
+            'rewards.recorder:id,name',
             'aiRequests' => fn ($query) => $query
                 ->where('request_type', 'npc_dialogue')
                 ->latest()
@@ -210,6 +220,62 @@ class SessionController extends Controller
                 'created_at' => $request->created_at?->toIso8601String(),
             ]);
 
+        $attendanceRecords = $session->attendances
+            ->sortByDesc(fn (SessionAttendance $attendance) => $attendance->responded_at ?? $attendance->updated_at ?? $attendance->created_at)
+            ->values()
+            ->map(fn (SessionAttendance $attendance) => [
+                'id' => $attendance->id,
+                'status' => $attendance->status,
+                'note' => $attendance->note,
+                'responded_at' => $attendance->responded_at?->toIso8601String(),
+                'user' => [
+                    'id' => $attendance->user->id,
+                    'name' => $attendance->user->name,
+                ],
+            ]);
+
+        $currentAttendance = $session->attendances
+            ->firstWhere('user_id', $user->id);
+
+        $attendanceCounts = [
+            'yes' => $session->attendances->where('status', SessionAttendance::STATUS_YES)->count(),
+            'maybe' => $session->attendances->where('status', SessionAttendance::STATUS_MAYBE)->count(),
+            'no' => $session->attendances->where('status', SessionAttendance::STATUS_NO)->count(),
+        ];
+
+        $recaps = $session->recaps
+            ->sortByDesc('created_at')
+            ->values()
+            ->map(fn (SessionRecap $recap) => [
+                'id' => $recap->id,
+                'title' => $recap->title,
+                'body' => $recap->body,
+                'created_at' => $recap->created_at?->toIso8601String(),
+                'author' => [
+                    'id' => $recap->author->id,
+                    'name' => $recap->author->name,
+                ],
+                'can_delete' => $isManager || $recap->author_id === $user->id,
+            ]);
+
+        $rewards = $session->rewards
+            ->sortByDesc('created_at')
+            ->values()
+            ->map(fn (SessionReward $reward) => [
+                'id' => $reward->id,
+                'reward_type' => $reward->reward_type,
+                'title' => $reward->title,
+                'quantity' => $reward->quantity,
+                'awarded_to' => $reward->awarded_to,
+                'notes' => $reward->notes,
+                'recorded_at' => $reward->created_at?->toIso8601String(),
+                'recorder' => [
+                    'id' => $reward->recorder->id,
+                    'name' => $reward->recorder->name,
+                ],
+                'can_delete' => $isManager || $reward->recorded_by === $user->id,
+            ]);
+
         $storedRecording = null;
 
         if ($session->hasStoredRecording()) {
@@ -248,11 +314,24 @@ class SessionController extends Controller
             'dice_rolls' => $diceRolls,
             'initiative' => $initiativeEntries,
             'ai_dialogues' => $aiDialogues,
+            'attendance' => [
+                'responses' => $attendanceRecords,
+                'counts' => $attendanceCounts,
+                'current_user' => $currentAttendance ? [
+                    'status' => $currentAttendance->status,
+                    'note' => $currentAttendance->note,
+                ] : null,
+            ],
+            'recaps' => $recaps,
+            'rewards' => $rewards,
             'note_visibilities' => SessionNote::visibilities(),
             'permissions' => [
                 'can_manage' => $isManager,
                 'can_delete' => $isManager,
                 'can_upload_recording' => $isManager,
+                'can_rsvp' => $sessionPolicy->respond($user, $session),
+                'can_share_recap' => $sessionPolicy->recap($user, $session),
+                'can_log_reward' => $sessionPolicy->reward($user, $session),
             ],
         ]);
     }

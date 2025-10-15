@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use App\Models\Campaign;
+use App\Models\CampaignInvitation;
+use App\Models\CampaignQuest;
+use App\Models\CampaignQuestUpdate;
 use App\Models\CampaignTask;
 use App\Models\Group;
 use App\Models\GroupMembership;
@@ -18,6 +21,9 @@ use App\Models\Map;
 use App\Models\MapTile;
 use App\Models\TileTemplate;
 use App\Policies\CampaignPolicy;
+use App\Policies\CampaignInvitationPolicy;
+use App\Policies\CampaignQuestPolicy;
+use App\Policies\CampaignQuestUpdatePolicy;
 use App\Policies\CampaignTaskPolicy;
 use App\Policies\DiceRollPolicy;
 use App\Policies\GroupPolicy;
@@ -65,5 +71,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(MapTile::class, MapTilePolicy::class);
         Gate::policy(TileTemplate::class, TileTemplatePolicy::class);
         Gate::policy(CampaignEntity::class, CampaignEntityPolicy::class);
+        Gate::policy(CampaignInvitation::class, CampaignInvitationPolicy::class);
+        Gate::policy(CampaignQuest::class, CampaignQuestPolicy::class);
+        Gate::policy(CampaignQuestUpdate::class, CampaignQuestUpdatePolicy::class);
     }
 }

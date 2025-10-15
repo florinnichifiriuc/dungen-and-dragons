@@ -77,17 +77,60 @@ type InitiativeEntryResource = {
     order_index: number;
 };
 
+type AttendanceStatus = 'yes' | 'maybe' | 'no';
+
+type AttendanceResponse = {
+    id: number;
+    status: AttendanceStatus;
+    note: string | null;
+    responded_at: string | null;
+    user: { id: number; name: string };
+};
+
+type AttendanceSummary = {
+    responses: AttendanceResponse[];
+    counts: Record<AttendanceStatus, number>;
+    current_user: { status: AttendanceStatus; note: string | null } | null;
+};
+
+type SessionRecapResource = {
+    id: number;
+    title: string | null;
+    body: string;
+    created_at: string | null;
+    author: { id: number; name: string };
+    can_delete: boolean;
+};
+
+type SessionRewardResource = {
+    id: number;
+    reward_type: string;
+    title: string;
+    quantity: number | null;
+    awarded_to: string | null;
+    notes: string | null;
+    recorded_at: string | null;
+    recorder: { id: number; name: string };
+    can_delete: boolean;
+};
+
 type SessionShowProps = {
     campaign: CampaignContext;
     session: SessionDetail;
     notes: SessionNoteResource[];
     dice_rolls: DiceRollResource[];
     initiative: InitiativeEntryResource[];
+    attendance: AttendanceSummary;
+    recaps: SessionRecapResource[];
+    rewards: SessionRewardResource[];
     note_visibilities: string[];
     permissions: {
         can_manage: boolean;
         can_delete: boolean;
         can_upload_recording: boolean;
+        can_rsvp: boolean;
+        can_share_recap: boolean;
+        can_log_reward: boolean;
     };
     ai_dialogues: AiDialogueEntry[];
 };
@@ -148,12 +191,49 @@ const visibilityLabels: Record<string, string> = {
 
 const defaultDiceExpression = '1d20';
 
+const attendanceOptions: Array<{ value: AttendanceStatus; label: string; description: string }> = [
+    { value: 'yes', label: 'Joining', description: 'Count me in for the full session.' },
+    { value: 'maybe', label: 'Tentative', description: 'I might be late or need to confirm.' },
+    { value: 'no', label: 'Unavailable', description: 'I cannot attend this gathering.' },
+];
+
+const attendanceStatusLabels: Record<AttendanceStatus, string> = {
+    yes: 'Joining',
+    maybe: 'Tentative',
+    no: 'Unavailable',
+};
+
+const attendanceStatusStyles: Record<AttendanceStatus, string> = {
+    yes: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
+    maybe: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
+    no: 'border-rose-500/40 bg-rose-500/10 text-rose-200',
+};
+
+const attendanceStatusOrder: AttendanceStatus[] = ['yes', 'maybe', 'no'];
+
+const rewardTypeLabels: Record<string, string> = {
+    loot: 'Loot',
+    experience: 'Experience',
+    boon: 'Boon',
+    note: 'Log Entry',
+};
+
+const rewardTypeStyles: Record<string, string> = {
+    loot: 'border-amber-500/40 bg-amber-500/10 text-amber-200',
+    experience: 'border-indigo-500/40 bg-indigo-500/10 text-indigo-200',
+    boon: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
+    note: 'border-slate-500/40 bg-slate-500/10 text-slate-200',
+};
+
 export default function SessionShow({
     campaign,
     session,
     notes,
     dice_rolls: diceRolls,
     initiative,
+    attendance,
+    recaps,
+    rewards,
     note_visibilities: noteVisibilities,
     permissions,
     ai_dialogues: aiDialogues,
@@ -175,6 +255,7 @@ export default function SessionShow({
     });
     const [npcSubmitting, setNpcSubmitting] = useState(false);
     const [npcError, setNpcError] = useState<string | null>(null);
+    const rewardTypeOptions = Object.entries(rewardTypeLabels);
 
     useEffect(() => {
         setNoteFeed(orderNotes(notes));
@@ -191,6 +272,29 @@ export default function SessionShow({
     useEffect(() => {
         setNpcDialogueLog(aiDialogues);
     }, [aiDialogues]);
+
+    const attendanceForm = useForm({
+        status: attendance.current_user?.status ?? 'yes',
+        note: attendance.current_user?.note ?? '',
+    });
+
+    useEffect(() => {
+        attendanceForm.setData('status', attendance.current_user?.status ?? 'yes');
+        attendanceForm.setData('note', attendance.current_user?.note ?? '');
+    }, [attendance.current_user?.status, attendance.current_user?.note]);
+
+    const recapForm = useForm({
+        title: '',
+        body: '',
+    });
+
+    const rewardForm = useForm({
+        reward_type: 'loot',
+        title: '',
+        quantity: '',
+        awarded_to: '',
+        notes: '',
+    });
 
     const noteForm = useForm({
         content: '',
@@ -285,6 +389,28 @@ export default function SessionShow({
         } finally {
             setNpcSubmitting(false);
         }
+    };
+
+    const handleRewardSubmit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        rewardForm
+            .transform((data) => ({
+                ...data,
+                quantity: data.quantity ? Number(data.quantity) : null,
+                awarded_to: data.awarded_to || null,
+                notes: data.notes || null,
+            }))
+            .post(
+            route('campaigns.sessions.rewards.store', {
+                campaign: campaign.id,
+                session: session.id,
+            }),
+            {
+                preserveScroll: true,
+                onSuccess: () => rewardForm.reset('title', 'quantity', 'awarded_to', 'notes'),
+            },
+        );
     };
 
     useEffect(() => {
@@ -414,6 +540,29 @@ export default function SessionShow({
             });
     };
 
+    const submitAttendance = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        attendanceForm.post(
+            route('campaigns.sessions.attendance.store', { campaign: campaign.id, session: session.id }),
+            { preserveScroll: true },
+        );
+    };
+
+    const submitRecap = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        recapForm.post(
+            route('campaigns.sessions.recaps.store', { campaign: campaign.id, session: session.id }),
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    recapForm.reset();
+                },
+            },
+        );
+    };
+
     const submitRecording = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
@@ -436,6 +585,35 @@ export default function SessionShow({
                     recordingForm.setData('recording', null);
                 },
             },
+        );
+    };
+
+    const handleAttendanceClear = () => {
+        router.delete(
+            route('campaigns.sessions.attendance.destroy', { campaign: campaign.id, session: session.id }),
+            { preserveScroll: true },
+        );
+    };
+
+    const handleRecapDelete = (recapId: number) => {
+        router.delete(
+            route('campaigns.sessions.recaps.destroy', {
+                campaign: campaign.id,
+                session: session.id,
+                recap: recapId,
+            }),
+            { preserveScroll: true },
+        );
+    };
+
+    const handleRewardDelete = (rewardId: number) => {
+        router.delete(
+            route('campaigns.sessions.rewards.destroy', {
+                campaign: campaign.id,
+                session: session.id,
+                reward: rewardId,
+            }),
+            { preserveScroll: true },
         );
     };
 
@@ -709,6 +887,246 @@ export default function SessionShow({
                         <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
                             <header className="mb-4 flex items-center justify-between">
                                 <div>
+                                    <h2 className="text-lg font-semibold text-zinc-100">Rewards & loot ledger</h2>
+                                    <p className="text-xs text-zinc-500">
+                                        Track treasure, boons, and experience shared during the session.
+                                    </p>
+                                </div>
+                            </header>
+
+                            {permissions.can_log_reward ? (
+                                <form onSubmit={handleRewardSubmit} className="space-y-4">
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="reward-type">Type</Label>
+                                            <select
+                                                id="reward-type"
+                                                value={rewardForm.data.reward_type}
+                                                onChange={(event) => rewardForm.setData('reward_type', event.target.value)}
+                                                className="h-9 w-full rounded-md border border-zinc-700 bg-zinc-900/60 px-2 text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                            >
+                                                {rewardTypeOptions.map(([value, label]) => (
+                                                    <option key={value} value={value}>
+                                                        {label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {rewardForm.errors.reward_type && (
+                                                <p className="text-sm text-rose-400">{rewardForm.errors.reward_type}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="reward-title">Title</Label>
+                                            <Input
+                                                id="reward-title"
+                                                value={rewardForm.data.title}
+                                                onChange={(event) => rewardForm.setData('title', event.target.value)}
+                                                placeholder="Jeweled chalice"
+                                                required
+                                            />
+                                            {rewardForm.errors.title && (
+                                                <p className="text-sm text-rose-400">{rewardForm.errors.title}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="reward-quantity">Quantity</Label>
+                                            <Input
+                                                id="reward-quantity"
+                                                type="number"
+                                                min={1}
+                                                value={rewardForm.data.quantity}
+                                                onChange={(event) => rewardForm.setData('quantity', event.target.value)}
+                                                placeholder="1"
+                                            />
+                                            {rewardForm.errors.quantity && (
+                                                <p className="text-sm text-rose-400">{rewardForm.errors.quantity}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="reward-awarded">Awarded to</Label>
+                                            <Input
+                                                id="reward-awarded"
+                                                value={rewardForm.data.awarded_to}
+                                                onChange={(event) => rewardForm.setData('awarded_to', event.target.value)}
+                                                placeholder="Party stash"
+                                            />
+                                            {rewardForm.errors.awarded_to && (
+                                                <p className="text-sm text-rose-400">{rewardForm.errors.awarded_to}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="grid gap-2 md:col-span-2">
+                                            <Label htmlFor="reward-notes">Notes</Label>
+                                            <Textarea
+                                                id="reward-notes"
+                                                rows={3}
+                                                value={rewardForm.data.notes}
+                                                onChange={(event) => rewardForm.setData('notes', event.target.value)}
+                                                placeholder="Identified as feycraft; keep away from cold iron."
+                                            />
+                                            {rewardForm.errors.notes && (
+                                                <p className="text-sm text-rose-400">{rewardForm.errors.notes}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <Button type="submit" size="sm" disabled={rewardForm.processing}>
+                                            {rewardForm.processing ? 'Logging…' : 'Log reward'}
+                                        </Button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <p className="text-sm text-zinc-500">
+                                    Only campaign members may log session rewards.
+                                </p>
+                            )}
+
+                            <div className="mt-6 space-y-4">
+                                {rewards.length === 0 ? (
+                                    <p className="text-sm text-zinc-500">No rewards logged yet. Tally the haul when you do!</p>
+                                ) : (
+                                    rewards.map((reward) => (
+                                        <article
+                                            key={reward.id}
+                                            className="rounded-lg border border-zinc-800/80 bg-zinc-950/80 p-4 text-sm text-zinc-300"
+                                        >
+                                            <header className="flex flex-wrap items-start justify-between gap-3">
+                                                <div className="space-y-1">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <p className="text-base font-semibold text-zinc-100">
+                                                            {reward.title}
+                                                            {reward.quantity ? ` ×${reward.quantity}` : ''}
+                                                        </p>
+                                                        <span
+                                                            className={`rounded-full border px-2 py-0.5 text-xs ${
+                                                                rewardTypeStyles[reward.reward_type] ?? 'border-zinc-600 bg-zinc-800/80 text-zinc-200'
+                                                            }`}
+                                                        >
+                                                            {rewardTypeLabels[reward.reward_type] ?? reward.reward_type}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-zinc-500">
+                                                        Logged by {reward.recorder.name} • {formatDateTime(reward.recorded_at)}
+                                                        {reward.awarded_to ? ` • Awarded to ${reward.awarded_to}` : ''}
+                                                    </p>
+                                                </div>
+                                                {reward.can_delete && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-xs text-rose-300 hover:text-rose-400"
+                                                        onClick={() => handleRewardDelete(reward.id)}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                )}
+                                            </header>
+
+                                            {reward.notes && <p className="mt-3 whitespace-pre-wrap">{reward.notes}</p>}
+                                        </article>
+                                    ))
+                                )}
+                            </div>
+                        </section>
+
+                        <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
+                            <header className="mb-4 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-zinc-100">Session recaps</h2>
+                                    <p className="text-xs text-zinc-500">
+                                        Chronicle the adventure with quick highlights and reflections.
+                                    </p>
+                                </div>
+                            </header>
+
+                            {permissions.can_share_recap ? (
+                                <form onSubmit={submitRecap} className="space-y-4">
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="recap-title">Title (optional)</Label>
+                                            <Input
+                                                id="recap-title"
+                                                value={recapForm.data.title}
+                                                onChange={(event) => recapForm.setData('title', event.target.value)}
+                                                placeholder="Aftermath at the Ember Gate"
+                                            />
+                                            {recapForm.errors.title && (
+                                                <p className="text-sm text-rose-400">{recapForm.errors.title}</p>
+                                            )}
+                                        </div>
+                                        <div className="grid gap-2 md:col-span-2">
+                                            <Label htmlFor="recap-body">Recap</Label>
+                                            <Textarea
+                                                id="recap-body"
+                                                rows={4}
+                                                value={recapForm.data.body}
+                                                onChange={(event) => recapForm.setData('body', event.target.value)}
+                                                placeholder="Summarize the big beats, clutch rolls, or cliffhanger."
+                                                required
+                                            />
+                                            {recapForm.errors.body && (
+                                                <p className="text-sm text-rose-400">{recapForm.errors.body}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <Button type="submit" size="sm" disabled={recapForm.processing}>
+                                            {recapForm.processing ? 'Sharing…' : 'Share recap'}
+                                        </Button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <p className="text-sm text-zinc-500">
+                                    Only campaign members may add recaps for this session.
+                                </p>
+                            )}
+
+                            <div className="mt-6 space-y-4">
+                                {recaps.length === 0 ? (
+                                    <p className="text-sm text-zinc-500">No recaps yet. Capture the tale while it’s fresh!</p>
+                                ) : (
+                                    recaps.map((recap) => (
+                                        <article
+                                            key={recap.id}
+                                            className="rounded-lg border border-zinc-800/80 bg-zinc-950/80 p-4 text-sm text-zinc-300"
+                                        >
+                                            <header className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p className="text-base font-semibold text-zinc-100">
+                                                        {recap.title ?? `${recap.author.name}'s recap`}
+                                                    </p>
+                                                    <p className="text-xs text-zinc-500">
+                                                        {recap.author.name} • {formatDateTime(recap.created_at)}
+                                                    </p>
+                                                </div>
+                                                {recap.can_delete && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-xs text-rose-300 hover:text-rose-400"
+                                                        onClick={() => handleRecapDelete(recap.id)}
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                )}
+                                            </header>
+                                            <p className="mt-3 whitespace-pre-wrap">{recap.body}</p>
+                                        </article>
+                                    ))
+                                )}
+                            </div>
+                        </section>
+
+                        <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
+                            <header className="mb-4 flex items-center justify-between">
+                                <div>
                                     <h2 className="text-lg font-semibold text-zinc-100">Notes</h2>
                                     <p className="text-xs text-zinc-500">Capture discoveries, NPC quotes, and tactical plans.</p>
                                 </div>
@@ -873,6 +1291,133 @@ export default function SessionShow({
                                         </div>
                                     ))
                                 )}
+                            </div>
+                        </section>
+
+                        <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
+                            <header className="mb-4 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-zinc-100">Attendance roster</h2>
+                                    <p className="text-xs text-zinc-500">Signal your plans so the table can prepare.</p>
+                                </div>
+                            </header>
+
+                            {permissions.can_rsvp ? (
+                                <form onSubmit={submitAttendance} className="space-y-4">
+                                    <div className="grid gap-2 sm:grid-cols-3">
+                                        {attendanceOptions.map((option) => {
+                                            const isActive = attendanceForm.data.status === option.value;
+
+                                            return (
+                                                <Button
+                                                    key={option.value}
+                                                    type="button"
+                                                    size="sm"
+                                                    variant={isActive ? 'default' : 'outline'}
+                                                    className={`flex flex-col items-start gap-1 border-zinc-700 text-left transition ${
+                                                        isActive
+                                                            ? 'border-amber-500/60 bg-amber-500/20 text-amber-100'
+                                                            : 'text-zinc-200 hover:text-amber-200'
+                                                    }`}
+                                                    disabled={attendanceForm.processing}
+                                                    onClick={() => {
+                                                        attendanceForm.setData('status', option.value);
+                                                        attendanceForm.clearErrors('status');
+                                                    }}
+                                                >
+                                                    <span className="font-semibold">{option.label}</span>
+                                                    <span className="text-xs text-zinc-400">{option.description}</span>
+                                                </Button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {attendanceForm.errors.status && (
+                                        <p className="text-sm text-rose-400">{attendanceForm.errors.status}</p>
+                                    )}
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="attendance-note">Optional note</Label>
+                                        <Textarea
+                                            id="attendance-note"
+                                            rows={2}
+                                            value={attendanceForm.data.note}
+                                            onChange={(event) => attendanceForm.setData('note', event.target.value)}
+                                            placeholder="Share arrival plans, remote dial-in details, or requests."
+                                        />
+                                        {attendanceForm.errors.note && (
+                                            <p className="text-sm text-rose-400">{attendanceForm.errors.note}</p>
+                                        )}
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <Button type="submit" size="sm" disabled={attendanceForm.processing}>
+                                            {attendanceForm.processing ? 'Saving…' : 'Save RSVP'}
+                                        </Button>
+                                        {attendance.current_user && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-xs text-zinc-300 hover:text-amber-200"
+                                                onClick={handleAttendanceClear}
+                                                disabled={attendanceForm.processing}
+                                            >
+                                                Clear response
+                                            </Button>
+                                        )}
+                                    </div>
+                                </form>
+                            ) : (
+                                <p className="text-sm text-zinc-500">
+                                    Only campaign members may RSVP to this session.
+                                </p>
+                            )}
+
+                            <div className="mt-6 space-y-4">
+                                <div>
+                                    <h3 className="text-xs uppercase tracking-wide text-zinc-500">Party status</h3>
+                                    <ul className="mt-2 space-y-1 text-sm text-zinc-300">
+                                        {attendanceStatusOrder.map((status) => (
+                                            <li
+                                                key={status}
+                                                className="flex items-center justify-between rounded-md border border-zinc-800/70 bg-zinc-950/70 px-3 py-2"
+                                            >
+                                                <span>{attendanceStatusLabels[status]}</span>
+                                                <span className="font-semibold text-zinc-100">{attendance.counts[status]}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-xs uppercase tracking-wide text-zinc-500">Responses</h3>
+                                    <div className="mt-2 space-y-3 text-sm">
+                                        {attendance.responses.length === 0 ? (
+                                            <p className="text-zinc-500">No RSVPs yet. Share your plans!</p>
+                                        ) : (
+                                            attendance.responses.map((response) => (
+                                                <div
+                                                    key={response.id}
+                                                    className={`rounded-lg border px-3 py-2 ${attendanceStatusStyles[response.status]}`}
+                                                >
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                                        <span className="font-medium">{response.user.name}</span>
+                                                        <span className="text-xs uppercase tracking-wide text-zinc-200">
+                                                            {attendanceStatusLabels[response.status]}
+                                                        </span>
+                                                    </div>
+                                                    {response.note && (
+                                                        <p className="mt-1 text-xs text-zinc-200">{response.note}</p>
+                                                    )}
+                                                    <p className="mt-1 text-[11px] text-zinc-400">
+                                                        {formatDateTime(response.responded_at)}
+                                                    </p>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </section>
                     </div>

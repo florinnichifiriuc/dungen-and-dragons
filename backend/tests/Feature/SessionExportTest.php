@@ -5,6 +5,8 @@ use App\Models\CampaignSession;
 use App\Models\Group;
 use App\Models\GroupMembership;
 use App\Models\SessionNote;
+use App\Models\SessionRecap;
+use App\Models\SessionReward;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -130,4 +132,107 @@ it('allows managers to upload and remove stored recordings while blocking player
     $session->refresh();
     expect($session->recording_path)->toBeNull();
     Storage::disk('public')->assertMissing($storedPath);
+});
+
+it('includes session recaps in markdown exports for all viewers', function () {
+    [$manager, $campaign, $group, $session] = seedCampaignSession();
+
+    $player = User::factory()->create();
+
+    GroupMembership::create([
+        'group_id' => $group->id,
+        'user_id' => $player->id,
+        'role' => GroupMembership::ROLE_PLAYER,
+    ]);
+
+    SessionRecap::create([
+        'campaign_id' => $campaign->id,
+        'campaign_session_id' => $session->id,
+        'author_id' => $manager->id,
+        'title' => 'GM Chronicle',
+        'body' => 'The party sealed the breach with starlight wards.',
+    ]);
+
+    SessionRecap::create([
+        'campaign_id' => $campaign->id,
+        'campaign_session_id' => $session->id,
+        'author_id' => $player->id,
+        'title' => 'Player Notes',
+        'body' => 'We owe the artificer three favors after tonight.',
+    ]);
+
+    $managerExport = $this->actingAs($manager)->get(route('campaigns.sessions.exports.markdown', [
+        'campaign' => $campaign,
+        'session' => $session,
+    ]));
+
+    $managerExport->assertOk();
+    expect($managerExport->getContent())
+        ->toContain('GM Chronicle')
+        ->toContain('Player Notes')
+        ->toContain('starlight wards')
+        ->toContain('owe the artificer');
+
+    $playerExport = $this->actingAs($player)->get(route('campaigns.sessions.exports.markdown', [
+        'campaign' => $campaign,
+        'session' => $session,
+    ]));
+
+    $playerExport->assertOk();
+    expect($playerExport->getContent())
+        ->toContain('GM Chronicle')
+        ->toContain('Player Notes');
+});
+
+it('renders reward ledger entries in markdown exports for all viewers', function () {
+    [$manager, $campaign, $group, $session] = seedCampaignSession();
+
+    $player = User::factory()->create();
+
+    GroupMembership::create([
+        'group_id' => $group->id,
+        'user_id' => $player->id,
+        'role' => GroupMembership::ROLE_PLAYER,
+    ]);
+
+    SessionReward::create([
+        'campaign_id' => $campaign->id,
+        'campaign_session_id' => $session->id,
+        'recorded_by' => $manager->id,
+        'reward_type' => SessionReward::TYPE_LOOT,
+        'title' => 'Moonstone circlet',
+        'quantity' => 1,
+        'awarded_to' => 'Lyra',
+        'notes' => 'Glows in moonlight.',
+    ]);
+
+    SessionReward::create([
+        'campaign_id' => $campaign->id,
+        'campaign_session_id' => $session->id,
+        'recorded_by' => $player->id,
+        'reward_type' => SessionReward::TYPE_XP,
+        'title' => 'Combat training',
+        'quantity' => 250,
+    ]);
+
+    $managerExport = $this->actingAs($manager)->get(route('campaigns.sessions.exports.markdown', [
+        'campaign' => $campaign,
+        'session' => $session,
+    ]));
+
+    $managerExport->assertOk();
+    expect($managerExport->getContent())
+        ->toContain('Moonstone circlet')
+        ->toContain('Lyra')
+        ->toContain('Combat training');
+
+    $playerExport = $this->actingAs($player)->get(route('campaigns.sessions.exports.markdown', [
+        'campaign' => $campaign,
+        'session' => $session,
+    ]));
+
+    $playerExport->assertOk();
+    expect($playerExport->getContent())
+        ->toContain('Moonstone circlet')
+        ->toContain('Combat training');
 });
