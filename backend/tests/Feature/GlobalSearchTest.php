@@ -2,6 +2,7 @@
 
 use App\Models\Campaign;
 use App\Models\CampaignSession;
+use App\Models\CampaignQuest;
 use App\Models\CampaignTask;
 use App\Models\Group;
 use App\Models\GroupMembership;
@@ -55,6 +56,15 @@ it('returns accessible records that match the query', function () {
             'description' => 'Seal the rift before nightfall.',
         ]);
 
+    $quest = CampaignQuest::factory()
+        ->for($campaign)
+        ->create([
+            'title' => 'Shadow Sigil Hunt',
+            'summary' => 'Track down the sigils empowering the shadow tide.',
+            'status' => CampaignQuest::STATUS_ACTIVE,
+            'priority' => CampaignQuest::PRIORITY_HIGH,
+        ]);
+
     // Foreign data that should not appear
     Campaign::factory()->create(['title' => 'Sunrise Covenant']);
 
@@ -71,6 +81,9 @@ it('returns accessible records that match the query', function () {
 
     expect($results['tasks'])->toHaveCount(1)
         ->and($results['tasks'][0]['id'])->toBe($task->id);
+
+    expect($results['quests'])->toHaveCount(1)
+        ->and($results['quests'][0]['id'])->toBe($quest->id);
 });
 
 it('hides gm-only notes from non-managers', function () {

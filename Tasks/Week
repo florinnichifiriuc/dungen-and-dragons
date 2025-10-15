@@ -1,25 +1,24 @@
-# Task 9 – Modular Tile Maps
+# Task 23 – Session Rewards & Loot Ledger
 
-**Status:** In Progress
+**Status:** Completed
 **Owner:** Engineering
-**Dependencies:** Task 3, Task 7, Task 8
-**Related Backlog Items:** Implement modular tile map system (tile templates, axial coordinates, map tile CRUD)
+**Dependencies:** Task 6, Task 22
 
 ## Intent
-Introduce a reusable tile library and hex map editor so dungeon masters can sketch regions with reusable terrain pieces. Tile templates should capture terrain and movement metadata, while map tiles pin those templates to axial coordinates on group maps. The initial editor can be form-based but must respect orientation rules and guard against duplicate placements.
+Equip the session workspace with a shared ledger so parties can log treasure, experience awards, and narrative boons the moment they drop. The ledger should stay alongside attendance, notes, and recaps while feeding exports for future reference.
 
 ## Subtasks
-- [ ] Add database structures and models for maps, tile templates, and map tiles with axial coordinates.
-- [ ] Implement policies and controllers for managing tile templates and region maps under group authorization.
-- [ ] Provide Inertia forms to create/edit tile templates and maps plus a basic map inspector for tile CRUD.
-- [ ] Cover happy-path and edge cases with Pest feature tests (placement uniqueness, template authorization, lock guards).
-- [ ] Update planning docs and progress logs once complete.
+- [x] Create reward persistence, validation, and policies for campaign members.
+- [x] Add reward logging/removal endpoints and Inertia routes.
+- [x] Layer a reward form and ledger timeline into the session workspace UI.
+- [x] Update session exports (Markdown + PDF) to include the reward ledger.
+- [x] Cover reward logging/moderation/export flows with Pest specs and refresh documentation.
 
 ## Notes
-- Default maps should use hex grids; allow switching between pointy/flat orientations to future-proof editors.
-- Prevent deleting templates that are still referenced by map tiles so existing boards stay intact.
-- Axial coordinates must remain unique per map to avoid stacking conflicts; validate before insert.
-- Locked tiles should only be editable by group owners to preserve finalized layouts.
+- Any campaign member with session access can log a reward; GMs retain moderation rights.
+- Type badges (loot, experience, boon, note) help distinguish reward categories at a glance.
+- Optional quantity, recipient, and notes fields keep party distribution transparent.
 
 ## Log
-- 2025-10-16 09:15 UTC – Kickoff. Reviewed README map specification and outlined schema plus controller surfaces for initial implementation.
+- 2025-10-24 15:10 UTC – Scoped reward ledger UX, moderation rules, and export touchpoints.
+- 2025-10-24 17:55 UTC – Implemented ledger persistence, UI, exports, tests, and doc updates.

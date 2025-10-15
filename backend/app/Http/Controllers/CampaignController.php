@@ -6,6 +6,7 @@ use App\Http\Requests\CampaignStoreRequest;
 use App\Http\Requests\CampaignUpdateRequest;
 use App\Models\Campaign;
 use App\Models\CampaignRoleAssignment;
+use App\Models\CampaignQuest;
 use App\Models\CampaignEntity;
 use App\Models\Group;
 use App\Models\GroupMembership;
@@ -14,6 +15,7 @@ use App\Models\User;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -159,7 +161,7 @@ class CampaignController extends Controller
             ->with('success', 'Campaign created.');
     }
 
-    public function show(Campaign $campaign): Response
+    public function show(Request $request, Campaign $campaign): Response
     {
         $this->authorize('view', $campaign);
 
@@ -181,6 +183,23 @@ class CampaignController extends Controller
                 'entity_type' => $entity->entity_type,
             ])
             ->values();
+
+        $questCount = $campaign->quests()->whereNull('archived_at')->count();
+        $spotlightQuests = $campaign->quests()
+            ->whereNull('archived_at')
+            ->orderByRaw("CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'standard' THEN 2 ELSE 3 END")
+            ->orderByDesc('updated_at')
+            ->take(3)
+            ->get(['id', 'title', 'status', 'priority'])
+            ->map(fn (CampaignQuest $quest) => [
+                'id' => $quest->id,
+                'title' => $quest->title,
+                'status' => $quest->status,
+                'priority' => $quest->priority,
+            ])
+            ->values();
+
+        $canManage = $request->user()?->can('update', $campaign) ?? false;
 
         $members = $campaign->group->memberships->map(fn (GroupMembership $membership) => [
             'id' => $membership->user->id,
@@ -213,16 +232,21 @@ class CampaignController extends Controller
             ];
         })->values();
 
-        $invitations = $campaign->invitations->map(fn ($invitation) => [
-            'id' => $invitation->id,
-            'role' => $invitation->role,
-            'email' => $invitation->email,
-            'group' => $invitation->group ? [
-                'id' => $invitation->group->id,
-                'name' => $invitation->group->name,
-            ] : null,
-            'expires_at' => optional($invitation->expires_at)->toAtomString(),
-        ])->values();
+        $invitations = $campaign->invitations
+            ->filter(fn ($invitation) => $invitation->accepted_at === null)
+            ->map(fn ($invitation) use ($canManage) => [
+                'id' => $invitation->id,
+                'role' => $invitation->role,
+                'email' => $invitation->email,
+                'group' => $invitation->group ? [
+                    'id' => $invitation->group->id,
+                    'name' => $invitation->group->name,
+                ] : null,
+                'expires_at' => optional($invitation->expires_at)->toAtomString(),
+                'accept_url' => $canManage
+                    ? route('campaigns.invitations.accept.show', ['invitation' => $invitation->token])
+                    : null,
+            ])->values();
 
         return Inertia::render('Campaigns/Show', [
             'campaign' => [
@@ -247,6 +271,9 @@ class CampaignController extends Controller
                 'invitations' => $invitations,
                 'entities_count' => $entityCount,
                 'recent_entities' => $recentEntities,
+                'quests_count' => $questCount,
+                'spotlight_quests' => $spotlightQuests,
+                'can_manage' => $canManage,
             ],
             'available_roles' => CampaignRoleAssignment::roles(),
             'available_statuses' => Campaign::statuses(),

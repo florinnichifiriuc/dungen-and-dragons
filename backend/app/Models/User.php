@@ -114,4 +114,14 @@ class User extends Authenticatable
     {
         return $this->morphMany(CampaignRoleAssignment::class, 'assignee');
     }
+
+    public function sessionAttendances(): HasMany
+    {
+        return $this->hasMany(SessionAttendance::class);
+    }
+
+    public function sessionRecaps(): HasMany
+    {
+        return $this->hasMany(SessionRecap::class, 'author_id');
+    }
 }

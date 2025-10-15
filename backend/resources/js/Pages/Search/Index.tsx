@@ -43,6 +43,14 @@ type TaskResult = {
     campaign: { id: number; title: string };
 };
 
+type QuestResult = {
+    id: number;
+    title: string;
+    status: string;
+    priority: string;
+    campaign: { id: number; title: string };
+};
+
 type SearchPageProps = {
     query: string;
     active_scopes: string[];
@@ -52,6 +60,7 @@ type SearchPageProps = {
         sessions: SessionResult[];
         notes: NoteResult[];
         tasks: TaskResult[];
+        quests: QuestResult[];
     };
 };
 
@@ -60,6 +69,21 @@ const scopeLabels: Record<string, string> = {
     sessions: 'Sessions',
     notes: 'Session notes',
     tasks: 'Tasks',
+    quests: 'Quests',
+};
+
+const questStatusLabels: Record<string, string> = {
+    planned: 'Planned',
+    active: 'Active',
+    completed: 'Completed',
+    failed: 'Failed',
+};
+
+const questPriorityLabels: Record<string, string> = {
+    critical: 'Critical',
+    high: 'High',
+    standard: 'Standard',
+    low: 'Low',
 };
 
 function formatDateTime(value: string | null): string {
@@ -302,6 +326,40 @@ export default function SearchIndex() {
                                                             View in context
                                                         </Link>
                                                     </Button>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    </section>
+                                );
+                            }
+
+                            if (scope === 'quests') {
+                                return (
+                                    <section key={scope} className="space-y-4">
+                                        <h2 className="text-lg font-semibold text-zinc-200">Quests</h2>
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            {(scopeResults as QuestResult[]).map((quest) => (
+                                                <article
+                                                    key={quest.id}
+                                                    className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-5 shadow-inner shadow-black/40"
+                                                >
+                                                    <div className="flex items-start justify-between gap-4">
+                                                        <div>
+                                                            <h3 className="text-xl font-semibold text-zinc-100">{quest.title}</h3>
+                                                            <p className="text-sm text-zinc-400">
+                                                                Status: {questStatusLabels[quest.status] ?? quest.status}
+                                                            </p>
+                                                            <p className="text-xs text-zinc-500">
+                                                                Priority: {questPriorityLabels[quest.priority] ?? quest.priority}
+                                                            </p>
+                                                            <p className="mt-2 text-xs uppercase tracking-wide text-zinc-500">
+                                                                Campaign: {quest.campaign.title}
+                                                            </p>
+                                                        </div>
+                                                        <Button asChild variant="outline" className="border-sky-500/40 text-xs text-sky-200 hover:bg-sky-500/10">
+                                                            <Link href={route('campaigns.quests.show', [quest.campaign.id, quest.id])}>Open</Link>
+                                                        </Button>
+                                                    </div>
                                                 </article>
                                             ))}
                                         </div>

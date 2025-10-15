@@ -75,6 +75,21 @@ class CampaignSession extends Model
         return $this->morphMany(AiRequest::class, 'context');
     }
 
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(SessionAttendance::class, 'campaign_session_id');
+    }
+
+    public function recaps(): HasMany
+    {
+        return $this->hasMany(SessionRecap::class, 'campaign_session_id');
+    }
+
+    public function rewards(): HasMany
+    {
+        return $this->hasMany(SessionReward::class, 'campaign_session_id');
+    }
+
     public function hasStoredRecording(): bool
     {
         return filled($this->recording_disk) && filled($this->recording_path);

@@ -32,4 +32,19 @@ class SessionPolicy
     {
         return $this->view($user, $session);
     }
+
+    public function respond(User $user, CampaignSession $session): bool
+    {
+        return $this->view($user, $session);
+    }
+
+    public function recap(User $user, CampaignSession $session): bool
+    {
+        return $this->view($user, $session);
+    }
+
+    public function reward(User $user, CampaignSession $session): bool
+    {
+        return $this->view($user, $session);
+    }
 }

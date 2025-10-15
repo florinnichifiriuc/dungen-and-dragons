@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Campaign;
 use App\Models\CampaignRoleAssignment;
+use App\Models\CampaignQuest;
 use App\Models\CampaignSession;
 use App\Models\CampaignTask;
 use App\Models\Group;
@@ -18,7 +19,7 @@ class GlobalSearchService
     /**
      * @var array<int, string>
      */
-    public const SCOPES = ['campaigns', 'sessions', 'notes', 'tasks'];
+    public const SCOPES = ['campaigns', 'sessions', 'notes', 'tasks', 'quests'];
 
     /**
      * @return array<int, string>
@@ -52,6 +53,7 @@ class GlobalSearchService
             'sessions' => [],
             'notes' => [],
             'tasks' => [],
+            'quests' => [],
         ];
 
         if ($term === '') {
@@ -222,6 +224,34 @@ class GlobalSearchService
                     'campaign' => [
                         'id' => $task->campaign->id,
                         'title' => $task->campaign->title,
+                    ],
+                ])
+                ->values()
+                ->all();
+        }
+
+        if (in_array('quests', $scopes, true)) {
+            $results['quests'] = CampaignQuest::query()
+                ->with('campaign:id,title')
+                ->whereNull('archived_at')
+                ->whereHas('campaign', $campaignVisibility)
+                ->where(function (Builder $query) use ($like): void {
+                    $query->where('title', 'like', $like)
+                        ->orWhere('summary', 'like', $like)
+                        ->orWhere('details', 'like', $like);
+                })
+                ->orderByRaw("CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'standard' THEN 2 ELSE 3 END")
+                ->orderByDesc('updated_at')
+                ->limit(10)
+                ->get()
+                ->map(fn (CampaignQuest $quest) => [
+                    'id' => $quest->id,
+                    'title' => $quest->title,
+                    'status' => $quest->status,
+                    'priority' => $quest->priority,
+                    'campaign' => [
+                        'id' => $quest->campaign->id,
+                        'title' => $quest->campaign->title,
                     ],
                 ])
                 ->values()

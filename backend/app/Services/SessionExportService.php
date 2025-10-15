@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\AiRequest;
 use App\Models\CampaignSession;
 use App\Models\SessionNote;
+use App\Models\SessionAttendance;
+use App\Models\SessionReward;
 use App\Models\User;
 use App\Policies\CampaignPolicy;
 use Illuminate\Support\Carbon;
@@ -27,6 +29,9 @@ class SessionExportService
             'notes.author:id,name',
             'diceRolls.roller:id,name',
             'initiativeEntries',
+            'attendances.user:id,name',
+            'recaps.author:id,name',
+            'rewards.recorder:id,name',
             'aiRequests' => fn ($query) => $query
                 ->where('request_type', 'npc_dialogue')
                 ->latest()
@@ -94,6 +99,57 @@ class SessionExportService
                 'created_at' => $request->created_at?->clone()->setTimezone('UTC'),
             ]);
 
+        $attendanceResponses = $session->attendances
+            ->sortByDesc(fn (SessionAttendance $attendance) => $attendance->responded_at ?? $attendance->updated_at ?? $attendance->created_at)
+            ->values()
+            ->map(fn (SessionAttendance $attendance) => [
+                'id' => $attendance->id,
+                'status' => $attendance->status,
+                'note' => $attendance->note,
+                'responded_at' => $attendance->responded_at?->clone()->setTimezone('UTC'),
+                'user' => [
+                    'id' => $attendance->user->id,
+                    'name' => $attendance->user->name,
+                ],
+            ]);
+
+        $attendanceCounts = [
+            'yes' => $session->attendances->where('status', SessionAttendance::STATUS_YES)->count(),
+            'maybe' => $session->attendances->where('status', SessionAttendance::STATUS_MAYBE)->count(),
+            'no' => $session->attendances->where('status', SessionAttendance::STATUS_NO)->count(),
+        ];
+
+        $recaps = $session->recaps
+            ->sortByDesc('created_at')
+            ->values()
+            ->map(fn ($recap) => [
+                'id' => $recap->id,
+                'title' => $recap->title,
+                'body' => $recap->body,
+                'author' => [
+                    'id' => $recap->author->id,
+                    'name' => $recap->author->name,
+                ],
+                'created_at' => $recap->created_at?->clone()->setTimezone('UTC'),
+            ]);
+
+        $rewards = $session->rewards
+            ->sortByDesc('created_at')
+            ->values()
+            ->map(fn (SessionReward $reward) => [
+                'id' => $reward->id,
+                'reward_type' => $reward->reward_type,
+                'title' => $reward->title,
+                'quantity' => $reward->quantity,
+                'awarded_to' => $reward->awarded_to,
+                'notes' => $reward->notes,
+                'recorded_at' => $reward->created_at?->clone()->setTimezone('UTC'),
+                'recorder' => [
+                    'id' => $reward->recorder->id,
+                    'name' => $reward->recorder->name,
+                ],
+            ]);
+
         $storedRecordingUrl = null;
         $storedRecordingName = null;
 
@@ -141,6 +197,12 @@ class SessionExportService
             'dice_rolls' => $diceRolls,
             'initiative' => $initiative,
             'ai_dialogues' => $aiDialogues,
+            'attendance' => [
+                'responses' => $attendanceResponses,
+                'counts' => $attendanceCounts,
+            ],
+            'recaps' => $recaps,
+            'rewards' => $rewards,
         ];
     }
 
@@ -195,6 +257,81 @@ class SessionExportService
             $lines[] = '## Summary';
             $lines[] = $session['summary'];
             $lines[] = '';
+        }
+
+        if (count($data['rewards']) > 0) {
+            $lines[] = '## Rewards & Loot Ledger';
+
+            foreach ($data['rewards'] as $reward) {
+                $timestamp = $reward['recorded_at'] instanceof Carbon
+                    ? $reward['recorded_at']->format('Y-m-d H:i \U\T\C')
+                    : 'Unknown time';
+                $typeLabel = Str::headline($reward['reward_type']);
+                $quantity = $reward['quantity'] ? ' x' . $reward['quantity'] : '';
+                $recipient = filled($reward['awarded_to']) ? ' → ' . $reward['awarded_to'] : '';
+
+                $lines[] = sprintf(
+                    '- %s%s%s — %s (%s by %s)',
+                    $reward['title'],
+                    $quantity,
+                    $recipient,
+                    $typeLabel,
+                    $timestamp,
+                    $reward['recorder']['name'],
+                );
+
+                if (filled($reward['notes'])) {
+                    $lines[] = '  - Notes: ' . $reward['notes'];
+                }
+            }
+
+            $lines[] = '';
+        }
+
+        if (count($data['attendance']['responses']) > 0) {
+            $lines[] = '## Attendance';
+            $lines[] = sprintf('- Joining: %d', $data['attendance']['counts']['yes']);
+            $lines[] = sprintf('- Tentative: %d', $data['attendance']['counts']['maybe']);
+            $lines[] = sprintf('- Unavailable: %d', $data['attendance']['counts']['no']);
+            $lines[] = '';
+            $lines[] = '### Responses';
+
+            foreach ($data['attendance']['responses'] as $response) {
+                $timestamp = $response['responded_at'] instanceof Carbon
+                    ? $response['responded_at']->format('Y-m-d H:i \U\T\C')
+                    : 'Unknown time';
+
+                $note = filled($response['note']) ? ' – ' . $response['note'] : '';
+
+                $lines[] = sprintf(
+                    '- %s: %s%s (%s)',
+                    $response['user']['name'],
+                    match ($response['status']) {
+                        SessionAttendance::STATUS_YES => 'Joining',
+                        SessionAttendance::STATUS_MAYBE => 'Tentative',
+                        SessionAttendance::STATUS_NO => 'Unavailable',
+                        default => ucfirst($response['status']),
+                    },
+                    $note,
+                    $timestamp,
+                );
+            }
+
+            $lines[] = '';
+        }
+
+        if (count($data['recaps']) > 0) {
+            $lines[] = '## Session Recaps';
+            foreach ($data['recaps'] as $recap) {
+                $timestamp = $recap['created_at'] instanceof Carbon
+                    ? $recap['created_at']->format('Y-m-d H:i \U\T\C')
+                    : 'Unknown time';
+                $title = $recap['title'] ?? null;
+                $heading = $title ? $title : 'Recap';
+                $lines[] = sprintf('### %s — %s (%s)', $heading, $recap['author']['name'], $timestamp);
+                $lines[] = $recap['body'];
+                $lines[] = '';
+            }
         }
 
         if (count($data['notes']) > 0) {
