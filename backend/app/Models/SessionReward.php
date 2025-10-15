@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SessionReward extends Model
 {
     use HasFactory;
+    use HasUuids;
+
+    /**
+     * @var string
+     */
+    protected $keyType = 'string';
+
+    /**
+     * @var bool
+     */
+    public $incrementing = false;
 
     public const TYPE_LOOT = 'loot';
     public const TYPE_XP = 'experience';

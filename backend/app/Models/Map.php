@@ -48,4 +48,9 @@ class Map extends Model
     {
         return $this->hasMany(MapTile::class);
     }
+
+    public function tokens(): HasMany
+    {
+        return $this->hasMany(MapToken::class);
+    }
 }

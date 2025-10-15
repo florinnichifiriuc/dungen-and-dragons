@@ -20,6 +20,7 @@ use App\Http\Controllers\RegionAiDelegationController;
 use App\Http\Controllers\RegionTurnController;
 use App\Http\Controllers\MapController;
 use App\Http\Controllers\MapTileController;
+use App\Http\Controllers\MapTokenController;
 use App\Http\Controllers\TileTemplateController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\SessionNoteController;
@@ -64,7 +65,11 @@ Route::middleware('auth')->group(function (): void {
     Route::resource('groups.maps', MapController::class)
         ->except(['index'])
         ->scoped();
+    Route::put('groups/{group}/maps/{map}/fog', [MapController::class, 'updateFog'])->name('groups.maps.fog.update');
     Route::resource('groups.maps.tiles', MapTileController::class)
+        ->only(['store', 'update', 'destroy'])
+        ->scoped();
+    Route::resource('groups.maps.tokens', MapTokenController::class)
         ->only(['store', 'update', 'destroy'])
         ->scoped();
     Route::get('groups/{group}/regions/{region}/turns/create', [RegionTurnController::class, 'create'])->name('groups.regions.turns.create');

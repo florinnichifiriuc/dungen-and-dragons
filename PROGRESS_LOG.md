@@ -29,5 +29,11 @@
 | 2025-10-23 19:05 | Session Attendance | Added RSVP roster with policies, session workspace UI, export integration, and automated tests so parties can coordinate participation. |
 | 2025-10-24 12:05 | Session Recaps | Introduced recap journal persistence, workspace composer, export support, and tests so parties can chronicle each gathering. |
 | 2025-10-24 17:55 | Session Rewards Ledger | Added reward ledger persistence, workspace logging UI, export coverage, and tests so treasure, boons, and XP stay organized. |
+| 2025-10-25 11:05 | Map Fog of War Controls | Delivered per-tile fog persistence, Inertia payload updates, GM toggle UI, reveal-all action, and Pest coverage for validation and permissions. |
+| 2025-10-25 17:30 | Map Tokens & Encounter Setup | Added map token persistence, workspace controls, realtime broadcasts, and feature coverage so encounters stay synced across facilitators. |
+| 2025-10-26 09:20 | Token Initiative Tracking | Layered initiative values and status effect notes onto map tokens with UI controls, broadcasts, and feature coverage for encounter pacing. |
+| 2025-10-26 13:55 | Token Layer Priority Controls | Added z-index layering to map tokens with GM-facing inputs, realtime badges, and coverage so overlapping minis stack predictably. |
+| 2025-10-26 17:45 | Token Factions & Filters | Introduced faction metadata, GM filters, and badge styling so parties can spotlight allies, threats, neutrals, and hazards at a glance. |
+| 2025-10-26 20:10 | Token Vitality Tracking | Added hit point, max, and temporary health fields to tokens with realtime badges so facilitators can monitor combat pacing in place. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.
