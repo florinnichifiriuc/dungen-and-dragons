@@ -20,8 +20,9 @@ class RegionUpdateRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'summary' => ['nullable', 'string', 'max:512'],
             'description' => ['nullable', 'string'],
+            'world_id' => ['required', 'integer', 'exists:worlds,id'],
             'dungeon_master_id' => ['nullable', 'integer', 'exists:users,id'],
-            'turn_duration_hours' => ['required', 'integer', 'in:6,24'],
+            'turn_duration_hours' => ['required', 'integer', 'between:1,168'],
             'next_turn_at' => ['nullable', 'date'],
         ];
     }

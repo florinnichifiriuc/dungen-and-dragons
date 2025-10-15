@@ -5,6 +5,7 @@ use App\Models\CampaignRoleAssignment;
 use App\Models\Group;
 use App\Models\GroupMembership;
 use App\Models\Region;
+use App\Models\World;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -19,7 +20,8 @@ it('allows group managers to create campaigns', function () {
         'role' => GroupMembership::ROLE_OWNER,
     ]);
 
-    $region = Region::factory()->for($group)->create();
+    $world = World::factory()->for($group)->create();
+    $region = Region::factory()->for($group)->for($world)->create();
 
     $response = $this->actingAs($user)->post(route('campaigns.store'), [
         'group_id' => $group->id,
