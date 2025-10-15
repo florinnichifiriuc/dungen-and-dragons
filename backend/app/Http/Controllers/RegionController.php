@@ -7,6 +7,7 @@ use App\Http\Requests\RegionUpdateRequest;
 use App\Models\Group;
 use App\Models\GroupMembership;
 use App\Models\Region;
+use App\Models\World;
 use App\Services\TurnScheduler;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -16,14 +17,36 @@ use Inertia\Response;
 
 class RegionController extends Controller
 {
-    public function create(Group $group): Response
+    public function create(Group $group): Response|RedirectResponse
     {
         $this->authorize('create', [Region::class, $group]);
+
+        $worlds = $group->worlds()
+            ->orderBy('name')
+            ->get(['id', 'name', 'default_turn_duration_hours']);
+
+        if ($worlds->isEmpty()) {
+            return redirect()
+                ->route('groups.worlds.create', $group)
+                ->with('error', 'Create a world before assigning regions.');
+        }
+
+        $selectedWorldId = request()->integer('world_id');
+        $selectedWorld = $worlds->firstWhere('id', $selectedWorldId) ?? $worlds->first();
 
         return Inertia::render('Regions/Create', [
             'group' => [
                 'id' => $group->id,
                 'name' => $group->name,
+            ],
+            'worlds' => $worlds->map(fn ($world) => [
+                'id' => $world->id,
+                'name' => $world->name,
+                'default_turn_duration_hours' => $world->default_turn_duration_hours,
+            ])->values(),
+            'defaults' => [
+                'world_id' => $selectedWorld?->id,
+                'turn_duration_hours' => $selectedWorld?->default_turn_duration_hours ?? 24,
             ],
             'dungeonMasters' => $this->eligibleDungeonMasters($group),
         ]);
@@ -36,13 +59,17 @@ class RegionController extends Controller
         $validated = $request->validated();
         $dungeonMasterId = $validated['dungeon_master_id'] ?? null;
 
+        /** @var World $world */
+        $world = $group->worlds()->findOrFail($validated['world_id']);
+
         if ($dungeonMasterId !== null) {
             $this->assertDungeonMaster($group, $dungeonMasterId);
         }
 
-        DB::transaction(function () use ($group, $validated, $dungeonMasterId, $scheduler): void {
+        DB::transaction(function () use ($group, $world, $validated, $dungeonMasterId, $scheduler): void {
             /** @var Region $region */
             $region = $group->regions()->create([
+                'world_id' => $world->id,
                 'name' => $validated['name'],
                 'summary' => $validated['summary'] ?? null,
                 'description' => $validated['description'] ?? null,
@@ -74,6 +101,10 @@ class RegionController extends Controller
 
         $region->loadMissing('turnConfiguration');
 
+        $worlds = $group->worlds()
+            ->orderBy('name')
+            ->get(['id', 'name', 'default_turn_duration_hours']);
+
         return Inertia::render('Regions/Edit', [
             'group' => [
                 'id' => $group->id,
@@ -85,9 +116,15 @@ class RegionController extends Controller
                 'summary' => $region->summary,
                 'description' => $region->description,
                 'dungeon_master_id' => $region->dungeon_master_id,
+                'world_id' => $region->world_id,
                 'turn_duration_hours' => $region->turnConfiguration?->turn_duration_hours,
                 'next_turn_at' => optional($region->turnConfiguration?->next_turn_at)->toAtomString(),
             ],
+            'worlds' => $worlds->map(fn ($world) => [
+                'id' => $world->id,
+                'name' => $world->name,
+                'default_turn_duration_hours' => $world->default_turn_duration_hours,
+            ])->values(),
             'dungeonMasters' => $this->eligibleDungeonMasters($group),
         ]);
     }
@@ -100,12 +137,16 @@ class RegionController extends Controller
         $validated = $request->validated();
         $dungeonMasterId = $validated['dungeon_master_id'] ?? null;
 
+        /** @var World $world */
+        $world = $group->worlds()->findOrFail($validated['world_id']);
+
         if ($dungeonMasterId !== null) {
             $this->assertDungeonMaster($group, $dungeonMasterId);
         }
 
-        DB::transaction(function () use ($region, $validated, $dungeonMasterId, $scheduler): void {
+        DB::transaction(function () use ($region, $world, $validated, $dungeonMasterId, $scheduler): void {
             $region->update([
+                'world_id' => $world->id,
                 'name' => $validated['name'],
                 'summary' => $validated['summary'] ?? null,
                 'description' => $validated['description'] ?? null,

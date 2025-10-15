@@ -1,11 +1,9 @@
 # Task Plan
 
 ## Backlog
-- [ ] Create group management (create/join/roles) and policies.
-- [ ] Build world + region CRUD with configurable turn durations and DM assignments.
+- [x] Create group management (create/join/roles) and policies.
 - [ ] Implement campaign CRUD with group invitations and role assignments.
 - [x] Develop turn scheduler service and API (process turn, AI fallback).
-- [ ] Implement modular tile map system (tile templates, axial coordinates, map tile CRUD).
 - [ ] Integrate Laravel Reverb for realtime initiative, chat, map tokens.
 - [ ] Build task board with turn-based due dates and Kanban UI.
 - [ ] Implement AI services (Ollama Gemma3) for NPC and DM takeover workflows.
@@ -24,3 +22,6 @@
 - Task 4 – Campaign Management Foundations (campaign CRUD, invitations, role assignments)
 - Task 5 – Turn Scheduler API (region turn processing, AI fallback summaries)
 - Task 6 – Session Workspace (session scheduling, collaborative notes/dice, initiative tracker)
+- Task 7 – Group Management (join codes, membership admin UI, policies)
+- Task 8 – Worlds & Regions CRUD (world hierarchies, DM pacing defaults)
+- Task 9 – Modular Tile Maps (tile templates, map editor, axial tile CRUD)

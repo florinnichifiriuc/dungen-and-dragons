@@ -12,5 +12,8 @@
 | 2025-10-14 18:40 | Campaign Foundations | Added campaign CRUD, role assignments, invitations, Inertia dashboards, and automated tests (Pest + Dusk). |
 | 2025-10-14 20:45 | Turn Scheduler API | Implemented region turn processing service, AI fallback summaries, Inertia workflows, and automated coverage (Pest + Dusk). |
 | 2025-10-15 13:40 | Session Workspace | Added session scheduling, notes, dice log, and initiative tracker with DiceRoller service, Inertia workspace UI, Pest specs, and Dusk journey. |
+| 2025-10-15 17:45 | Group Management | Introduced join codes, membership policies, Inertia roster controls, and Pest coverage for invitations, role changes, and leave flows. |
+| 2025-10-15 20:30 | Worlds & Regions CRUD | Added world hierarchies with pacing defaults, tied regions to worlds, refreshed Inertia dashboards, and expanded Pest coverage for world administration. |
+| 2025-10-16 13:40 | Modular Tile Maps | Delivered tile template library, map CRUD/editor flows, and Pest coverage for axial placement, uniqueness, and locking rules. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.

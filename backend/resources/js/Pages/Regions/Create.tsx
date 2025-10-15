@@ -14,10 +14,21 @@ type DungeonMasterOption = {
     role: string;
 };
 
+type WorldOption = {
+    id: number;
+    name: string;
+    default_turn_duration_hours: number;
+};
+
 type RegionCreateProps = {
     group: {
         id: number;
         name: string;
+    };
+    worlds: WorldOption[];
+    defaults: {
+        world_id: number | null;
+        turn_duration_hours: number;
     };
     dungeonMasters: DungeonMasterOption[];
 };
@@ -26,20 +37,31 @@ type FormData = {
     name: string;
     summary: string;
     description: string;
+    world_id: string;
     dungeon_master_id: string;
     turn_duration_hours: string;
     next_turn_at: string;
 };
 
-export default function RegionCreate({ group, dungeonMasters }: RegionCreateProps) {
+export default function RegionCreate({ group, worlds, defaults, dungeonMasters }: RegionCreateProps) {
     const { data, setData, post, processing, errors } = useForm<FormData>({
         name: '',
         summary: '',
         description: '',
+        world_id: defaults.world_id ? defaults.world_id.toString() : '',
         dungeon_master_id: '',
-        turn_duration_hours: '24',
+        turn_duration_hours: defaults.turn_duration_hours.toString(),
         next_turn_at: '',
     });
+
+    const handleWorldChange = (worldId: string) => {
+        setData('world_id', worldId);
+
+        const selected = worlds.find((world) => world.id.toString() === worldId);
+        if (selected) {
+            setData('turn_duration_hours', selected.default_turn_duration_hours.toString());
+        }
+    };
 
     const submit: FormEventHandler = (event) => {
         event.preventDefault();
@@ -92,6 +114,27 @@ export default function RegionCreate({ group, dungeonMasters }: RegionCreateProp
                     <InputError message={errors.description} />
                 </div>
 
+                <div className="space-y-2">
+                    <Label htmlFor="world_id">World</Label>
+                    <select
+                        id="world_id"
+                        value={data.world_id}
+                        onChange={(event) => handleWorldChange(event.target.value)}
+                        className="w-full rounded-md border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-100 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                        required
+                    >
+                        <option value="" disabled>
+                            Select a world
+                        </option>
+                        {worlds.map((world) => (
+                            <option key={world.id} value={world.id}>
+                                {world.name}
+                            </option>
+                        ))}
+                    </select>
+                    <InputError message={errors.world_id} />
+                </div>
+
                 <div className="grid gap-6 sm:grid-cols-2">
                     <div className="space-y-2">
                         <Label htmlFor="dungeon_master_id">Dungeon master</Label>
@@ -113,15 +156,14 @@ export default function RegionCreate({ group, dungeonMasters }: RegionCreateProp
 
                     <div className="space-y-2">
                         <Label htmlFor="turn_duration_hours">Turn cadence</Label>
-                        <select
+                        <Input
                             id="turn_duration_hours"
+                            type="number"
+                            min={1}
+                            max={168}
                             value={data.turn_duration_hours}
                             onChange={(event) => setData('turn_duration_hours', event.target.value)}
-                            className="w-full rounded-md border border-zinc-800 bg-zinc-950/70 px-3 py-2 text-sm text-zinc-100 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                        >
-                            <option value="6">6 hours</option>
-                            <option value="24">24 hours</option>
-                        </select>
+                        />
                         <InputError message={errors.turn_duration_hours} />
                     </div>
                 </div>

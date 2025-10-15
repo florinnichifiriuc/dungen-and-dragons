@@ -18,6 +18,7 @@ class Group extends Model
     protected $fillable = [
         'name',
         'slug',
+        'join_code',
         'description',
         'created_by',
     ];
@@ -49,6 +50,14 @@ class Group extends Model
     }
 
     /**
+     * Worlds curated by the group.
+     */
+    public function worlds(): HasMany
+    {
+        return $this->hasMany(World::class);
+    }
+
+    /**
      * Regions owned by the group.
      */
     public function regions(): HasMany
@@ -62,5 +71,21 @@ class Group extends Model
     public function campaigns(): HasMany
     {
         return $this->hasMany(Campaign::class);
+    }
+
+    /**
+     * Tile templates curated by the group.
+     */
+    public function tileTemplates(): HasMany
+    {
+        return $this->hasMany(TileTemplate::class);
+    }
+
+    /**
+     * Maps owned by the group.
+     */
+    public function maps(): HasMany
+    {
+        return $this->hasMany(Map::class);
     }
 }

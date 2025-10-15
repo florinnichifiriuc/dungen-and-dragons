@@ -17,11 +17,20 @@ class Region extends Model
      */
     protected $fillable = [
         'group_id',
+        'world_id',
         'dungeon_master_id',
         'name',
         'summary',
         'description',
     ];
+
+    /**
+     * Parent world for this region.
+     */
+    public function world(): BelongsTo
+    {
+        return $this->belongsTo(World::class);
+    }
 
     /**
      * Owning group.
@@ -50,5 +59,10 @@ class Region extends Model
     public function turns(): HasMany
     {
         return $this->hasMany(Turn::class);
+    }
+
+    public function maps(): HasMany
+    {
+        return $this->hasMany(Map::class);
     }
 }

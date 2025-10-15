@@ -5,6 +5,7 @@ namespace Tests\Browser;
 use App\Models\Group;
 use App\Models\GroupMembership;
 use App\Models\Region;
+use App\Models\World;
 use App\Models\User;
 use App\Services\TurnScheduler;
 use Carbon\CarbonImmutable;
@@ -29,7 +30,8 @@ class RegionTurnProcessingTest extends DuskTestCase
             'role' => GroupMembership::ROLE_OWNER,
         ]);
 
-        $region = Region::factory()->for($group)->create(['name' => 'Eldertide Vale']);
+        $world = World::factory()->for($group)->create();
+        $region = Region::factory()->for($group)->for($world)->create(['name' => 'Eldertide Vale']);
 
         app(TurnScheduler::class)->configure($region, 24, CarbonImmutable::now('UTC'));
 

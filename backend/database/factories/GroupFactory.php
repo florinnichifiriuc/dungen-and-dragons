@@ -22,6 +22,7 @@ class GroupFactory extends Factory
         return [
             'name' => Str::title($name),
             'slug' => $slugBase.'-'.$this->faker->unique()->lexify('???'),
+            'join_code' => Str::upper($this->faker->unique()->lexify('??????')),
             'description' => $this->faker->optional()->sentence(),
             'created_by' => User::factory(),
         ];

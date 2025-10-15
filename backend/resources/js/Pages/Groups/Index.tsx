@@ -27,9 +27,14 @@ export default function GroupsIndex({ groups }: GroupsIndexProps) {
                     </p>
                 </div>
 
-                <Button asChild>
-                    <Link href={route('groups.create')}>Create group</Link>
-                </Button>
+                <div className="flex items-center gap-3">
+                    <Button asChild variant="outline" className="border-zinc-700">
+                        <Link href={route('groups.join')}>Join group</Link>
+                    </Button>
+                    <Button asChild>
+                        <Link href={route('groups.create')}>Create group</Link>
+                    </Button>
+                </div>
             </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">

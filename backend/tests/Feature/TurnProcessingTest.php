@@ -5,6 +5,7 @@ use App\Models\GroupMembership;
 use App\Models\Region;
 use App\Models\Turn;
 use App\Models\User;
+use App\Models\World;
 use App\Services\TurnScheduler;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,7 +22,8 @@ it('allows authorized managers to process region turns', function () {
         'role' => GroupMembership::ROLE_OWNER,
     ]);
 
-    $region = Region::factory()->for($group)->create();
+    $world = World::factory()->for($group)->create();
+    $region = Region::factory()->for($group)->for($world)->create();
 
     app(TurnScheduler::class)->configure($region, 24, CarbonImmutable::now('UTC'));
 
@@ -52,7 +54,8 @@ it('supports ai fallback when no summary is provided', function () {
         'role' => GroupMembership::ROLE_OWNER,
     ]);
 
-    $region = Region::factory()->for($group)->create();
+    $world = World::factory()->for($group)->create();
+    $region = Region::factory()->for($group)->for($world)->create();
 
     app(TurnScheduler::class)->configure($region, 6, CarbonImmutable::now('UTC'));
 
@@ -84,7 +87,8 @@ it('prevents players from processing region turns', function () {
         'role' => GroupMembership::ROLE_PLAYER,
     ]);
 
-    $region = Region::factory()->for($group)->create();
+    $world = World::factory()->for($group)->create();
+    $region = Region::factory()->for($group)->for($world)->create();
 
     app(TurnScheduler::class)->configure($region, 24, CarbonImmutable::now('UTC'));
 
