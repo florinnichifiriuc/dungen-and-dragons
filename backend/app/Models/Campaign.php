@@ -108,4 +108,14 @@ class Campaign extends Model
     {
         return $this->hasMany(CampaignTask::class);
     }
+
+    public function entities(): HasMany
+    {
+        return $this->hasMany(CampaignEntity::class);
+    }
+
+    public function tags(): HasMany
+    {
+        return $this->hasMany(Tag::class);
+    }
 }

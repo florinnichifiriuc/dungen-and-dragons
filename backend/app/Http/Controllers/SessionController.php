@@ -2,24 +2,35 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SessionRecordingStoreRequest;
 use App\Http\Requests\SessionStoreRequest;
 use App\Http\Requests\SessionUpdateRequest;
 use App\Models\Campaign;
-use App\Models\CampaignRoleAssignment;
-use App\Models\GroupMembership;
 use App\Models\CampaignSession;
 use App\Models\SessionNote;
 use App\Models\Turn;
 use App\Models\User;
+use App\Policies\CampaignPolicy;
+use App\Services\SessionExportService;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
-use Inertia\Response;
+use Inertia\Response as InertiaResponse;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class SessionController extends Controller
 {
-    public function index(Campaign $campaign): Response
+    public function __construct(private readonly SessionExportService $sessionExportService)
+    {
+    }
+
+    public function index(Campaign $campaign): InertiaResponse
     {
         $this->authorize('view', $campaign);
 
@@ -45,7 +56,7 @@ class SessionController extends Controller
         ]);
     }
 
-    public function create(Campaign $campaign): Response
+    public function create(Campaign $campaign): InertiaResponse
     {
         $this->authorize('create', [CampaignSession::class, $campaign]);
 
@@ -112,7 +123,7 @@ class SessionController extends Controller
             ->with('success', 'Session scheduled.');
     }
 
-    public function show(Campaign $campaign, CampaignSession $session): Response
+    public function show(Campaign $campaign, CampaignSession $session): InertiaResponse
     {
         $this->ensureSessionBelongsToCampaign($campaign, $session);
         $this->authorize('view', $session);
@@ -120,7 +131,9 @@ class SessionController extends Controller
         /** @var Authenticatable&User $user */
         $user = auth()->user();
 
-        $isManager = $this->userManagesCampaign($user, $campaign);
+        /** @var CampaignPolicy $campaignPolicy */
+        $campaignPolicy = app(CampaignPolicy::class);
+        $isManager = $campaignPolicy->update($user, $campaign);
 
         $session->load([
             'creator:id,name',
@@ -197,6 +210,15 @@ class SessionController extends Controller
                 'created_at' => $request->created_at?->toIso8601String(),
             ]);
 
+        $storedRecording = null;
+
+        if ($session->hasStoredRecording()) {
+            $storedRecording = [
+                'download_url' => Storage::disk($session->recording_disk)->url($session->recording_path),
+                'filename' => basename($session->recording_path),
+            ];
+        }
+
         return Inertia::render('Sessions/Show', [
             'campaign' => [
                 'id' => $campaign->id,
@@ -211,6 +233,7 @@ class SessionController extends Controller
                 'duration_minutes' => $session->duration_minutes,
                 'location' => $session->location,
                 'recording_url' => $session->recording_url,
+                'stored_recording' => $storedRecording,
                 'turn' => $session->turn ? [
                     'id' => $session->turn->id,
                     'number' => $session->turn->number,
@@ -229,11 +252,12 @@ class SessionController extends Controller
             'permissions' => [
                 'can_manage' => $isManager,
                 'can_delete' => $isManager,
+                'can_upload_recording' => $isManager,
             ],
         ]);
     }
 
-    public function edit(Campaign $campaign, CampaignSession $session): Response
+    public function edit(Campaign $campaign, CampaignSession $session): InertiaResponse
     {
         $this->ensureSessionBelongsToCampaign($campaign, $session);
         $this->authorize('update', $session);
@@ -313,6 +337,10 @@ class SessionController extends Controller
         $this->ensureSessionBelongsToCampaign($campaign, $session);
         $this->authorize('delete', $session);
 
+        if ($session->hasStoredRecording()) {
+            Storage::disk($session->recording_disk)->delete($session->recording_path);
+        }
+
         $session->delete();
 
         return redirect()
@@ -320,35 +348,103 @@ class SessionController extends Controller
             ->with('success', 'Session archived.');
     }
 
+    public function exportMarkdown(Request $request, Campaign $campaign, CampaignSession $session): HttpResponse
+    {
+        $this->ensureSessionBelongsToCampaign($campaign, $session);
+        $this->authorize('view', $session);
+
+        /** @var Authenticatable&User $viewer */
+        $viewer = $request->user();
+
+        $data = $this->sessionExportService->buildExportData($session, $viewer);
+        $markdown = $this->sessionExportService->generateMarkdown($data);
+
+        $filename = sprintf('session-%s.md', $session->id);
+
+        return response($markdown)
+            ->withHeaders([
+                'Content-Type' => 'text/markdown; charset=UTF-8',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            ]);
+    }
+
+    public function exportPdf(Request $request, Campaign $campaign, CampaignSession $session): HttpResponse
+    {
+        $this->ensureSessionBelongsToCampaign($campaign, $session);
+        $this->authorize('view', $session);
+
+        /** @var Authenticatable&User $viewer */
+        $viewer = $request->user();
+
+        $data = $this->sessionExportService->buildExportData($session, $viewer);
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml(view('exports.session', $data)->render());
+        $dompdf->setPaper('a4');
+        $dompdf->render();
+
+        $filename = sprintf('session-%s.pdf', $session->id);
+
+        return response($dompdf->output())
+            ->withHeaders([
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            ]);
+    }
+
+    public function storeRecording(SessionRecordingStoreRequest $request, Campaign $campaign, CampaignSession $session): RedirectResponse
+    {
+        $this->ensureSessionBelongsToCampaign($campaign, $session);
+        $this->authorize('update', $session);
+
+        $file = $request->file('recording');
+        $disk = 'public';
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = $file->getClientOriginalExtension();
+        $safeName = Str::slug($originalName) ?: 'recording';
+        $filename = sprintf('%s-%s.%s', $session->id, $safeName, $extension ?: 'bin');
+        $path = $file->storeAs('session-recordings/'.$campaign->id, $filename, $disk);
+
+        if ($session->hasStoredRecording()) {
+            Storage::disk($session->recording_disk)->delete($session->recording_path);
+        }
+
+        $session->update([
+            'recording_disk' => $disk,
+            'recording_path' => $path,
+        ]);
+
+        return redirect()
+            ->route('campaigns.sessions.show', [$campaign, $session])
+            ->with('success', 'Recording uploaded.');
+    }
+
+    public function destroyRecording(Campaign $campaign, CampaignSession $session): RedirectResponse
+    {
+        $this->ensureSessionBelongsToCampaign($campaign, $session);
+        $this->authorize('update', $session);
+
+        if ($session->hasStoredRecording()) {
+            Storage::disk($session->recording_disk)->delete($session->recording_path);
+        }
+
+        $session->update([
+            'recording_disk' => null,
+            'recording_path' => null,
+        ]);
+
+        return redirect()
+            ->route('campaigns.sessions.show', [$campaign, $session])
+            ->with('success', 'Recording removed.');
+    }
+
     protected function ensureSessionBelongsToCampaign(Campaign $campaign, CampaignSession $session): void
     {
         if ($session->campaign_id !== $campaign->id) {
             abort(404);
         }
-    }
-
-    protected function userManagesCampaign(User $user, Campaign $campaign): bool
-    {
-        if ($campaign->created_by === $user->id) {
-            return true;
-        }
-
-        $isManager = $campaign->group->memberships()
-            ->where('user_id', $user->id)
-            ->whereIn('role', [
-                GroupMembership::ROLE_OWNER,
-                GroupMembership::ROLE_DUNGEON_MASTER,
-            ])
-            ->exists();
-
-        if ($isManager) {
-            return true;
-        }
-
-        return $campaign->roleAssignments()
-            ->where('assignee_type', User::class)
-            ->where('assignee_id', $user->id)
-            ->where('role', CampaignRoleAssignment::ROLE_GM)
-            ->exists();
     }
 }

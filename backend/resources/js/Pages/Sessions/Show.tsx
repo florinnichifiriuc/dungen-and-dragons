@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 
@@ -40,8 +40,14 @@ type SessionDetail = {
     duration_minutes: number | null;
     location: string | null;
     recording_url: string | null;
+    stored_recording: StoredRecording | null;
     turn: { id: number; number: number; window_started_at: string | null } | null;
     creator: { id: number; name: string };
+};
+
+type StoredRecording = {
+    download_url: string;
+    filename: string;
 };
 
 type SessionNoteResource = {
@@ -81,6 +87,7 @@ type SessionShowProps = {
     permissions: {
         can_manage: boolean;
         can_delete: boolean;
+        can_upload_recording: boolean;
     };
     ai_dialogues: AiDialogueEntry[];
 };
@@ -201,6 +208,18 @@ export default function SessionShow({
         initiative: '',
         is_current: false,
     });
+
+    const recordingForm = useForm<{ recording: File | null }>({
+        recording: null,
+    });
+
+    const handleRecordingChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0] ?? null;
+        recordingForm.setData('recording', file);
+        if (file) {
+            recordingForm.clearErrors('recording');
+        }
+    };
 
     const handleNpcSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -395,6 +414,31 @@ export default function SessionShow({
             });
     };
 
+    const submitRecording = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        if (!recordingForm.data.recording) {
+            recordingForm.setError('recording', 'Select a file to upload.');
+            return;
+        }
+
+        const formElement = event.currentTarget;
+
+        recordingForm.post(
+            route('campaigns.sessions.recording.store', { campaign: campaign.id, session: session.id }),
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    formElement.reset();
+                },
+                onFinish: () => {
+                    recordingForm.setData('recording', null);
+                },
+            },
+        );
+    };
+
     const handleNoteDelete = (noteId: number) => {
         router.delete(route('campaigns.sessions.notes.destroy', { campaign: campaign.id, session: session.id, note: noteId }), {
             preserveScroll: true,
@@ -447,6 +491,17 @@ export default function SessionShow({
         );
     };
 
+    const handleRecordingRemove = () => {
+        if (!confirm('Remove the stored recording from this session?')) {
+            return;
+        }
+
+        router.delete(
+            route('campaigns.sessions.recording.destroy', { campaign: campaign.id, session: session.id }),
+            { preserveScroll: true },
+        );
+    };
+
     const diceBreakdown = (roll: DiceRollResource): string => {
         const parts: string[] = [];
         const rolls = roll.result_breakdown?.rolls;
@@ -464,6 +519,16 @@ export default function SessionShow({
         return parts.length > 0 ? parts.join(' ') : roll.expression;
     };
 
+    const markdownExportUrl = route('campaigns.sessions.exports.markdown', {
+        campaign: campaign.id,
+        session: session.id,
+    });
+
+    const pdfExportUrl = route('campaigns.sessions.exports.pdf', {
+        campaign: campaign.id,
+        session: session.id,
+    });
+
     return (
         <AppLayout>
             <Head title={`${session.title} workspace`} />
@@ -477,9 +542,27 @@ export default function SessionShow({
                     </p>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-wrap items-center justify-end gap-3">
                     <Button variant="outline" asChild className="border-zinc-700 text-zinc-200 hover:text-amber-200">
                         <Link href={route('campaigns.sessions.index', { campaign: campaign.id })}>Back to sessions</Link>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        asChild
+                        className="border-zinc-700 text-zinc-200 hover:text-amber-200"
+                    >
+                        <a href={markdownExportUrl} download>
+                            Download Markdown
+                        </a>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        asChild
+                        className="border-zinc-700 text-zinc-200 hover:text-amber-200"
+                    >
+                        <a href={pdfExportUrl} download>
+                            Download PDF
+                        </a>
                     </Button>
                     {permissions.can_manage && (
                         <Button asChild>
@@ -533,22 +616,78 @@ export default function SessionShow({
                             </div>
                             <div>
                                 <dt className="text-xs uppercase tracking-wide text-zinc-500">Recording</dt>
-                                <dd>
-                                    {session.recording_url ? (
+                                <dd className="space-y-2">
+                                    {session.recording_url && (
                                         <a
                                             href={session.recording_url}
-                                            className="text-amber-300 underline decoration-dotted underline-offset-4"
+                                            className="block text-amber-300 underline decoration-dotted underline-offset-4"
                                             target="_blank"
                                             rel="noreferrer"
                                         >
-                                            Open recording
+                                            External link
                                         </a>
+                                    )}
+                                    {session.stored_recording ? (
+                                        <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-300">
+                                            <a
+                                                href={session.stored_recording.download_url}
+                                                className="text-amber-300 underline decoration-dotted underline-offset-4"
+                                                download
+                                            >
+                                                Download {session.stored_recording.filename}
+                                            </a>
+                                            {permissions.can_upload_recording && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    className="text-xs text-rose-300 hover:text-rose-400"
+                                                    onClick={handleRecordingRemove}
+                                                >
+                                                    Remove stored copy
+                                                </Button>
+                                            )}
+                                        </div>
                                     ) : (
-                                        'No recording yet'
+                                        <p className="text-sm text-zinc-500">
+                                            {session.recording_url
+                                                ? 'No stored upload yet.'
+                                                : 'No recording yet.'}
+                                        </p>
                                     )}
                                 </dd>
                             </div>
                         </dl>
+
+                        {permissions.can_upload_recording && (
+                            <form
+                                onSubmit={submitRecording}
+                                className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-zinc-800/70 bg-zinc-950/70 p-4"
+                            >
+                                <div className="flex-1 min-w-[200px]">
+                                    <Label htmlFor="recording-upload" className="text-xs uppercase tracking-wide text-zinc-500">
+                                        Upload recording
+                                    </Label>
+                                    <Input
+                                        id="recording-upload"
+                                        type="file"
+                                        accept="audio/*,video/*"
+                                        onChange={handleRecordingChange}
+                                        className="mt-1 border-zinc-700 bg-zinc-900/60 text-sm text-zinc-100"
+                                    />
+                                    <p className="mt-1 text-xs text-zinc-500">Up to 500 MB audio or video.</p>
+                                    {recordingForm.errors.recording && (
+                                        <p className="text-sm text-rose-400">{recordingForm.errors.recording}</p>
+                                    )}
+                                </div>
+                                <Button
+                                    type="submit"
+                                    size="sm"
+                                    disabled={recordingForm.processing || !recordingForm.data.recording}
+                                >
+                                    {recordingForm.processing ? 'Uploading…' : 'Upload'}
+                                </Button>
+                            </form>
+                        )}
 
                         <div className="mt-6 grid gap-6">
                             <div>

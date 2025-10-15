@@ -47,6 +47,8 @@ type CampaignPayload = {
     members: CampaignMember[];
     assignments: CampaignAssignment[];
     invitations: CampaignInvitation[];
+    entities_count: number;
+    recent_entities: { id: number; name: string; entity_type: string }[];
 };
 
 type CampaignShowProps = {
@@ -59,6 +61,14 @@ const roleLabels: Record<string, string> = {
     gm: 'Game Master',
     player: 'Adventurer',
     observer: 'Observer',
+};
+
+const entityTypeLabels: Record<string, string> = {
+    character: 'Character',
+    npc: 'NPC',
+    monster: 'Monster',
+    item: 'Item',
+    location: 'Location',
 };
 
 export default function CampaignShow({ campaign, available_roles }: CampaignShowProps) {
@@ -108,6 +118,13 @@ export default function CampaignShow({ campaign, available_roles }: CampaignShow
                         className="border-emerald-600/60 text-sm text-emerald-200 hover:bg-emerald-500/10"
                     >
                         <Link href={route('campaigns.tasks.index', campaign.id)}>Task board</Link>
+                    </Button>
+                    <Button
+                        asChild
+                        variant="outline"
+                        className="border-purple-600/60 text-sm text-purple-200 hover:bg-purple-500/10"
+                    >
+                        <Link href={route('campaigns.entities.index', campaign.id)}>Lore codex</Link>
                     </Button>
                     <Button
                         asChild
@@ -163,6 +180,45 @@ export default function CampaignShow({ campaign, available_roles }: CampaignShow
                                 <dd>{campaign.end_date ?? 'Open'}</dd>
                             </div>
                         </dl>
+                    </article>
+
+                    <article className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
+                        <header className="flex items-center justify-between">
+                            <h2 className="text-lg font-semibold text-zinc-100">Lore codex</h2>
+                            <span className="text-xs uppercase tracking-wide text-zinc-500">
+                                {campaign.entities_count} entr{campaign.entities_count === 1 ? 'y' : 'ies'}
+                            </span>
+                        </header>
+
+                        {campaign.entities_count === 0 ? (
+                            <p className="mt-4 rounded-lg border border-dashed border-zinc-800 bg-zinc-900/40 p-4 text-sm text-zinc-400">
+                                No lore entries captured yet. Chronicle key NPCs, factions, and relics to anchor each session.
+                            </p>
+                        ) : (
+                            <ul className="mt-4 space-y-3">
+                                {campaign.recent_entities.map((entity) => (
+                                    <li key={entity.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3">
+                                        <div>
+                                            <p className="font-medium text-zinc-100">{entity.name}</p>
+                                            <p className="text-xs text-zinc-500">
+                                                {entityTypeLabels[entity.entity_type] ?? entity.entity_type}
+                                            </p>
+                                        </div>
+                                        <Link
+                                            href={route('campaigns.entities.show', [campaign.id, entity.id])}
+                                            className="text-xs font-semibold uppercase tracking-wide text-amber-300 hover:text-amber-200"
+                                        >
+                                            View
+                                        </Link>
+                                    </li>
+                                ))}
+                                {campaign.entities_count > campaign.recent_entities.length && (
+                                    <li className="text-xs text-zinc-500">
+                                        + {campaign.entities_count - campaign.recent_entities.length} more awaiting discovery
+                                    </li>
+                                )}
+                            </ul>
+                        )}
                     </article>
 
                     <article className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">

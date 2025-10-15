@@ -26,6 +26,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'locale',
+        'timezone',
+        'theme',
+        'high_contrast',
+        'font_scale',
     ];
 
     /**
@@ -48,6 +53,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'high_contrast' => 'boolean',
+            'font_scale' => 'integer',
         ];
     }
 

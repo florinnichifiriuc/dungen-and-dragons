@@ -6,6 +6,7 @@ use App\Http\Requests\CampaignStoreRequest;
 use App\Http\Requests\CampaignUpdateRequest;
 use App\Models\Campaign;
 use App\Models\CampaignRoleAssignment;
+use App\Models\CampaignEntity;
 use App\Models\Group;
 use App\Models\GroupMembership;
 use App\Models\Region;
@@ -169,6 +170,18 @@ class CampaignController extends Controller
             'roleAssignments.assignee',
         ]);
 
+        $entityCount = $campaign->entities()->count();
+        $recentEntities = $campaign->entities()
+            ->latest()
+            ->take(3)
+            ->get(['id', 'name', 'entity_type'])
+            ->map(fn (CampaignEntity $entity) => [
+                'id' => $entity->id,
+                'name' => $entity->name,
+                'entity_type' => $entity->entity_type,
+            ])
+            ->values();
+
         $members = $campaign->group->memberships->map(fn (GroupMembership $membership) => [
             'id' => $membership->user->id,
             'name' => $membership->user->name,
@@ -232,6 +245,8 @@ class CampaignController extends Controller
                 'members' => $members,
                 'assignments' => $assignments,
                 'invitations' => $invitations,
+                'entities_count' => $entityCount,
+                'recent_entities' => $recentEntities,
             ],
             'available_roles' => CampaignRoleAssignment::roles(),
             'available_statuses' => Campaign::statuses(),

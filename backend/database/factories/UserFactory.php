@@ -29,6 +29,11 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'locale' => 'en',
+            'timezone' => 'UTC',
+            'theme' => 'system',
+            'high_contrast' => false,
+            'font_scale' => 100,
         ];
     }
 

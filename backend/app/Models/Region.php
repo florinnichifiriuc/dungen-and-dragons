@@ -28,6 +28,13 @@ class Region extends Model
     ];
 
     /**
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'ai_controlled' => 'boolean',
+    ];
+
+    /**
      * Parent world for this region.
      */
     public function world(): BelongsTo

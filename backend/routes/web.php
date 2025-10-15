@@ -6,6 +6,7 @@ use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CampaignInvitationController;
 use App\Http\Controllers\CampaignRoleAssignmentController;
 use App\Http\Controllers\CampaignTaskController;
+use App\Http\Controllers\CampaignEntityController;
 use App\Http\Controllers\DiceRollController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupJoinController;
@@ -19,6 +20,8 @@ use App\Http\Controllers\MapTileController;
 use App\Http\Controllers\TileTemplateController;
 use App\Http\Controllers\SessionController;
 use App\Http\Controllers\SessionNoteController;
+use App\Http\Controllers\SearchController;
+use App\Http\Controllers\UserPreferenceController;
 use App\Http\Controllers\WorldController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -37,6 +40,8 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
+    Route::get('/settings/preferences', [UserPreferenceController::class, 'edit'])->name('settings.preferences.edit');
+    Route::put('/settings/preferences', [UserPreferenceController::class, 'update'])->name('settings.preferences.update');
     Route::get('groups/join', [GroupJoinController::class, 'create'])->name('groups.join');
     Route::post('groups/join', [GroupJoinController::class, 'store'])->name('groups.join.store');
     Route::resource('groups', GroupController::class);
@@ -69,10 +74,16 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('campaigns/{campaign}/tasks/{task}', [CampaignTaskController::class, 'update'])->name('campaigns.tasks.update');
     Route::post('campaigns/{campaign}/tasks/reorder', [CampaignTaskController::class, 'reorder'])->name('campaigns.tasks.reorder');
     Route::delete('campaigns/{campaign}/tasks/{task}', [CampaignTaskController::class, 'destroy'])->name('campaigns.tasks.destroy');
+    Route::resource('campaigns.entities', CampaignEntityController::class);
     Route::resource('campaigns.sessions', SessionController::class);
+    Route::get('campaigns/{campaign}/sessions/{session}/exports/markdown', [SessionController::class, 'exportMarkdown'])->name('campaigns.sessions.exports.markdown');
+    Route::get('campaigns/{campaign}/sessions/{session}/exports/pdf', [SessionController::class, 'exportPdf'])->name('campaigns.sessions.exports.pdf');
+    Route::post('campaigns/{campaign}/sessions/{session}/recording', [SessionController::class, 'storeRecording'])->name('campaigns.sessions.recording.store');
+    Route::delete('campaigns/{campaign}/sessions/{session}/recording', [SessionController::class, 'destroyRecording'])->name('campaigns.sessions.recording.destroy');
     Route::post('campaigns/{campaign}/sessions/{session}/notes', [SessionNoteController::class, 'store'])->name('campaigns.sessions.notes.store');
     Route::patch('campaigns/{campaign}/sessions/{session}/notes/{note}', [SessionNoteController::class, 'update'])->name('campaigns.sessions.notes.update');
     Route::delete('campaigns/{campaign}/sessions/{session}/notes/{note}', [SessionNoteController::class, 'destroy'])->name('campaigns.sessions.notes.destroy');
+    Route::get('search', [SearchController::class, 'index'])->name('search.index');
     Route::post('campaigns/{campaign}/sessions/{session}/dice-rolls', [DiceRollController::class, 'store'])->name('campaigns.sessions.dice-rolls.store');
     Route::delete('campaigns/{campaign}/sessions/{session}/dice-rolls/{roll}', [DiceRollController::class, 'destroy'])->name('campaigns.sessions.dice-rolls.destroy');
     Route::post('campaigns/{campaign}/sessions/{session}/initiative', [InitiativeEntryController::class, 'store'])->name('campaigns.sessions.initiative.store');

@@ -28,6 +28,8 @@ class CampaignSession extends Model
         'location',
         'summary',
         'recording_url',
+        'recording_disk',
+        'recording_path',
     ];
 
     /**
@@ -71,5 +73,10 @@ class CampaignSession extends Model
     public function aiRequests(): MorphMany
     {
         return $this->morphMany(AiRequest::class, 'context');
+    }
+
+    public function hasStoredRecording(): bool
+    {
+        return filled($this->recording_disk) && filled($this->recording_path);
     }
 }
