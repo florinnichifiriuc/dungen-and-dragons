@@ -47,3 +47,4 @@
 - Task 29 – Token Vitality Tracking (hit point, max, and temporary health badges with realtime syncing)
 - Task 30 – Token Condition Presets (structured condition toggles, realtime badges, and validation)
 - Task 31 – Token Condition Timers (preset duration inputs, realtime syncing, and badge readouts)
+- Task 32 – Token Condition Countdown Automation (auto-decrement timers on region turns, clearing expired conditions and broadcasting updates)

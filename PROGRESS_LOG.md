@@ -37,5 +37,6 @@
 | 2025-10-26 20:10 | Token Vitality Tracking | Added hit point, max, and temporary health fields to tokens with realtime badges so facilitators can monitor combat pacing in place. |
 | 2025-10-26 22:40 | Token Condition Presets | Added structured condition presets with realtime badges, workspace toggles, and validation so crowd-control states stay in sync. |
 | 2025-10-27 01:35 | Token Condition Timers | Extended condition presets with duration tracking, workspace inputs, realtime badge readouts, and normalization coverage so rounds remaining stay visible. |
+| 2025-10-27 05:15 | Token Condition Countdown Automation | Automated timer decrements during region turn processing, clearing expired conditions and broadcasting refreshed token payloads for encounter clarity. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.
