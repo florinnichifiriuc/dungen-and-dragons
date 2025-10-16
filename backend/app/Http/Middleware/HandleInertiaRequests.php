@@ -46,6 +46,9 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
+            'notifications' => [
+                'unread_count' => fn () => $request->user()?->unreadNotifications()->count() ?? 0,
+            ],
             'preferences' => fn () => $request->user()?->only([
                 'locale',
                 'timezone',

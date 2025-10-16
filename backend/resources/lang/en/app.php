@@ -5,6 +5,8 @@ return [
     'navigation' => [
         'search' => 'Search',
         'preferences' => 'Preferences',
+        'notifications' => 'Notifications',
+        'notifications_badge' => 'unread alerts',
         'logout' => 'Log out',
     ],
     'a11y' => [
@@ -37,5 +39,43 @@ return [
         ],
         'submit' => 'Save preferences',
         'success' => 'Preferences updated.',
+        'notifications' => [
+            'title' => 'Escalation notifications',
+            'description' => 'Choose how condition timer alerts reach you and define quiet hours so late-night sessions stay calm.',
+            'channels' => [
+                'in_app' => 'In-app alerts',
+                'in_app_hint' => 'Shows badges and updates in the notification center.',
+                'push' => 'Push notifications',
+                'push_hint' => 'Requires an active device subscription. Respects quiet hours.',
+                'email' => 'Email notifications',
+                'email_hint' => 'Delivers urgent summaries to your inbox when digests are off.',
+            ],
+            'quiet_hours_start' => 'Quiet hours begin',
+            'quiet_hours_end' => 'Quiet hours end',
+            'digest_label' => 'Digest delivery',
+            'digest_hint' => 'Switch to a digest to bundle alerts into a single recap.',
+            'digest_options' => [
+                'off' => 'Send immediately',
+                'daily' => 'Daily dawn digest (UTC)',
+                'session' => 'After each session',
+            ],
+        ],
+    ],
+    'notifications' => [
+        'title' => 'Notification center',
+        'description' => 'Stay on top of escalating conditions and table updates.',
+        'empty' => 'No notifications yet. Escalations and alerts will appear here.',
+        'mark_all' => 'Mark all as read',
+        'mark_read' => 'Mark as read',
+        'view_summary' => 'Open condition summary',
+        'cleared' => 'All notifications marked as read.',
+        'token_label' => 'Token:',
+        'condition_label' => 'Condition:',
+        'rounds_label' => 'Rounds remaining',
+        'urgency' => [
+            'critical' => 'Critical',
+            'warning' => 'Warning',
+            'calm' => 'Calm',
+        ],
     ],
 ];

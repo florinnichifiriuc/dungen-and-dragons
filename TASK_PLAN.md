@@ -1,27 +1,19 @@
 # Task Plan
 
 ## Backlog
-- [x] Task 38 – Token Condition Timer Batch Adjustments (finalize API contract, multi-select UX, bulk delta tooling, conflict telemetry, optimistic syncing safeguards, and expanded Form Request validation).
-- [x] Task 39 – Condition Timer Player Summaries (projection cache layer, redacted payloads, narrative-friendly copy seeded from curated condition templates, automated visibility regression suite).
-- [x] Task 40 – Condition Timer Mobile Recap Widgets (responsive Inertia panels, offline-friendly state caching, and integration with player summaries, plus performance/lighthouse budget).
-- [x] Task 41 – Timer Projection Developer Guide (document reusable projection/service pattern, invalidation hooks, ops logging, and QA checklist in developer docs).
-- [x] Task 42 – Condition Timer Interaction Wireframes (Figma wireframes for desktop/tablet/mobile, component specs, and handoff notes for shadcn/Tailwind implementation).
-- [x] Task 43 – Condition Narrative Copy Deck (author 12–15 lore-friendly snippets by urgency tier, localization notes, and QA sign-off checklist).
-- [x] Task 44 – Player Transparency Research & Telemetry (define trust/immersion survey, instrument analytics events, and prep beta feedback plan post-launch).
-- [x] Task 45 – Condition Summary Copy Integration (synchronize narrative templates with runtime projection coverage and add regression tests).
-- [x] Create group management (create/join/roles) and policies.
-- [x] Establish milestone demo flow automation that runs at a human reading pace with verbose console narration to showcase completed work for each milestone.
-- [x] Develop turn scheduler service and API (process turn, AI fallback).
-- [x] Integrate Laravel Reverb for realtime initiative, chat, map tokens.
-- [x] Build task board with turn-based due dates and Kanban UI.
-- [x] Implement AI services (Ollama Gemma3) for NPC and DM takeover workflows.
-- [x] Add search/filter infrastructure across entities, tasks, notes.
-- [x] Implement exports (Markdown/PDF) and session recording storage.
-- [x] Finalize localization, accessibility, theming, and docs.
-- [x] Task 46 – Condition Timer Acknowledgement Trails (player review toggles, GM receipt overview, analytics hooks, and realtime hydration).
-- [x] Task 47 – Condition Timer Adjustment Chronicle (persist timer adjustment history, surface timeline UI, export hooks, and privacy filters).
-- [x] Task 48 – Condition Timer Chronicle Integration (embed acknowledgements and timelines into session recap exports, share links, and AI briefings).
-- [x] Task 49 – Condition Timer Summary Share Links (signed share tokens, public outlook view, export references, and management controls).
+- [ ] Task 51 – Player Digest & Nudge Summaries (cross-feature digest aggregation, narrative tone review, delivery scheduling, and opt-out flows).
+- [ ] Task 52 – Facilitator Insights Dashboard (timer health analytics, acknowledgement funnels, and risk flags with drill-down filters).
+- [ ] Task 53 – Condition Timer API Hardening (rate limiting, conflict resolution improvements, circuit breaker alarms, and chaos testing playbook).
+- [ ] Task 54 – Offline Sync Reliability (queued acknowledgement reconciliation, background sync workers, and degraded-mode UI messaging).
+- [ ] Task 55 – Localization & Accessibility Audit (timer surfaces internationalization review, screen reader scripts, and QA regression harness updates).
+- [ ] Task 56 – Condition Transparency Data Exports (CSV/JSON exports, webhook triggers, and admin governance controls).
+- [ ] Task 57 – Share Link & Consent Controls (configurable expiry policies, guest acknowledgement visibility toggles, and audit consent logs).
+- [ ] Task 58 – AI Mentor Briefings (condition trend prompts, spoiler-safe recommendations, and facilitator override tools leveraging existing AI services).
+- [ ] Task 59 – End-to-End Transparency QA Suite (guest regression coverage, load/perf scripts, and beta launch acceptance checklist).
+- [ ] Task 60 – Condition Timer Share Access Trails (immutable access logging, masked telemetry, and export hooks layered on top of summary shares).
+- [ ] Task 61 – Condition Timer Share Expiry Stewardship (configurable expiry presets, lifecycle warnings, and lightweight extension controls in the manager UI).
+- [ ] Task 62 – Condition Timer Share Access Insights (trend dashboards for share usage, facilitator highlight panels, and export-ready datasets).
+- [ ] Task 63 – Condition Timer Share Guest Experience Polish (guest-facing narrative framing, responsive recap layouts, and regression coverage for refreshed copy).
 ## In Progress
 - _None_
 
@@ -64,3 +56,16 @@
 - Task 35 – Token Condition Timer Quick Adjustments (dashboard plus/minus controls, optimistic syncing, and feature coverage)
 - Task 36 – Token Condition Timer Filters (faction-aware filtering, urgency focus toggles, and search controls)
 - Task 37 – Token Condition Timer Quick Clearing (dashboard removal controls, optimistic syncing, and documentation updates)
+- Task 38 – Token Condition Timer Batch Adjustments (multi-select UX, bulk delta tooling, telemetry, and optimistic safeguards)
+- Task 39 – Condition Timer Player Summaries (projection cache, redacted payloads, narrative copy hooks, and regression suite)
+- Task 40 – Condition Timer Mobile Recap Widgets (responsive panels, offline caching, summary integration, and perf budget)
+- Task 41 – Timer Projection Developer Guide (projection/service documentation, invalidation hooks, ops logging, QA checklist)
+- Task 42 – Condition Timer Interaction Wireframes (annotated wireframes, component specs, shadcn/Tailwind handoff notes)
+- Task 43 – Condition Narrative Copy Deck (lore-friendly snippets, localization notes, QA sign-off checklist)
+- Task 44 – Player Transparency Research & Telemetry (surveys, analytics events, beta feedback plan)
+- Task 45 – Condition Summary Copy Integration (template synchronization with projections and regression tests)
+- Task 46 – Condition Timer Acknowledgement Trails (review toggles, receipt overview, analytics, realtime hydration)
+- Task 47 – Condition Timer Adjustment Chronicle (history persistence, timeline UI, export hooks, privacy filters)
+- Task 48 – Condition Timer Chronicle Integration (embed acknowledgements/timelines into recaps, exports, and AI briefings)
+- Task 49 – Condition Timer Summary Share Links (signed share tokens, public view, export references, management controls)
+- Task 50 – Condition Timer Escalation Notifications (preference-aware escalation journeys, quiet hours, notification center, and telemetry dispatch)
