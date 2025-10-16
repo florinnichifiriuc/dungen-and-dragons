@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Events\MapTokenBroadcasted;
+use App\Events\MapTokenConditionsExpired;
 use App\Models\MapToken;
 use App\Models\Region;
 use App\Models\Turn;
@@ -51,9 +52,9 @@ class TurnScheduler
             $summaryText = $summaryText ?? $this->aiDelegate->generateSummary($region, $windowStart, $windowEnd);
         }
 
-        $updatedTokenIds = [];
+        $tokenChanges = [];
 
-        $turn = DB::transaction(function () use (&$updatedTokenIds, $region, $configuration, $actor, $windowStart, $windowEnd, $processedAt, $summaryText, $useAiFallback, $durationHours): Turn {
+        $turn = DB::transaction(function () use (&$tokenChanges, $region, $configuration, $actor, $windowStart, $windowEnd, $processedAt, $summaryText, $useAiFallback, $durationHours): Turn {
             $latestTurn = $region->turns()->lockForUpdate()->orderByDesc('number')->first();
             $nextNumber = $latestTurn?->number + 1 ?? 1;
 
@@ -72,19 +73,46 @@ class TurnScheduler
                 'last_processed_at' => $processedAt,
             ])->save();
 
-            $updatedTokenIds = $this->advanceMapTokenConditionDurations($region);
+            $tokenChanges = $this->advanceMapTokenConditionDurations($region);
 
             return $turn;
         });
 
-        if ($updatedTokenIds !== []) {
-            MapToken::query()
-                ->whereIn('id', $updatedTokenIds)
+        if ($tokenChanges !== []) {
+            $tokenIds = array_unique(array_map(static fn (array $change): int => $change['token_id'], $tokenChanges));
+
+            $tokens = MapToken::query()
+                ->whereIn('id', $tokenIds)
                 ->with('map')
                 ->get()
-                ->each(function (MapToken $token): void {
-                    event(new MapTokenBroadcasted($token->map, 'updated', MapTokenPayload::from($token)));
-                });
+                ->keyBy(fn (MapToken $token): int => (int) $token->id);
+
+            $expiredLookup = [];
+
+            foreach ($tokenChanges as $change) {
+                if ($change['expired'] === []) {
+                    continue;
+                }
+
+                $expiredLookup[$change['token_id']] = $change['expired'];
+            }
+
+            foreach ($tokens as $token) {
+                event(new MapTokenBroadcasted($token->map, 'updated', MapTokenPayload::from($token)));
+
+                $tokenId = (int) $token->id;
+
+                if ($expiredLookup === [] || ! array_key_exists($tokenId, $expiredLookup)) {
+                    continue;
+                }
+
+                event(new MapTokenConditionsExpired(
+                    $token->map,
+                    $tokenId,
+                    $token->name,
+                    $expiredLookup[$tokenId],
+                ));
+            }
         }
 
         return $turn;
@@ -102,7 +130,7 @@ class TurnScheduler
     }
 
     /**
-     * @return array<int, int>
+     * @return array<int, array{token_id: int, expired: array<int, string>}>
      */
     protected function advanceMapTokenConditionDurations(Region $region): array
     {
@@ -112,7 +140,7 @@ class TurnScheduler
             return [];
         }
 
-        $updatedTokenIds = [];
+        $changes = [];
 
         $tokens = MapToken::query()
             ->whereIn('map_id', $mapIds)
@@ -130,6 +158,7 @@ class TurnScheduler
             $newConditions = [];
             $newDurations = [];
             $changed = false;
+            $expiredConditions = [];
 
             foreach ($conditions as $condition) {
                 if (! array_key_exists($condition, $durations)) {
@@ -151,6 +180,7 @@ class TurnScheduler
                     continue;
                 }
 
+                $expiredConditions[] = $condition;
                 $changed = true;
             }
 
@@ -163,9 +193,12 @@ class TurnScheduler
                 'status_condition_durations' => $newDurations,
             ])->save();
 
-            $updatedTokenIds[] = (int) $token->id;
+            $changes[] = [
+                'token_id' => (int) $token->id,
+                'expired' => $expiredConditions,
+            ];
         }
 
-        return $updatedTokenIds;
+        return $changes;
     }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 
 import AppLayout from '@/Layouts/AppLayout';
@@ -130,6 +130,18 @@ type MapTokenEventPayload = {
     token: Partial<MapTokenSummary> & { id: number };
 };
 
+type ConditionExpirationEventPayload = {
+    token: { id: number; name?: string };
+    conditions: string[];
+};
+
+type ConditionAlert = {
+    tokenId: number;
+    tokenName: string;
+    conditions: string[];
+    createdAt: number;
+};
+
 const orderTiles = (items: MapTileSummary[]): MapTileSummary[] =>
     [...items].sort((a, b) => {
         if (a.q !== b.q) {
@@ -174,6 +186,7 @@ const orderTokens = (items: MapTokenSummary[]): MapTokenSummary[] =>
     });
 
 const MAX_CONDITION_DURATION = 20;
+const CONDITION_ALERT_LIFESPAN = 90_000;
 
 const normalizeConditionDurations = (
     durations: Record<string, number | null | undefined> | null | undefined,
@@ -300,6 +313,8 @@ export default function MapShow({
         return acc;
     }, {});
 
+    const conditionOrderRef = useRef(conditionOrder);
+
     const orderConditions = (values: string[]): string[] =>
         conditionOrder.filter((condition) => values.includes(condition));
 
@@ -327,8 +342,21 @@ export default function MapShow({
     const [updatingToken, setUpdatingToken] = useState<number | null>(null);
     const [removingToken, setRemovingToken] = useState<number | null>(null);
     const [tokenFactionFilter, setTokenFactionFilter] = useState<'all' | TokenFaction>('all');
+    const [conditionAlerts, setConditionAlerts] = useState<ConditionAlert[]>([]);
 
     const fogBusy = fogPendingTileId !== null;
+
+    const dismissConditionAlert = (createdAt: number) => {
+        setConditionAlerts((current) => current.filter((alert) => alert.createdAt !== createdAt));
+    };
+
+    const clearConditionAlerts = () => {
+        setConditionAlerts([]);
+    };
+
+    useEffect(() => {
+        conditionOrderRef.current = conditionOrder;
+    }, [conditionOrder]);
 
     useEffect(() => {
         setLiveTiles(orderTiles(tiles));
@@ -337,6 +365,18 @@ export default function MapShow({
     useEffect(() => {
         setLiveTokens(orderTokens(tokens.map((token) => prepareTokenForState(token))));
     }, [tokens]);
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            const threshold = Date.now() - CONDITION_ALERT_LIFESPAN;
+
+            setConditionAlerts((current) =>
+                current.filter((alert) => alert.createdAt >= threshold)
+            );
+        }, 5000);
+
+        return () => window.clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         if (tile_templates.length > 0 && createForm.data.tile_template_id === '') {
@@ -466,9 +506,40 @@ export default function MapShow({
             setLiveTokens((current) => current.filter((token) => token.id !== payload.token.id));
         };
 
+        const handleConditionsExpired = (payload: ConditionExpirationEventPayload) => {
+            if (
+                payload.token?.id === undefined ||
+                !Array.isArray(payload.conditions) ||
+                payload.conditions.length === 0
+            ) {
+                return;
+            }
+
+            const order = conditionOrderRef.current ?? [];
+            const sanitized = order.filter((condition) => payload.conditions.includes(condition));
+
+            if (sanitized.length === 0) {
+                return;
+            }
+
+            setConditionAlerts((current) => {
+                const nextAlert: ConditionAlert = {
+                    tokenId: payload.token.id,
+                    tokenName: payload.token.name ?? 'Token',
+                    conditions: sanitized,
+                    createdAt: Date.now(),
+                };
+
+                const merged = [...current, nextAlert];
+
+                return merged.slice(-8);
+            });
+        };
+
         channel.listen('.map-token.created', handleTokenCreatedOrUpdated);
         channel.listen('.map-token.updated', handleTokenCreatedOrUpdated);
         channel.listen('.map-token.deleted', handleTokenDeleted);
+        channel.listen('.map-token.conditions-expired', handleConditionsExpired);
 
         return () => {
             channel.stopListening('.map-tile.created');
@@ -477,6 +548,7 @@ export default function MapShow({
             channel.stopListening('.map-token.created');
             channel.stopListening('.map-token.updated');
             channel.stopListening('.map-token.deleted');
+            channel.stopListening('.map-token.conditions-expired');
             echo.leave(channelName);
         };
     }, [group.id, map.id]);
@@ -888,6 +960,64 @@ export default function MapShow({
                         </div>
                     </div>
                 </div>
+
+                {conditionAlerts.length > 0 && (
+                    <section className="mx-auto max-w-4xl space-y-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 shadow-inner shadow-amber-900/30">
+                        <header className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-semibold uppercase tracking-wide text-amber-100">
+                                    Conditions cleared
+                                </h2>
+                                <p className="text-xs text-amber-200/80">
+                                    Timers expired for these tokens during the latest region turn.
+                                </p>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs uppercase tracking-wide text-amber-200 hover:bg-amber-500/20 hover:text-amber-50"
+                                onClick={clearConditionAlerts}
+                            >
+                                Dismiss all
+                            </Button>
+                        </header>
+                        <ul className="space-y-2">
+                            {conditionAlerts.map((alert) => (
+                                <li
+                                    key={`${alert.tokenId}-${alert.createdAt}`}
+                                    className="flex items-start justify-between gap-4 rounded-lg border border-amber-500/30 bg-amber-500/15 px-3 py-2 text-amber-50"
+                                >
+                                    <div>
+                                        <p className="text-sm font-semibold leading-5 text-amber-100">
+                                            {alert.tokenName}
+                                        </p>
+                                        <p className="text-xs uppercase tracking-wide text-amber-200">
+                                            {alert.conditions
+                                                .map((condition) => conditionLabelMap[condition] ?? condition)
+                                                .join(', ')}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[11px] uppercase tracking-wide text-amber-200/80">
+                                            Cleared
+                                        </span>
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-6 w-6 rounded-full text-amber-200 hover:bg-amber-500/20 hover:text-amber-50"
+                                            onClick={() => dismissConditionAlert(alert.createdAt)}
+                                        >
+                                            <span aria-hidden>×</span>
+                                            <span className="sr-only">Dismiss alert</span>
+                                        </Button>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
 
                 <section className="mx-auto max-w-4xl rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/30">
                     <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

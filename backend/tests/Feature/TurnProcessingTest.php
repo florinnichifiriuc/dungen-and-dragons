@@ -1,6 +1,7 @@
 <?php
 
 use App\Events\MapTokenBroadcasted;
+use App\Events\MapTokenConditionsExpired;
 use App\Models\AiRequest;
 use App\Models\Group;
 use App\Models\GroupMembership;
@@ -141,7 +142,7 @@ it('decrements token condition timers and clears expired conditions when a turn 
         'status_condition_durations' => [],
     ]);
 
-    Event::fake([MapTokenBroadcasted::class]);
+    Event::fake([MapTokenBroadcasted::class, MapTokenConditionsExpired::class]);
 
     app(TurnScheduler::class)->configure($region, 24, CarbonImmutable::now('UTC'));
 
@@ -168,4 +169,17 @@ it('decrements token condition timers and clears expired conditions when a turn 
 
         return true;
     });
+
+    Event::assertDispatchedTimes(MapTokenConditionsExpired::class, 1);
+    Event::assertDispatched(
+        MapTokenConditionsExpired::class,
+        function (MapTokenConditionsExpired $event) use ($map, $tokenWithTimers): bool {
+            expect($event->map->is($map))->toBeTrue();
+            expect($event->tokenId)->toBe($tokenWithTimers->id);
+            expect($event->tokenName)->toBe($tokenWithTimers->name);
+            expect($event->conditions)->toBe(['frightened']);
+
+            return true;
+        }
+    );
 });
