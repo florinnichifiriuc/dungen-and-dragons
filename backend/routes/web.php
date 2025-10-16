@@ -4,7 +4,9 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\AnalyticsEventController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CampaignController;
+use App\Http\Controllers\CampaignDigestPreviewController;
 use App\Http\Controllers\CampaignInvitationAcceptController;
+use App\Http\Controllers\CampaignInsightsController;
 use App\Http\Controllers\CampaignInvitationController;
 use App\Http\Controllers\CampaignRoleAssignmentController;
 use App\Http\Controllers\CampaignTaskController;
@@ -106,6 +108,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('groups/{group}/regions/{region}/turns', [RegionTurnController::class, 'store'])->name('groups.regions.turns.store');
     Route::post('groups/{group}/regions/{region}/ai-delegate', [RegionAiDelegationController::class, 'store'])->name('groups.regions.ai-delegate.store');
     Route::resource('campaigns', CampaignController::class);
+    Route::get('campaigns/{campaign}/insights', [CampaignInsightsController::class, 'show'])->name('campaigns.insights.show');
+    Route::get('campaigns/{campaign}/digests/preview', [CampaignDigestPreviewController::class, 'show'])->name('campaigns.digests.preview');
     Route::post('campaigns/{campaign}/invitations', [CampaignInvitationController::class, 'store'])->name('campaigns.invitations.store');
     Route::delete('campaigns/{campaign}/invitations/{invitation}', [CampaignInvitationController::class, 'destroy'])->name('campaigns.invitations.destroy');
     Route::get('invitations/{invitation:token}', [CampaignInvitationAcceptController::class, 'show'])->name('campaigns.invitations.accept.show');

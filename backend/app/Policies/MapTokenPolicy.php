@@ -7,12 +7,15 @@ use App\Models\GroupMembership;
 use App\Models\Map;
 use App\Models\MapToken;
 use App\Models\User;
+use Illuminate\Auth\Access\Response;
 
 class MapTokenPolicy
 {
-    public function create(User $user, Map $map): bool
+    public function create(User $user, Map $map): Response
     {
-        return $this->hasBuilderRole($user, $map->group);
+        return $this->hasBuilderRole($user, $map->group)
+            ? Response::allow()
+            : Response::deny(trans('app.condition_timer_batch.errors.unauthorized'));
     }
 
     public function update(User $user, MapToken $token): bool

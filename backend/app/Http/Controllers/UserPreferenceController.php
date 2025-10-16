@@ -34,6 +34,9 @@ class UserPreferenceController extends Controller
                 'notification_quiet_hours_start' => $notificationPreferences->quiet_hours_start,
                 'notification_quiet_hours_end' => $notificationPreferences->quiet_hours_end,
                 'notification_digest_delivery' => $notificationPreferences->digest_delivery,
+                'notification_digest_channel_in_app' => $notificationPreferences->digest_channel_in_app,
+                'notification_digest_channel_email' => $notificationPreferences->digest_channel_email,
+                'notification_digest_channel_push' => $notificationPreferences->digest_channel_push,
             ],
             'options' => [
                 'locales' => array_keys((array) config('preferences.locales')),
@@ -78,6 +81,9 @@ class UserPreferenceController extends Controller
             'quiet_hours_start' => $quietStart,
             'quiet_hours_end' => $quietEnd,
             'digest_delivery' => $validated['notification_digest_delivery'],
+            'digest_channel_in_app' => (bool) $validated['notification_digest_channel_in_app'],
+            'digest_channel_email' => (bool) $validated['notification_digest_channel_email'],
+            'digest_channel_push' => (bool) $validated['notification_digest_channel_push'],
         ])->save();
 
         return redirect()

@@ -39,6 +39,9 @@ class UserPreferenceUpdateRequest extends FormRequest
             'notification_quiet_hours_start' => ['nullable', 'date_format:H:i', 'required_with:notification_quiet_hours_end'],
             'notification_quiet_hours_end' => ['nullable', 'date_format:H:i', 'required_with:notification_quiet_hours_start'],
             'notification_digest_delivery' => ['required', Rule::in($digestOptions)],
+            'notification_digest_channel_in_app' => ['required', 'boolean'],
+            'notification_digest_channel_email' => ['required', 'boolean'],
+            'notification_digest_channel_push' => ['required', 'boolean'],
         ];
     }
 }

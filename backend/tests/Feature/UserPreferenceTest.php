@@ -49,6 +49,9 @@ it('persists updated accessibility preferences', function (): void {
             'notification_quiet_hours_start' => '21:00',
             'notification_quiet_hours_end' => '07:00',
             'notification_digest_delivery' => 'daily',
+            'notification_digest_channel_in_app' => true,
+            'notification_digest_channel_email' => true,
+            'notification_digest_channel_push' => false,
         ])
         ->assertRedirect(route('settings.preferences.edit'))
         ->assertSessionHas('success', Lang::get('app.preferences.success'));
@@ -70,6 +73,9 @@ it('persists updated accessibility preferences', function (): void {
         'quiet_hours_start' => '21:00',
         'quiet_hours_end' => '07:00',
         'digest_delivery' => 'daily',
+        'digest_channel_in_app' => true,
+        'digest_channel_email' => true,
+        'digest_channel_push' => false,
     ]);
 });
 
@@ -89,6 +95,9 @@ it('validates unsupported preference values', function (): void {
             'notification_quiet_hours_start' => 'evening',
             'notification_quiet_hours_end' => 'morning',
             'notification_digest_delivery' => 'monthly',
+            'notification_digest_channel_in_app' => 'perhaps',
+            'notification_digest_channel_email' => 'never',
+            'notification_digest_channel_push' => 'sure',
         ])
         ->assertSessionHasErrors([
             'locale',
@@ -102,5 +111,8 @@ it('validates unsupported preference values', function (): void {
             'notification_quiet_hours_start',
             'notification_quiet_hours_end',
             'notification_digest_delivery',
+            'notification_digest_channel_in_app',
+            'notification_digest_channel_email',
+            'notification_digest_channel_push',
         ]);
 });

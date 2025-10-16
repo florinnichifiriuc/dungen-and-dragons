@@ -57,6 +57,16 @@ class CampaignPolicy
         return $this->canManage($user, $campaign);
     }
 
+    public function previewDigest(User $user, Campaign $campaign): bool
+    {
+        return $this->canManage($user, $campaign);
+    }
+
+    public function viewInsights(User $user, Campaign $campaign): bool
+    {
+        return $this->canManage($user, $campaign);
+    }
+
     protected function canManage(User $user, Campaign $campaign): bool
     {
         if ($campaign->created_by === $user->id) {
