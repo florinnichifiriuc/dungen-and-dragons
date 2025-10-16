@@ -3,12 +3,17 @@ import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 
 import AppLayout from '@/Layouts/AppLayout';
+import PlayerConditionTimerSummaryPanel, {
+    ConditionTimerSummaryResource,
+} from '@/components/condition-timers/PlayerConditionTimerSummaryPanel';
+import { MobileConditionTimerRecapWidget } from '@/components/condition-timers/MobileConditionTimerRecapWidget';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { getEcho } from '@/lib/realtime';
+import { useConditionTimerSummaryCache } from '@/hooks/useConditionTimerSummaryCache';
 
 function formatDateTime(value: string | null): string {
     if (!value) {
@@ -29,6 +34,7 @@ function formatDateTime(value: string | null): string {
 type CampaignContext = {
     id: number;
     title: string;
+    group: { id: number; name: string };
 };
 
 type SessionDetail = {
@@ -133,6 +139,8 @@ type SessionShowProps = {
         can_log_reward: boolean;
     };
     ai_dialogues: AiDialogueEntry[];
+    condition_timer_summary: ConditionTimerSummaryResource;
+    condition_timer_summary_share_url: string;
 };
 
 type SessionNoteEventPayload = {
@@ -156,6 +164,10 @@ type AiDialogueEntry = {
     reply: string | null;
     status: string;
     created_at: string | null;
+};
+
+type ConditionTimerSummaryEventPayload = {
+    summary: ConditionTimerSummaryResource;
 };
 
 const parseIsoTimestamp = (value: string | null): number => {
@@ -237,12 +249,23 @@ export default function SessionShow({
     note_visibilities: noteVisibilities,
     permissions,
     ai_dialogues: aiDialogues,
+    condition_timer_summary: conditionTimerSummary,
+    condition_timer_summary_share_url: conditionTimerSummaryShareUrl,
 }: SessionShowProps) {
     const page = usePage();
     const currentUserId = (page.props.auth?.user?.id as number | undefined) ?? null;
     const defaultVisibility = noteVisibilities.includes('players')
         ? 'players'
         : noteVisibilities[0] ?? 'players';
+    const summaryStorageKey = `condition-summary:group-${campaign.group.id}`;
+
+    const {
+        summary: conditionSummary,
+        updateSummary: updateConditionSummary,
+    } = useConditionTimerSummaryCache({
+        storageKey: summaryStorageKey,
+        initialSummary: conditionTimerSummary,
+    });
 
     const [noteFeed, setNoteFeed] = useState<SessionNoteResource[]>(() => orderNotes(notes));
     const [diceLog, setDiceLog] = useState<DiceRollResource[]>(() => orderDiceRolls(diceRolls));
@@ -487,6 +510,18 @@ export default function SessionShow({
             gmChannel.listen('.session-note.deleted', handleNoteDelete);
         }
 
+        const conditionChannel = echo.private(`groups.${campaign.group.id}.condition-timers`);
+
+        const handleConditionSummary = (payload: ConditionTimerSummaryEventPayload) => {
+            if (!payload.summary) {
+                return;
+            }
+
+            updateConditionSummary(payload.summary);
+        };
+
+        conditionChannel.listen('.condition-timer-summary.updated', handleConditionSummary);
+
         return () => {
             channel.stopListening('.session-note.created');
             channel.stopListening('.session-note.updated');
@@ -504,8 +539,18 @@ export default function SessionShow({
                 gmChannel.stopListening('.session-note.deleted');
                 echo.leave(`${baseChannel}.gms`);
             }
+
+            conditionChannel.stopListening('.condition-timer-summary.updated');
+            echo.leave(`groups.${campaign.group.id}.condition-timers`);
         };
-    }, [campaign.id, session.id, permissions.can_manage]);
+    }, [
+        campaign.id,
+        campaign.group.id,
+        session.id,
+        permissions.can_manage,
+        summaryStorageKey,
+        updateConditionSummary,
+    ]);
 
     const submitNote = (event: FormEvent) => {
         event.preventDefault();
@@ -882,6 +927,17 @@ export default function SessionShow({
                             </div>
                         </div>
                     </div>
+
+                    <MobileConditionTimerRecapWidget
+                        summary={conditionSummary}
+                        shareUrl={conditionTimerSummaryShareUrl}
+                        className="md:hidden"
+                    />
+                    <PlayerConditionTimerSummaryPanel
+                        summary={conditionSummary}
+                        shareUrl={conditionTimerSummaryShareUrl}
+                        className="hidden md:block"
+                    />
 
                     <div className="grid gap-6 md:grid-cols-2">
                         <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">

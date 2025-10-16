@@ -15,8 +15,10 @@ use Illuminate\Support\Facades\DB;
 
 class TurnScheduler
 {
-    public function __construct(private readonly TurnAiDelegate $aiDelegate)
-    {
+    public function __construct(
+        private readonly TurnAiDelegate $aiDelegate,
+        private readonly ConditionTimerSummaryProjector $conditionTimerSummaryProjector
+    ) {
     }
 
     public function configure(Region $region, int $turnDurationHours, ?CarbonImmutable $nextTurnAt = null): TurnConfiguration
@@ -83,7 +85,7 @@ class TurnScheduler
 
             $tokens = MapToken::query()
                 ->whereIn('id', $tokenIds)
-                ->with('map')
+                ->with(['map.group'])
                 ->get()
                 ->keyBy(fn (MapToken $token): int => (int) $token->id);
 
@@ -112,6 +114,15 @@ class TurnScheduler
                     $token->name,
                     $expiredLookup[$tokenId],
                 ));
+            }
+
+            $groups = $tokens
+                ->map(fn (MapToken $token) => $token->map->group)
+                ->filter()
+                ->unique(fn ($group) => $group->id ?? null);
+
+            foreach ($groups as $group) {
+                $this->conditionTimerSummaryProjector->refreshForGroup($group);
             }
         }
 

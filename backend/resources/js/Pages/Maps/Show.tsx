@@ -155,6 +155,24 @@ type ConditionTimerGroup = {
     timers: ConditionTimerEntry[];
 };
 
+type SelectedTimerMap = Record<number, string[]>;
+
+type BatchAdjustmentPlan =
+    | {
+          tokenId: number;
+          condition: string;
+          type: 'delta';
+          value: number;
+          expected: number;
+      }
+    | {
+          tokenId: number;
+          condition: string;
+          type: 'set';
+          value: number;
+          expected: number;
+      };
+
 const orderTiles = (items: MapTileSummary[]): MapTileSummary[] =>
     [...items].sort((a, b) => {
         if (a.q !== b.q) {
@@ -379,6 +397,12 @@ export default function MapShow({
     const [timerSearchQuery, setTimerSearchQuery] = useState('');
     const [showCriticalTimersOnly, setShowCriticalTimersOnly] = useState(false);
     const [conditionAlerts, setConditionAlerts] = useState<ConditionAlert[]>([]);
+    const [selectedTimers, setSelectedTimers] = useState<SelectedTimerMap>({});
+    const [batchDeltaInput, setBatchDeltaInput] = useState('1');
+    const [batchSetInput, setBatchSetInput] = useState('');
+    const [batchProcessing, setBatchProcessing] = useState(false);
+    const [batchSummary, setBatchSummary] = useState<string | null>(null);
+    const [pendingBatchSummary, setPendingBatchSummary] = useState<string | null>(null);
 
     const fogBusy = fogPendingTileId !== null;
 
@@ -850,6 +874,378 @@ export default function MapShow({
             ),
         [filteredConditionTimerGroups]
     );
+
+    useEffect(() => {
+        const availableKeys = new Set<string>();
+
+        conditionTimerGroups.forEach((group) => {
+            group.timers.forEach((timer) => {
+                availableKeys.add(`${group.tokenId}:${timer.condition}`);
+            });
+        });
+
+        setSelectedTimers((current) => {
+            let changed = false;
+            const next: SelectedTimerMap = {};
+
+            Object.entries(current).forEach(([tokenIdKey, conditions]) => {
+                const tokenId = Number(tokenIdKey);
+                const validConditions = conditions.filter((condition) =>
+                    availableKeys.has(`${tokenId}:${condition}`)
+                );
+
+                if (validConditions.length > 0) {
+                    next[tokenId] = validConditions;
+                }
+
+                if (validConditions.length !== conditions.length) {
+                    changed = true;
+                }
+            });
+
+            if (! changed && Object.keys(next).length === Object.keys(current).length) {
+                return current;
+            }
+
+            return next;
+        });
+    }, [conditionTimerGroups]);
+
+    const selectedTimerEntries = useMemo(() => {
+        const lookup = new Map<string, { tokenId: number; condition: string; roundsRemaining: number }>();
+
+        conditionTimerGroups.forEach((group) => {
+            group.timers.forEach((timer) => {
+                lookup.set(`${group.tokenId}:${timer.condition}`, {
+                    tokenId: group.tokenId,
+                    condition: timer.condition,
+                    roundsRemaining: timer.roundsRemaining,
+                });
+            });
+        });
+
+        const entries: { tokenId: number; condition: string; roundsRemaining: number }[] = [];
+
+        Object.entries(selectedTimers).forEach(([tokenIdKey, conditions]) => {
+            const tokenId = Number(tokenIdKey);
+
+            conditions.forEach((condition) => {
+                const key = `${tokenId}:${condition}`;
+                const timer = lookup.get(key);
+
+                if (timer) {
+                    entries.push(timer);
+                }
+            });
+        });
+
+        return entries;
+    }, [conditionTimerGroups, selectedTimers]);
+
+    const selectedTimerCount = selectedTimerEntries.length;
+
+    const selectedTokenCount = useMemo(() => {
+        const unique = new Set<number>();
+
+        selectedTimerEntries.forEach((entry) => unique.add(entry.tokenId));
+
+        return unique.size;
+    }, [selectedTimerEntries]);
+
+    const isTimerSelected = (tokenId: number, condition: string) =>
+        selectedTimers[tokenId]?.includes(condition) ?? false;
+
+    const toggleTimerSelection = (tokenId: number, condition: string) => {
+        setSelectedTimers((current) => {
+            const currentForToken = current[tokenId] ?? [];
+            const isSelected = currentForToken.includes(condition);
+            const nextConditions = isSelected
+                ? currentForToken.filter((value) => value !== condition)
+                : [...currentForToken, condition];
+
+            if (nextConditions.length === 0) {
+                const { [tokenId]: _removed, ...rest } = current;
+
+                return rest;
+            }
+
+            return {
+                ...current,
+                [tokenId]: nextConditions,
+            };
+        });
+    };
+
+    const clearSelectedTimers = () => setSelectedTimers({});
+
+    const applyBatchAdjustments = (
+        plans: BatchAdjustmentPlan[],
+        summaryMessage: string
+    ) => {
+        if (plans.length === 0) {
+            return;
+        }
+
+        const plansByToken = plans.reduce<Record<number, BatchAdjustmentPlan[]>>(
+            (accumulator, plan) => {
+                const bucket = accumulator[plan.tokenId] ?? [];
+                bucket.push(plan);
+                accumulator[plan.tokenId] = bucket;
+
+                return accumulator;
+            },
+            {}
+        );
+
+        const draftSnapshots: Record<number, TokenDraft> = {};
+        const tokenSnapshots: Record<number, MapTokenSummary> = {};
+
+        Object.keys(plansByToken).forEach((tokenIdKey) => {
+            const tokenId = Number(tokenIdKey);
+            const draft = tokenEdits[tokenId];
+
+            if (draft) {
+                draftSnapshots[tokenId] = {
+                    ...draft,
+                    status_conditions: [...draft.status_conditions],
+                    status_condition_durations: { ...draft.status_condition_durations },
+                };
+            }
+
+            const liveToken = liveTokens.find((token) => token.id === tokenId);
+
+            if (liveToken) {
+                tokenSnapshots[tokenId] = {
+                    ...liveToken,
+                    status_conditions: [...liveToken.status_conditions],
+                    status_condition_durations: { ...liveToken.status_condition_durations },
+                };
+            }
+        });
+
+        const stateUpdates: Record<
+            number,
+            {
+                orderedConditions: string[];
+                syncedDurations: Record<string, number | ''>;
+                normalizedDurations: Record<string, number>;
+            }
+        > = {};
+
+        setTokenEdits((drafts) => {
+            const nextDrafts = { ...drafts };
+
+            Object.entries(plansByToken).forEach(([tokenIdKey, tokenPlans]) => {
+                const tokenId = Number(tokenIdKey);
+                const current = nextDrafts[tokenId];
+
+                if (! current) {
+                    return;
+                }
+
+                const orderedConditions = orderConditions(current.status_conditions);
+                let durationDraft = { ...current.status_condition_durations };
+
+                tokenPlans.forEach((plan) => {
+                    const rawCurrent = durationDraft[plan.condition];
+                    const numericCurrent =
+                        typeof rawCurrent === 'number' ? rawCurrent : Number(rawCurrent);
+                    const sanitizedCurrent = Number.isNaN(numericCurrent)
+                        ? 0
+                        : numericCurrent;
+
+                    let nextValue =
+                        plan.type === 'delta'
+                            ? sanitizedCurrent + plan.value
+                            : plan.value;
+
+                    if (nextValue <= 0) {
+                        delete durationDraft[plan.condition];
+                    } else {
+                        const clamped = Math.min(
+                            Math.max(Math.round(nextValue), 1),
+                            MAX_CONDITION_DURATION
+                        );
+                        durationDraft[plan.condition] = clamped;
+                    }
+                });
+
+                const syncedDurations = syncDurationDraft(durationDraft, orderedConditions);
+                const serializedDurations = serializeConditionDurations(
+                    syncedDurations,
+                    orderedConditions
+                );
+                const normalizedDurations = normalizeConditionDurations(
+                    serializedDurations ?? {},
+                    orderedConditions
+                );
+
+                stateUpdates[tokenId] = {
+                    orderedConditions,
+                    syncedDurations,
+                    normalizedDurations,
+                };
+
+                nextDrafts[tokenId] = {
+                    ...current,
+                    status_conditions: orderedConditions,
+                    status_condition_durations: syncedDurations,
+                };
+            });
+
+            return nextDrafts;
+        });
+
+        setLiveTokens((tokensState) =>
+            orderTokens(
+                tokensState.map((token) => {
+                    const update = stateUpdates[token.id];
+
+                    if (! update) {
+                        return token;
+                    }
+
+                    return {
+                        ...token,
+                        status_conditions: update.orderedConditions,
+                        status_condition_durations: update.normalizedDurations,
+                    };
+                })
+            )
+        );
+
+        const payload = plans.map((plan) => ({
+            token_id: plan.tokenId,
+            condition: plan.condition,
+            ...(plan.type === 'delta'
+                ? { delta: plan.value }
+                : { set_to: plan.value }),
+            expected_rounds: plan.expected,
+        }));
+
+        setBatchProcessing(true);
+        setPendingBatchSummary(summaryMessage);
+        setBatchSummary(null);
+
+        router.post(
+            route('groups.maps.tokens.condition-timers.batch', [group.id, map.id]),
+            { adjustments: payload },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    setPendingBatchSummary(null);
+                    setBatchSummary(summaryMessage);
+                },
+                onError: () => {
+                    setPendingBatchSummary(null);
+                    setBatchSummary(null);
+
+                    setTokenEdits((drafts) => {
+                        const nextDrafts = { ...drafts };
+
+                        Object.entries(draftSnapshots).forEach(([tokenIdKey, snapshot]) => {
+                            nextDrafts[Number(tokenIdKey)] = {
+                                ...snapshot,
+                                status_conditions: [...snapshot.status_conditions],
+                                status_condition_durations: {
+                                    ...snapshot.status_condition_durations,
+                                },
+                            };
+                        });
+
+                        return nextDrafts;
+                    });
+
+                    setLiveTokens((tokensState) =>
+                        orderTokens(
+                            tokensState.map((token) => {
+                                const snapshot = tokenSnapshots[token.id];
+
+                                if (! snapshot) {
+                                    return token;
+                                }
+
+                                return {
+                                    ...snapshot,
+                                    status_conditions: [...snapshot.status_conditions],
+                                    status_condition_durations: {
+                                        ...snapshot.status_condition_durations,
+                                    },
+                                };
+                            })
+                        )
+                    );
+                },
+                onFinish: () => {
+                    setBatchProcessing(false);
+                },
+            }
+        );
+    };
+
+    const handleApplyBatchDelta = (direction: 'increase' | 'decrease') => {
+        if (selectedTimerEntries.length === 0) {
+            return;
+        }
+
+        const parsed = Number(batchDeltaInput);
+        const magnitude = Number.isNaN(parsed)
+            ? 1
+            : Math.min(Math.max(Math.round(Math.abs(parsed)), 1), MAX_CONDITION_DURATION);
+
+        const delta = direction === 'increase' ? magnitude : -magnitude;
+
+        const plans: BatchAdjustmentPlan[] = selectedTimerEntries.map((entry) => ({
+            tokenId: entry.tokenId,
+            condition: entry.condition,
+            type: 'delta',
+            value: delta,
+            expected: entry.roundsRemaining,
+        }));
+
+        const timerLabel = selectedTimerEntries.length === 1 ? 'timer' : 'timers';
+        const tokenLabel = selectedTokenCount === 1 ? 'token' : 'tokens';
+        const scope = selectedTokenCount > 1 ? ` across ${selectedTokenCount} ${tokenLabel}` : '';
+        const summary = `${
+            direction === 'increase' ? 'Extended' : 'Reduced'
+        } ${selectedTimerEntries.length} ${timerLabel} by ${formatRoundsRemaining(
+            magnitude
+        )}${scope}`;
+
+        applyBatchAdjustments(plans, summary);
+    };
+
+    const handleApplyBatchSet = () => {
+        if (selectedTimerEntries.length === 0) {
+            return;
+        }
+
+        const parsed = Number(batchSetInput);
+
+        if (Number.isNaN(parsed) || parsed <= 0) {
+            return;
+        }
+
+        const target = Math.min(Math.max(Math.round(parsed), 1), MAX_CONDITION_DURATION);
+
+        const plans: BatchAdjustmentPlan[] = selectedTimerEntries.map((entry) => ({
+            tokenId: entry.tokenId,
+            condition: entry.condition,
+            type: 'set',
+            value: target,
+            expected: entry.roundsRemaining,
+        }));
+
+        const timerLabel = selectedTimerEntries.length === 1 ? 'timer' : 'timers';
+        const tokenLabel = selectedTokenCount === 1 ? 'token' : 'tokens';
+        const scope = selectedTokenCount > 1 ? ` across ${selectedTokenCount} ${tokenLabel}` : '';
+        const summary = `Reset ${selectedTimerEntries.length} ${timerLabel} to ${formatRoundsRemaining(
+            target
+        )}${scope}`;
+
+        applyBatchAdjustments(plans, summary);
+    };
 
     const hasTimerFiltersApplied =
         tokenFactionFilter !== 'all' ||
@@ -1375,6 +1771,116 @@ export default function MapShow({
                                 </div>
                             </div>
                         </header>
+                        {selectedTimerCount > 0 && (
+                            <div className="mt-4 space-y-3 rounded-lg border border-indigo-500/40 bg-indigo-500/10 p-4 shadow-inner shadow-indigo-900/10">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <p className="text-xs uppercase tracking-wide text-indigo-200/80">
+                                        Selected {selectedTimerCount}{' '}
+                                        {selectedTimerCount === 1 ? 'timer' : 'timers'}
+                                        {selectedTokenCount > 1 && (
+                                            <>
+                                                {' '}across {selectedTokenCount}{' '}
+                                                {selectedTokenCount === 1 ? 'token' : 'tokens'}
+                                            </>
+                                        )}
+                                    </p>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-[11px] uppercase tracking-wide text-indigo-200 hover:text-white"
+                                        onClick={clearSelectedTimers}
+                                        disabled={batchProcessing}
+                                    >
+                                        Clear selection
+                                    </Button>
+                                </div>
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Label
+                                            htmlFor="batch-delta"
+                                            className="text-[11px] uppercase tracking-wide text-indigo-200"
+                                        >
+                                            Adjust by
+                                        </Label>
+                                        <Input
+                                            id="batch-delta"
+                                            type="number"
+                                            min={1}
+                                            max={MAX_CONDITION_DURATION}
+                                            value={batchDeltaInput}
+                                            onChange={(event) => setBatchDeltaInput(event.target.value)}
+                                            className="h-8 w-20 border border-indigo-500/40 bg-zinc-950/70 text-xs text-indigo-100 focus-visible:ring-indigo-400"
+                                            disabled={batchProcessing}
+                                        />
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                className="text-xs uppercase tracking-wide"
+                                                onClick={() => handleApplyBatchDelta('increase')}
+                                                disabled={batchProcessing}
+                                            >
+                                                Extend
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                className="border-indigo-500/40 text-xs uppercase tracking-wide text-indigo-100"
+                                                onClick={() => handleApplyBatchDelta('decrease')}
+                                                disabled={batchProcessing}
+                                            >
+                                                Reduce
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Label
+                                            htmlFor="batch-set"
+                                            className="text-[11px] uppercase tracking-wide text-indigo-200"
+                                        >
+                                            Reset to
+                                        </Label>
+                                        <Input
+                                            id="batch-set"
+                                            type="number"
+                                            min={1}
+                                            max={MAX_CONDITION_DURATION}
+                                            value={batchSetInput}
+                                            onChange={(event) => setBatchSetInput(event.target.value)}
+                                            className="h-8 w-20 border border-indigo-500/40 bg-zinc-950/70 text-xs text-indigo-100 focus-visible:ring-indigo-400"
+                                            disabled={batchProcessing}
+                                        />
+                                        <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="secondary"
+                                            className="text-xs uppercase tracking-wide"
+                                            onClick={handleApplyBatchSet}
+                                            disabled={batchProcessing || batchSetInput.trim() === ''}
+                                        >
+                                            Apply
+                                        </Button>
+                                    </div>
+                                </div>
+                                {pendingBatchSummary && (
+                                    <p className="text-[11px] uppercase tracking-wide text-indigo-200/80">
+                                        Applying updates…
+                                    </p>
+                                )}
+                                {batchSummary && !pendingBatchSummary && (
+                                    <p className="text-[11px] uppercase tracking-wide text-indigo-100">
+                                        {batchSummary}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                        {selectedTimerCount === 0 && batchSummary && !pendingBatchSummary && (
+                            <div className="mt-4 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-200">
+                                {batchSummary}
+                            </div>
+                        )}
                         {filteredConditionTimerGroups.length === 0 ? (
                             <p className="rounded-lg border border-indigo-500/30 bg-indigo-500/5 px-4 py-3 text-sm text-indigo-200">
                                 No timers match the current filters. Adjust your search or urgency focus to bring them back into view.
@@ -1416,27 +1922,50 @@ export default function MapShow({
                                                 {group.timers.map((timer) => {
                                                     const conditionLabel =
                                                         conditionLabelMap[timer.condition] ?? timer.condition;
+                                                    const selected = isTimerSelected(
+                                                        group.tokenId,
+                                                        timer.condition
+                                                    );
+                                                    const selectionClasses = selected
+                                                        ? 'border-indigo-400/60 bg-indigo-500/20 shadow-inner shadow-indigo-900/20'
+                                                        : 'border-indigo-500/30 bg-indigo-500/10';
 
                                                     return (
                                                         <li
                                                             key={`${group.tokenId}-${timer.condition}`}
-                                                            className="flex items-center gap-2 rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2 py-1"
+                                                            className={`flex items-center gap-3 rounded-md border px-2 py-1 transition ${selectionClasses}`}
                                                         >
-                                                            <span className="text-xs font-medium text-indigo-100">
-                                                                {conditionLabel}
-                                                            </span>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <Button
-                                                                    type="button"
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    className="h-7 w-7 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-100 hover:bg-indigo-500/20 hover:text-white"
-                                                                    disabled={updatingToken === group.tokenId}
-                                                                    onClick={() =>
-                                                                        handleAdjustConditionTimer(
-                                                                            group.tokenId,
-                                                                            timer.condition,
-                                                                            -1,
+                                                            <Checkbox
+                                                                checked={selected}
+                                                                onCheckedChange={() =>
+                                                                    toggleTimerSelection(
+                                                                        group.tokenId,
+                                                                        timer.condition
+                                                                    )
+                                                                }
+                                                                aria-label={`Select ${conditionLabel} timer`}
+                                                                disabled={batchProcessing}
+                                                                className="h-4 w-4 border-indigo-500/60 data-[state=checked]:border-indigo-400 data-[state=checked]:bg-indigo-500"
+                                                            />
+                                                            <div className="flex flex-1 flex-wrap items-center justify-between gap-2">
+                                                                <span className="text-xs font-medium text-indigo-100">
+                                                                    {conditionLabel}
+                                                                </span>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        className="h-7 w-7 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-100 hover:bg-indigo-500/20 hover:text-white"
+                                                                        disabled={
+                                                                            batchProcessing ||
+                                                                            updatingToken === group.tokenId
+                                                                        }
+                                                                        onClick={() =>
+                                                                            handleAdjustConditionTimer(
+                                                                                group.tokenId,
+                                                                                timer.condition,
+                                                                                -1,
                                                                         )
                                                                     }
                                                                 >
@@ -1450,17 +1979,20 @@ export default function MapShow({
                                                                 >
                                                                     {formatRoundsRemaining(timer.roundsRemaining)}
                                                                 </span>
-                                                                <Button
-                                                                    type="button"
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    className="h-7 w-7 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-100 hover:bg-indigo-500/20 hover:text-white"
-                                                                    disabled={updatingToken === group.tokenId}
-                                                                    onClick={() =>
-                                                                        handleAdjustConditionTimer(
-                                                                            group.tokenId,
-                                                                            timer.condition,
-                                                                            1,
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        className="h-7 w-7 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-100 hover:bg-indigo-500/20 hover:text-white"
+                                                                        disabled={
+                                                                            batchProcessing ||
+                                                                            updatingToken === group.tokenId
+                                                                        }
+                                                                        onClick={() =>
+                                                                            handleAdjustConditionTimer(
+                                                                                group.tokenId,
+                                                                                timer.condition,
+                                                                                1,
                                                                         )
                                                                     }
                                                                 >
@@ -1469,24 +2001,28 @@ export default function MapShow({
                                                                         Increase {conditionLabel} timer
                                                                     </span>
                                                                 </Button>
-                                                                <Button
-                                                                    type="button"
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    className="h-7 w-7 rounded-full border border-rose-500/40 bg-transparent text-rose-200 hover:bg-rose-500/20 hover:text-white"
-                                                                    disabled={updatingToken === group.tokenId}
-                                                                    onClick={() =>
-                                                                        handleClearConditionTimer(
-                                                                            group.tokenId,
-                                                                            timer.condition,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    <X className="h-3 w-3" aria-hidden="true" />
-                                                                    <span className="sr-only">
-                                                                        Clear {conditionLabel} timer
-                                                                    </span>
-                                                                </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        className="h-7 w-7 rounded-full border border-rose-500/40 bg-transparent text-rose-200 hover:bg-rose-500/20 hover:text-white"
+                                                                        disabled={
+                                                                            batchProcessing ||
+                                                                            updatingToken === group.tokenId
+                                                                        }
+                                                                        onClick={() =>
+                                                                            handleClearConditionTimer(
+                                                                                group.tokenId,
+                                                                                timer.condition,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <X className="h-3 w-3" aria-hidden="true" />
+                                                                        <span className="sr-only">
+                                                                            Clear {conditionLabel} timer
+                                                                        </span>
+                                                                    </Button>
+                                                                </div>
                                                             </div>
                                                         </li>
                                                     );

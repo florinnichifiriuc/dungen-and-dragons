@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\CampaignSession;
+use App\Models\Group;
 use App\Models\Map;
 use App\Policies\CampaignPolicy;
 use App\Policies\SessionPolicy;
@@ -55,6 +56,19 @@ Broadcast::channel('groups.{groupId}.maps.{mapId}', function ($user, int $groupI
     }
 
     return $map->group
+        ->memberships()
+        ->where('user_id', $user->id)
+        ->exists();
+});
+
+Broadcast::channel('groups.{groupId}.condition-timers', function ($user, int $groupId) {
+    $group = Group::query()->find($groupId);
+
+    if ($group === null) {
+        return false;
+    }
+
+    return $group
         ->memberships()
         ->where('user_id', $user->id)
         ->exists();

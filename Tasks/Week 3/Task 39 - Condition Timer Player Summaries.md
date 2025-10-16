@@ -1,6 +1,6 @@
 # Task 39 – Condition Timer Player Summaries
 
-**Status:** Planned
+**Status:** Completed
 **Owner:** Product & Narrative Design
 **Dependencies:** Task 38
 
@@ -24,3 +24,4 @@ Expose a read-only, lore-friendly summary of active condition timers to players 
 
 ## Log
 - 2025-10-27 20:20 UTC – Logged follow-up to extend timer visibility to players after batch tooling.
+- 2025-10-30 14:05 UTC – Implemented redacted projection cache, realtime broadcasting, and session/shareable panels with localized narrative copy.
