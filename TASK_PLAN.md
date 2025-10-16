@@ -1,6 +1,8 @@
 # Task Plan
 
 ## Backlog
+- [ ] Task 38 – Token Condition Timer Batch Adjustments (multi-select timers, bulk delta tooling, optimistic syncing).
+- [ ] Task 39 – Condition Timer Player Summaries (redacted player view, realtime updates, narrative-friendly copy).
 - [x] Create group management (create/join/roles) and policies.
 - [x] Establish milestone demo flow automation that runs at a human reading pace with verbose console narration to showcase completed work for each milestone.
 - [x] Develop turn scheduler service and API (process turn, AI fallback).
@@ -10,7 +12,6 @@
 - [x] Add search/filter infrastructure across entities, tasks, notes.
 - [x] Implement exports (Markdown/PDF) and session recording storage.
 - [x] Finalize localization, accessibility, theming, and docs.
-
 ## In Progress
 - _None_
 
@@ -50,3 +51,6 @@
 - Task 32 – Token Condition Countdown Automation (auto-decrement timers on region turns, clearing expired conditions and broadcasting updates)
 - Task 33 – Token Condition Expiration Alerts (broadcast alert payloads and realtime UI notices when presets lapse)
 - Task 34 – Token Condition Timer Dashboard (aggregate active timers with urgency highlights in the map workspace)
+- Task 35 – Token Condition Timer Quick Adjustments (dashboard plus/minus controls, optimistic syncing, and feature coverage)
+- Task 36 – Token Condition Timer Filters (faction-aware filtering, urgency focus toggles, and search controls)
+- Task 37 – Token Condition Timer Quick Clearing (dashboard removal controls, optimistic syncing, and documentation updates)

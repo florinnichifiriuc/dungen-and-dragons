@@ -40,5 +40,8 @@
 | 2025-10-27 05:15 | Token Condition Countdown Automation | Automated timer decrements during region turn processing, clearing expired conditions and broadcasting refreshed token payloads for encounter clarity. |
 | 2025-10-27 09:10 | Token Condition Expiration Alerts | Broadcast expiration alerts during turn processing and surface realtime notices in the map workspace so facilitators see which presets have cleared. |
 | 2025-10-27 12:10 | Token Condition Timer Dashboard | Rolled out an aggregated countdown dashboard with urgency styling so facilitators can track all active condition timers at a glance. |
+| 2025-10-27 15:35 | Token Condition Timer Quick Adjustments | Added dashboard plus/minus controls, optimistic syncing, and coverage so facilitators can tweak condition timers without opening each token editor. |
+| 2025-10-27 18:20 | Token Condition Timer Filters | Introduced faction-aware filtering, urgency toggles, and search controls so facilitators can focus on the timers that need attention most. |
+| 2025-10-27 21:30 | Token Condition Timer Quick Clearing | Delivered dashboard clear controls with optimistic syncing so facilitators can remove expired effects without diving into each token editor. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.

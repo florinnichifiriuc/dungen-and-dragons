@@ -198,6 +198,46 @@ it('allows owners to adjust token coordinates and notes', function () {
     });
 });
 
+it('allows owners to clear individual condition timers from tokens', function () {
+    [$group, $owner] = createGroupWithOwnerForTokens();
+    $world = World::factory()->for($group)->create();
+    $region = \App\Models\Region::factory()->for($world)->create();
+    $map = Map::factory()->for($group)->for($region)->create();
+
+    $token = MapToken::factory()->for($map)->create([
+        'name' => 'Battlefield Cleric',
+        'status_conditions' => ['blinded', 'restrained'],
+        'status_condition_durations' => ['blinded' => 1, 'restrained' => 4],
+    ]);
+
+    Event::fake([MapTokenBroadcasted::class]);
+
+    $response = $this->actingAs($owner)->patch(
+        route('groups.maps.tokens.update', [$group, $map, $token]),
+        [
+            'status_conditions' => ['restrained'],
+            'status_condition_durations' => ['restrained' => 4],
+        ],
+    );
+
+    $response->assertRedirect(route('groups.maps.show', [$group, $map]));
+
+    $this->assertDatabaseHas('map_tokens', [
+        'id' => $token->id,
+        'status_conditions' => json_encode(['restrained']),
+        'status_condition_durations' => json_encode(['restrained' => 4]),
+    ]);
+
+    Event::assertDispatched(MapTokenBroadcasted::class, function (MapTokenBroadcasted $event) use ($map, $token) {
+        expect($event->map->is($map))->toBeTrue();
+        expect($event->token['id'])->toBe($token->id);
+        expect($event->token['status_conditions'])->toBe(['restrained']);
+        expect($event->token['status_condition_durations'])->toBe(['restrained' => 4]);
+
+        return true;
+    });
+});
+
 it('normalizes condition duration payloads to active presets within bounds', function () {
     [$group, $owner] = createGroupWithOwnerForTokens();
     $world = World::factory()->for($group)->create();
@@ -233,6 +273,47 @@ it('normalizes condition duration payloads to active presets within bounds', fun
         expect($event->token['id'])->toBe($token->id);
         expect($event->token['status_conditions'])->toBe(['charmed']);
         expect($event->token['status_condition_durations'])->toBe(['charmed' => 18]);
+
+        return true;
+    });
+});
+
+it('allows facilitators to clear timers while keeping presets active', function () {
+    [$group, $owner] = createGroupWithOwnerForTokens();
+    $world = World::factory()->for($group)->create();
+    $region = \App\Models\Region::factory()->for($world)->create();
+    $map = Map::factory()->for($group)->for($region)->create();
+
+    $token = MapToken::factory()->for($map)->create([
+        'status_conditions' => ['poisoned'],
+        'status_condition_durations' => ['poisoned' => 3],
+    ]);
+
+    Event::fake([MapTokenBroadcasted::class]);
+
+    $response = $this->actingAs($owner)->patch(route('groups.maps.tokens.update', [$group, $map, $token]), [
+        'status_conditions' => ['poisoned'],
+        'status_condition_durations' => null,
+    ]);
+
+    $response->assertRedirect(route('groups.maps.show', [$group, $map]));
+
+    $this->assertDatabaseHas('map_tokens', [
+        'id' => $token->id,
+        'status_conditions' => json_encode(['poisoned']),
+        'status_condition_durations' => null,
+    ]);
+
+    $token->refresh();
+
+    expect($token->status_conditions)->toBe(['poisoned']);
+    expect($token->status_condition_durations)->toBe([]);
+
+    Event::assertDispatched(MapTokenBroadcasted::class, function (MapTokenBroadcasted $event) use ($map, $token) {
+        expect($event->map->is($map))->toBeTrue();
+        expect($event->token['id'])->toBe($token->id);
+        expect($event->token['status_conditions'])->toBe(['poisoned']);
+        expect($event->token['status_condition_durations'])->toBe([]);
 
         return true;
     });
