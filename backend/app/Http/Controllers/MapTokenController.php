@@ -8,6 +8,7 @@ use App\Http\Requests\MapTokenUpdateRequest;
 use App\Models\Group;
 use App\Models\Map;
 use App\Models\MapToken;
+use App\Services\ConditionTimerChronicleService;
 use App\Services\ConditionTimerSummaryProjector;
 use App\Support\Broadcasting\MapTokenPayload;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +16,10 @@ use Illuminate\Support\Arr;
 
 class MapTokenController extends Controller
 {
+    public function __construct(private readonly ConditionTimerChronicleService $conditionTimerChronicle)
+    {
+    }
+
     public function store(MapTokenStoreRequest $request, Group $group, Map $map): RedirectResponse
     {
         $this->assertMapForGroup($group, $map);
@@ -47,6 +52,35 @@ class MapTokenController extends Controller
 
         event(new MapTokenBroadcasted($map, 'created', MapTokenPayload::from($token)));
 
+        $initialDurations = $token->status_condition_durations ?? [];
+
+        if (! empty($initialDurations)) {
+            $events = [];
+
+            foreach ($initialDurations as $condition => $value) {
+                if (! is_string($condition)) {
+                    continue;
+                }
+
+                $events[] = [
+                    'condition' => $condition,
+                    'previous' => null,
+                    'next' => $value,
+                ];
+            }
+
+            if ($events !== []) {
+                $this->conditionTimerChronicle->recordAdjustments(
+                    $group,
+                    $token,
+                    $events,
+                    'token_created',
+                    $request->user(),
+                    ['source' => 'token_store'],
+                );
+            }
+        }
+
         if (! empty($token->status_conditions)) {
             app(ConditionTimerSummaryProjector::class)->refreshForGroup($group, 'token_mutation');
         }
@@ -62,6 +96,8 @@ class MapTokenController extends Controller
         $validated = $request->validated();
 
         $data = [];
+        $beforeConditions = $token->status_conditions ?? [];
+        $beforeDurations = $token->status_condition_durations ?? [];
 
         if (array_key_exists('name', $validated)) {
             $data['name'] = $validated['name'];
@@ -143,7 +179,21 @@ class MapTokenController extends Controller
             $token->update($data);
         }
 
-        event(new MapTokenBroadcasted($map, 'updated', MapTokenPayload::from($token->fresh())));
+        $freshToken = $token->fresh();
+
+        $this->conditionTimerChronicle->recordDiff(
+            $group,
+            $freshToken,
+            $beforeConditions,
+            $beforeDurations,
+            $freshToken->status_conditions ?? [],
+            $freshToken->status_condition_durations ?? [],
+            'token_update',
+            $request->user(),
+            ['source' => 'token_update'],
+        );
+
+        event(new MapTokenBroadcasted($map, 'updated', MapTokenPayload::from($freshToken)));
 
         if ($this->shouldRefreshSummary($data)) {
             app(ConditionTimerSummaryProjector::class)->refreshForGroup($group, 'token_mutation');

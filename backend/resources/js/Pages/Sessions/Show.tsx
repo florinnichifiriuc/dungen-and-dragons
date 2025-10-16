@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 
@@ -14,6 +14,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { getEcho } from '@/lib/realtime';
 import { recordAnalyticsEventSync } from '@/lib/analytics';
+import {
+    applyAcknowledgementToSummary,
+    type ConditionAcknowledgementPayload,
+} from '@/lib/conditionAcknowledgements';
 import { useConditionTimerSummaryCache } from '@/hooks/useConditionTimerSummaryCache';
 
 function formatDateTime(value: string | null): string {
@@ -285,6 +289,12 @@ export default function SessionShow({
         storageKey: summaryStorageKey,
         initialSummary: conditionTimerSummary,
     });
+
+    const conditionSummaryRef = useRef(conditionSummary);
+
+    useEffect(() => {
+        conditionSummaryRef.current = conditionSummary;
+    }, [conditionSummary]);
 
     const analyticsRole = resolveAnalyticsRole(viewerRole);
     const [isSummaryVisible, setIsSummaryVisible] = useState(true);
@@ -562,6 +572,18 @@ export default function SessionShow({
 
         conditionChannel.listen('.condition-timer-summary.updated', handleConditionSummary);
 
+        const handleConditionAcknowledgement = (payload: ConditionAcknowledgementPayload) => {
+            const nextSummary = applyAcknowledgementToSummary(
+                conditionSummaryRef.current,
+                payload,
+                currentUserId,
+            );
+
+            updateConditionSummary(nextSummary, { allowStale: true });
+        };
+
+        conditionChannel.listen('.condition-timer-acknowledgement.recorded', handleConditionAcknowledgement);
+
         return () => {
             channel.stopListening('.session-note.created');
             channel.stopListening('.session-note.updated');
@@ -581,6 +603,7 @@ export default function SessionShow({
             }
 
             conditionChannel.stopListening('.condition-timer-summary.updated');
+            conditionChannel.stopListening('.condition-timer-acknowledgement.recorded');
             echo.leave(`groups.${campaign.group.id}.condition-timers`);
         };
     }, [
@@ -590,6 +613,7 @@ export default function SessionShow({
         permissions.can_manage,
         summaryStorageKey,
         updateConditionSummary,
+        currentUserId,
     ]);
 
     const submitNote = (event: FormEvent) => {

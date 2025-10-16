@@ -17,7 +17,8 @@ class TurnScheduler
 {
     public function __construct(
         private readonly TurnAiDelegate $aiDelegate,
-        private readonly ConditionTimerSummaryProjector $conditionTimerSummaryProjector
+        private readonly ConditionTimerSummaryProjector $conditionTimerSummaryProjector,
+        private readonly ConditionTimerChronicleService $conditionTimerChronicle
     ) {
     }
 
@@ -155,6 +156,7 @@ class TurnScheduler
 
         $tokens = MapToken::query()
             ->whereIn('map_id', $mapIds)
+            ->with(['map.group'])
             ->lockForUpdate()
             ->get();
 
@@ -203,6 +205,41 @@ class TurnScheduler
                 'status_conditions' => $newConditions,
                 'status_condition_durations' => $newDurations,
             ])->save();
+
+            $tokenEvents = [];
+
+            foreach ($durations as $condition => $value) {
+                if (! is_string($condition)) {
+                    continue;
+                }
+
+                $previous = $value;
+                $next = array_key_exists($condition, $newDurations) ? $newDurations[$condition] : null;
+
+                if ($previous === $next) {
+                    continue;
+                }
+
+                $tokenEvents[] = [
+                    'condition' => $condition,
+                    'previous' => $previous,
+                    'next' => $next,
+                    'context' => $next === null ? ['expired' => true] : ['tick' => 1],
+                ];
+            }
+
+            $group = $token->map->group ?? null;
+
+            if ($tokenEvents !== [] && $group !== null) {
+                $this->conditionTimerChronicle->recordAdjustments(
+                    $group,
+                    $token,
+                    $tokenEvents,
+                    'turn_advance',
+                    null,
+                    ['source' => 'turn_scheduler'],
+                );
+            }
 
             $changes[] = [
                 'token_id' => (int) $token->id,

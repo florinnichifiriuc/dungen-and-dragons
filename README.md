@@ -43,6 +43,8 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
 - **Interaction Wireframes (Task 42):** Provide annotated frames and accessibility notes that drive a consistent shadcn/Tailwind implementation across devices.
 - **Narrative Copy Deck (Task 43):** Supply condition-themed snippets keyed by urgency tier, localization notes, and spoiler safeguards.
 - **Research & Telemetry (Task 44):** Measure trust and immersion via surveys, analytics, and beta feedback loops, ensuring future iterations remain player-first.
+- **Acknowledgement Trails (Task 46):** Allow players to mark summaries as reviewed while facilitators monitor acknowledgement counts in real time with analytics coverage.
+- **Adjustment Chronicle (Task 47):** Preserve every timer tweak with privacy-aware timelines, facilitator detail, analytics hooks, and export-ready chronicles so groups can audit pacing decisions.
 
 ### Documentation & Research Assets
 - [Condition Timer Summary Projection Guide](backend/docs/projections/condition-timer-summary-projection-guide.md) – architecture, caching, analytics, and QA expectations for the reusable projection service.
