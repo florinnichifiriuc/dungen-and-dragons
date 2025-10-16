@@ -2,15 +2,18 @@
 
 use App\Events\ConditionTimerSummaryBroadcasted;
 use App\Events\MapTokenBroadcasted;
+use App\Models\AnalyticsEvent;
 use App\Models\Group;
 use App\Models\GroupMembership;
 use App\Models\Map;
 use App\Models\MapToken;
 use App\Models\User;
 use App\Models\World;
+use App\Support\ConditionTimerRateLimiter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Config;
 
 uses(RefreshDatabase::class);
 
@@ -584,4 +587,115 @@ it('defaults new tokens to layer zero when not supplied', function () {
 
         return true;
     });
+});
+
+it('rate limits batch condition adjustments and guides backoff', function () {
+    Config::set('condition_timers.rate_limit.per_token.max_attempts', 1);
+    Config::set('condition_timers.rate_limit.per_map.max_attempts', 10);
+    Config::set('condition_timers.rate_limit.per_token.decay_seconds', 300);
+    Config::set('condition_timers.rate_limit.per_map.decay_seconds', 300);
+    Config::set('condition_timers.rate_limit.lockout_decay_seconds', 300);
+
+    [$group, $owner] = createGroupWithOwnerForTokens();
+    $world = World::factory()->for($group)->create();
+    $region = \App\Models\Region::factory()->for($world)->create();
+    $map = Map::factory()->for($group)->for($region)->create();
+
+    $token = MapToken::factory()->for($map)->create([
+        'status_conditions' => ['restrained'],
+        'status_condition_durations' => ['restrained' => 4],
+    ]);
+
+    /** @var ConditionTimerRateLimiter $rateLimiter */
+    $rateLimiter = app(ConditionTimerRateLimiter::class);
+    $rateLimiter->clear($owner, $map, [$token->id]);
+
+    $initialRateLimitedEvents = AnalyticsEvent::query()
+        ->where('key', 'timer_summary.rate_limited')
+        ->count();
+
+    $first = $this->actingAs($owner)->post(route('groups.maps.tokens.condition-timers.batch', [$group, $map]), [
+        'adjustments' => [[
+            'token_id' => $token->id,
+            'condition' => 'restrained',
+            'delta' => -1,
+            'expected_rounds' => 4,
+        ]],
+    ]);
+
+    $first->assertRedirect(route('groups.maps.show', [$group, $map]));
+    $first->assertSessionHas('success');
+
+    $response = $this->actingAs($owner)->post(route('groups.maps.tokens.condition-timers.batch', [$group, $map]), [
+        'adjustments' => [[
+            'token_id' => $token->id,
+            'condition' => 'restrained',
+            'delta' => -1,
+            'expected_rounds' => 3,
+        ]],
+    ]);
+
+    $response->assertRedirect(route('groups.maps.show', [$group, $map]));
+    $response->assertSessionHas('error', fn ($message) => str_contains($message, 'weave shuddered'));
+    $response->assertSessionMissing('success');
+
+    expect(AnalyticsEvent::query()->where('key', 'timer_summary.rate_limited')->count())
+        ->toBeGreaterThanOrEqual($initialRateLimitedEvents + 1);
+});
+
+it('activates the circuit breaker when conflicts spike and enforces cooldown', function () {
+    Config::set('condition_timers.circuit_breaker.conflict_ratio', 0.5);
+    Config::set('condition_timers.circuit_breaker.minimum_conflicts', 1);
+    Config::set('condition_timers.circuit_breaker.cooldown_seconds', 45);
+
+    [$group, $owner] = createGroupWithOwnerForTokens();
+    $world = World::factory()->for($group)->create();
+    $region = \App\Models\Region::factory()->for($world)->create();
+    $map = Map::factory()->for($group)->for($region)->create();
+
+    $token = MapToken::factory()->for($map)->create([
+        'status_conditions' => ['restrained'],
+        'status_condition_durations' => ['restrained' => 3],
+    ]);
+
+    /** @var ConditionTimerRateLimiter $rateLimiter */
+    $rateLimiter = app(ConditionTimerRateLimiter::class);
+    $rateLimiter->clear($owner, $map, [$token->id]);
+
+    $initialCircuitEvents = AnalyticsEvent::query()
+        ->where('key', 'timer_summary.circuit_breaker_triggered')
+        ->count();
+
+    $response = $this->actingAs($owner)->post(route('groups.maps.tokens.condition-timers.batch', [$group, $map]), [
+        'adjustments' => [[
+            'token_id' => $token->id,
+            'condition' => 'restrained',
+            'delta' => 1,
+            'expected_rounds' => 9,
+        ]],
+    ]);
+
+    $response->assertRedirect(route('groups.maps.show', [$group, $map]));
+    $response->assertSessionHas('error', fn ($message) => str_contains($message, 'ward flared'));
+    $response->assertSessionHas('condition_timer_conflicts', function (array $messages): bool {
+        expect($messages)->not->toBeEmpty();
+        expect($messages[0])->toContain('Token');
+
+        return true;
+    });
+
+    expect(AnalyticsEvent::query()->where('key', 'timer_summary.circuit_breaker_triggered')->count())
+        ->toBeGreaterThanOrEqual($initialCircuitEvents + 1);
+
+    $followUp = $this->actingAs($owner)->post(route('groups.maps.tokens.condition-timers.batch', [$group, $map]), [
+        'adjustments' => [[
+            'token_id' => $token->id,
+            'condition' => 'restrained',
+            'delta' => 1,
+            'expected_rounds' => 9,
+        ]],
+    ]);
+
+    $followUp->assertRedirect(route('groups.maps.show', [$group, $map]));
+    $followUp->assertSessionHas('error', fn ($message) => str_contains($message, 'still stabilizing'));
 });

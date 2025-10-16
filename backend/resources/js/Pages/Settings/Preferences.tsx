@@ -22,6 +22,9 @@ type PreferenceForm = {
     notification_quiet_hours_start: string | null;
     notification_quiet_hours_end: string | null;
     notification_digest_delivery: string;
+    notification_digest_channel_in_app: boolean;
+    notification_digest_channel_email: boolean;
+    notification_digest_channel_push: boolean;
 };
 
 type PreferenceOptions = {
@@ -254,6 +257,63 @@ export default function Preferences() {
                                 {t('preferences.notifications.digest_hint')}
                             </p>
                             <InputError message={errors.notification_digest_delivery} className="text-sm" />
+                        </div>
+                        <div className="space-y-3 rounded-md border border-dashed border-zinc-400/40 p-4 dark:border-zinc-700/60">
+                            <div>
+                                <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">
+                                    {t('preferences.notifications.digest_channels_title')}
+                                </p>
+                                <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                                    {t('preferences.notifications.digest_channels_hint')}
+                                </p>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex items-start gap-3">
+                                    <Checkbox
+                                        id="notification_digest_channel_in_app"
+                                        checked={data.notification_digest_channel_in_app}
+                                        onCheckedChange={(checked) =>
+                                            setData('notification_digest_channel_in_app', Boolean(checked))
+                                        }
+                                    />
+                                    <div className="space-y-1">
+                                        <Label htmlFor="notification_digest_channel_in_app" className="text-sm font-medium">
+                                            {t('preferences.notifications.digest_channels.in_app')}
+                                        </Label>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <Checkbox
+                                        id="notification_digest_channel_email"
+                                        checked={data.notification_digest_channel_email}
+                                        onCheckedChange={(checked) =>
+                                            setData('notification_digest_channel_email', Boolean(checked))
+                                        }
+                                    />
+                                    <div className="space-y-1">
+                                        <Label htmlFor="notification_digest_channel_email" className="text-sm font-medium">
+                                            {t('preferences.notifications.digest_channels.email')}
+                                        </Label>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <Checkbox
+                                        id="notification_digest_channel_push"
+                                        checked={data.notification_digest_channel_push}
+                                        onCheckedChange={(checked) =>
+                                            setData('notification_digest_channel_push', Boolean(checked))
+                                        }
+                                    />
+                                    <div className="space-y-1">
+                                        <Label htmlFor="notification_digest_channel_push" className="text-sm font-medium">
+                                            {t('preferences.notifications.digest_channels.push')}
+                                        </Label>
+                                    </div>
+                                </div>
+                            </div>
+                            <InputError message={errors.notification_digest_channel_in_app} className="text-sm" />
+                            <InputError message={errors.notification_digest_channel_email} className="text-sm" />
+                            <InputError message={errors.notification_digest_channel_push} className="text-sm" />
                         </div>
                     </fieldset>
                     <Button type="submit" disabled={processing} className="inline-flex items-center gap-2">

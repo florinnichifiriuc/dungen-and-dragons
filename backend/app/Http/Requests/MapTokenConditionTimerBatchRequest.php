@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Map;
 use App\Models\MapToken;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -74,6 +75,21 @@ class MapTokenConditionTimerBatchRequest extends FormRequest
         ];
     }
 
+    public function messages(): array
+    {
+        return [
+            'adjustments.required' => trans('app.condition_timer_batch.errors.none_selected'),
+            'adjustments.array' => trans('app.condition_timer_batch.errors.invalid_payload'),
+            'adjustments.min' => trans('app.condition_timer_batch.errors.none_selected'),
+            'adjustments.*.token_id.required' => trans('app.condition_timer_batch.errors.token_missing'),
+            'adjustments.*.condition.in' => trans('app.condition_timer_batch.errors.condition_unknown'),
+            'adjustments.*.delta.not_in' => trans('app.condition_timer_batch.errors.delta_zero'),
+            'adjustments.*.delta.between' => trans('app.condition_timer_batch.errors.delta_bounds'),
+            'adjustments.*.set_to.between' => trans('app.condition_timer_batch.errors.set_bounds'),
+            'adjustments.*.expected_rounds.between' => trans('app.condition_timer_batch.errors.expected_bounds'),
+        ];
+    }
+
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator) {
@@ -88,14 +104,25 @@ class MapTokenConditionTimerBatchRequest extends FormRequest
                 $hasSet = array_key_exists('set_to', $adjustment) && $adjustment['set_to'] !== null;
 
                 if (! $hasDelta && ! $hasSet) {
-                    $validator->errors()->add("adjustments.$index.delta", 'An adjustment must provide a delta or set value.');
+                    $validator->errors()->add(
+                        "adjustments.$index.delta",
+                        trans('app.condition_timer_batch.errors.delta_or_set')
+                    );
                 }
 
                 if ($hasDelta && $hasSet) {
-                    $validator->errors()->add("adjustments.$index.delta", 'Choose either a delta or a set value, not both.');
+                    $validator->errors()->add(
+                        "adjustments.$index.delta",
+                        trans('app.condition_timer_batch.errors.delta_conflict')
+                    );
                 }
             }
         });
+    }
+
+    protected function failedAuthorization(): void
+    {
+        throw new AuthorizationException(trans('app.condition_timer_batch.errors.unauthorized'));
     }
 }
 

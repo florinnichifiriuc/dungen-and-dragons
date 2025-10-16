@@ -62,5 +62,8 @@
 | 2025-11-05 16:00 | Cross-Discipline Sync | Reviewed transparency initiative progress with focus group, captured appreciation/critique, and ratified Task 50–59 roadmap with owners and risks. |
 | 2025-11-05 21:10 | Condition Timer Escalation Notifications | Shipped preference-aware escalation routing with quiet-hour suppression, telemetry, and a notification center UI backed by new coverage. |
 | 2025-11-05 22:05 | Share Transparency Roadmap Refresh | Added Tasks 60–63 covering share access trails, expiry stewardship, insights, and guest experience polish in response to facilitator feedback. |
+| 2025-11-06 14:55 | Player Digest & Nudge Summaries | Implemented digest preferences, per-channel opt-outs, queue delivery job, facilitator preview UI, markdown exports, and regression coverage. |
+| 2025-11-07 12:10 | Facilitator Insights Dashboard | Delivered facilitator insights service, filtered analytics UI, markdown export hooks, telemetry instrumentation, and authorization coverage. |
+| 2025-11-08 09:45 | Condition Timer API Hardening | Added per-map/token throttles with narrative backoff, optimistic reconciliation messaging, circuit breaker telemetry, chaos testing runbook, and regression coverage. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.

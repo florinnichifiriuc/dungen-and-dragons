@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'digest_options' => ['off', 'daily', 'session'],
+    'digest_options' => ['off', 'urgent', 'daily', 'session'],
 ];

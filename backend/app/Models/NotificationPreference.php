@@ -23,6 +23,10 @@ class NotificationPreference extends Model
         'quiet_hours_start',
         'quiet_hours_end',
         'digest_delivery',
+        'digest_channel_in_app',
+        'digest_channel_email',
+        'digest_channel_push',
+        'digest_last_sent_at',
     ];
 
     /**
@@ -32,6 +36,10 @@ class NotificationPreference extends Model
         'channel_in_app' => 'boolean',
         'channel_push' => 'boolean',
         'channel_email' => 'boolean',
+        'digest_channel_in_app' => 'boolean',
+        'digest_channel_email' => 'boolean',
+        'digest_channel_push' => 'boolean',
+        'digest_last_sent_at' => 'immutable_datetime',
     ];
 
     public function user(): BelongsTo
@@ -46,6 +54,9 @@ class NotificationPreference extends Model
             'channel_push' => false,
             'channel_email' => true,
             'digest_delivery' => 'off',
+            'digest_channel_in_app' => true,
+            'digest_channel_email' => true,
+            'digest_channel_push' => false,
         ]);
     }
 }

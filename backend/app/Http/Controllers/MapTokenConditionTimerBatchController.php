@@ -11,6 +11,7 @@ use App\Services\AnalyticsRecorder;
 use App\Services\ConditionTimerChronicleService;
 use App\Services\ConditionTimerSummaryProjector;
 use App\Support\Broadcasting\MapTokenPayload;
+use App\Support\ConditionTimerRateLimiter;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -20,7 +21,8 @@ class MapTokenConditionTimerBatchController extends Controller
     public function __construct(
         private readonly AnalyticsRecorder $analytics,
         private readonly ConditionTimerSummaryProjector $conditionTimerSummaryProjector,
-        private readonly ConditionTimerChronicleService $chronicle
+        private readonly ConditionTimerChronicleService $chronicle,
+        private readonly ConditionTimerRateLimiter $rateLimiter
     ) {
     }
 
@@ -33,6 +35,57 @@ class MapTokenConditionTimerBatchController extends Controller
 
         $adjustments = collect($request->validated('adjustments'));
         $selectionCount = max(1, $adjustments->count());
+
+        if ($cooldown = $this->rateLimiter->cooldownFor($request->user(), $map)) {
+            $this->analytics->record(
+                'timer_summary.circuit_cooldown_active',
+                [
+                    'group_id' => $group->id,
+                    'map_id' => $map->id,
+                    'remaining_seconds' => $cooldown,
+                ],
+                actor: $request->user(),
+                group: $group,
+            );
+
+            return redirect()
+                ->route('groups.maps.show', [$group, $map])
+                ->with('error', trans('app.condition_timer_circuit_active', ['seconds' => $cooldown]));
+        }
+
+        $tokenHits = $adjustments
+            ->groupBy('token_id')
+            ->map(fn (Collection $entries) => $entries->count())
+            ->filter(fn ($count, $tokenId) => $tokenId !== null)
+            ->mapWithKeys(fn ($count, $tokenId) => [(int) $tokenId => $count])
+            ->all();
+
+        if ($violation = $this->rateLimiter->check($request->user(), $map, $tokenHits, $selectionCount)) {
+            $this->analytics->record(
+                'timer_summary.rate_limited',
+                [
+                    'group_id' => $group->id,
+                    'map_id' => $map->id,
+                    'scope' => $violation['scope'],
+                    'token_id' => $violation['scope'] === 'token' ? $violation['token_id'] : null,
+                    'available_in' => $violation['available_in'],
+                    'suggested_backoff' => $violation['suggested_backoff'],
+                    'lockouts' => $violation['lockouts'],
+                ],
+                actor: $request->user(),
+                group: $group,
+            );
+
+            return redirect()
+                ->route('groups.maps.show', [$group, $map])
+                ->with('error', trans_choice(
+                    'app.condition_timer_rate_limited',
+                    max(1, (int) $violation['suggested_backoff']),
+                    ['seconds' => $violation['suggested_backoff']]
+                ));
+        }
+
+        $this->rateLimiter->hit($request->user(), $map, $tokenHits);
 
         if ($adjustments->isEmpty()) {
             return redirect()->route('groups.maps.show', [$group, $map]);
@@ -53,6 +106,9 @@ class MapTokenConditionTimerBatchController extends Controller
         $conflicts = 0;
         $applied = 0;
         $broadcastTokens = [];
+        $conflictMessages = [];
+        $circuitBreakerTriggered = false;
+        $conflictThreshold = $this->resolveConflictThreshold($selectionCount);
 
         foreach ($tokenIds as $tokenId) {
             $tokenAdjustments = $adjustments->where('token_id', $tokenId);
@@ -65,8 +121,15 @@ class MapTokenConditionTimerBatchController extends Controller
                     $map,
                     (int) $tokenId,
                     $tokenAdjustments,
-                    $selectionCount
+                    $selectionCount,
+                    $conflictMessages
                 );
+
+                if ($conflicts >= $conflictThreshold) {
+                    $circuitBreakerTriggered = true;
+
+                    break;
+                }
 
                 continue;
             }
@@ -86,17 +149,24 @@ class MapTokenConditionTimerBatchController extends Controller
                 }
 
                 if (! in_array($condition, $statusConditions, true)) {
-                    $this->logConflict(
+                    $conflictMessages[] = $this->logConflict(
                         $request,
                         'condition_missing',
                         $group,
                         $map,
                         (int) $tokenId,
                         $condition,
-                        $selectionCount
+                        $selectionCount,
+                        ['token_name' => $token->name]
                     );
 
                     $conflicts++;
+
+                    if ($conflicts >= $conflictThreshold) {
+                        $circuitBreakerTriggered = true;
+
+                        break;
+                    }
 
                     continue;
                 }
@@ -106,7 +176,7 @@ class MapTokenConditionTimerBatchController extends Controller
 
                 if ($expected !== null) {
                     if ($current === null) {
-                        $this->logConflict(
+                        $conflictMessages[] = $this->logConflict(
                             $request,
                             'timer_absent',
                             $group,
@@ -117,16 +187,23 @@ class MapTokenConditionTimerBatchController extends Controller
                             [
                                 'expected' => $expected,
                                 'actual' => null,
+                                'token_name' => $token->name,
                             ]
                         );
 
                         $conflicts++;
 
+                        if ($conflicts >= $conflictThreshold) {
+                            $circuitBreakerTriggered = true;
+
+                            break;
+                        }
+
                         continue;
                     }
 
                     if ((int) $current !== (int) $expected) {
-                        $this->logConflict(
+                        $conflictMessages[] = $this->logConflict(
                             $request,
                             'expected_mismatch',
                             $group,
@@ -137,10 +214,17 @@ class MapTokenConditionTimerBatchController extends Controller
                             [
                                 'expected' => (int) $expected,
                                 'actual' => (int) $current,
+                                'token_name' => $token->name,
                             ]
                         );
 
                         $conflicts++;
+
+                        if ($conflicts >= $conflictThreshold) {
+                            $circuitBreakerTriggered = true;
+
+                            break;
+                        }
 
                         continue;
                     }
@@ -174,7 +258,7 @@ class MapTokenConditionTimerBatchController extends Controller
                 );
 
                 if ($clamped !== (int) round($target)) {
-                    $this->logConflict(
+                    $conflictMessages[] = $this->logConflict(
                         $request,
                         'clamped_to_bounds',
                         $group,
@@ -185,6 +269,7 @@ class MapTokenConditionTimerBatchController extends Controller
                         [
                             'requested' => (int) round($target),
                             'applied' => $clamped,
+                            'token_name' => $token->name,
                         ]
                     );
                 }
@@ -205,6 +290,10 @@ class MapTokenConditionTimerBatchController extends Controller
             }
 
             if (! $dirty) {
+                if ($circuitBreakerTriggered) {
+                    break;
+                }
+
                 continue;
             }
 
@@ -232,6 +321,28 @@ class MapTokenConditionTimerBatchController extends Controller
             }
 
             $broadcastTokens[] = $token->fresh();
+
+            if ($circuitBreakerTriggered) {
+                break;
+            }
+        }
+
+        if ($circuitBreakerTriggered) {
+            $cooldown = $this->rateLimiter->triggerCircuit($request->user(), $map);
+
+            $this->analytics->record(
+                'timer_summary.circuit_breaker_triggered',
+                [
+                    'group_id' => $group->id,
+                    'map_id' => $map->id,
+                    'conflicts' => $conflicts,
+                    'applied' => $applied,
+                    'selection_count' => $selectionCount,
+                    'cooldown_seconds' => $cooldown,
+                ],
+                actor: $request->user(),
+                group: $group,
+            );
         }
 
         foreach ($broadcastTokens as $token) {
@@ -253,12 +364,43 @@ class MapTokenConditionTimerBatchController extends Controller
         }
 
         if ($messageParts === []) {
-            $messageParts[] = 'No timers updated';
+            $messageParts[] = trans('app.condition_timer_no_updates');
         }
 
-        return redirect()
-            ->route('groups.maps.show', [$group, $map])
-            ->with('success', implode(' · ', $messageParts).'.');
+        $redirect = redirect()->route('groups.maps.show', [$group, $map]);
+
+        if ($messageParts !== []) {
+            $redirect->with('success', implode(' · ', $messageParts).'.');
+        }
+
+        if ($conflictMessages !== []) {
+            $redirect->with('condition_timer_conflicts', array_values(array_filter($conflictMessages)));
+        }
+
+        if ($circuitBreakerTriggered) {
+            $cooldown = $this->rateLimiter->cooldownFor($request->user(), $map)
+                ?? config('condition_timers.circuit_breaker.cooldown_seconds', 120);
+
+            $redirect->with('error', trans('app.condition_timer_circuit_tripped', [
+                'seconds' => $cooldown,
+            ]));
+        }
+
+        if ($conflicts > 0 && $applied === 0) {
+            $this->analytics->record(
+                'timer_summary.anomaly_detected',
+                [
+                    'group_id' => $group->id,
+                    'map_id' => $map->id,
+                    'reason' => 'all_conflicts',
+                    'selection_count' => $selectionCount,
+                ],
+                actor: $request->user(),
+                group: $group,
+            );
+        }
+
+        return $redirect;
     }
 
     protected function resolveTargetValue($current, array $adjustment): ?int
@@ -280,7 +422,8 @@ class MapTokenConditionTimerBatchController extends Controller
         Map $map,
         int $tokenId,
         Collection $adjustments,
-        int $selectionCount
+        int $selectionCount,
+        array &$conflictMessages
     ): int {
         $conflicts = 0;
 
@@ -291,7 +434,7 @@ class MapTokenConditionTimerBatchController extends Controller
                 continue;
             }
 
-            $this->logConflict(
+            $conflictMessages[] = $this->logConflict(
                 $request,
                 'token_missing',
                 $group,
@@ -316,15 +459,21 @@ class MapTokenConditionTimerBatchController extends Controller
         ?string $condition,
         int $selectionCount,
         array $context = []
-    ): void {
-        Log::warning('condition_timer_batch_adjustment_conflict', array_merge([
+    ): string {
+        $context = array_merge([
+            'token_name' => null,
+        ], $context);
+
+        $logContext = array_merge([
             'reason' => $reason,
             'group_id' => $group->id,
             'map_id' => $map->id,
             'token_id' => $tokenId,
             'condition' => $condition,
             'user_id' => $request->user()?->getAuthIdentifier(),
-        ], $context));
+        ], $context);
+
+        Log::warning('condition_timer_batch_adjustment_conflict', $logContext);
 
         $this->analytics->record(
             'timer_summary.conflict',
@@ -337,11 +486,51 @@ class MapTokenConditionTimerBatchController extends Controller
             actor: $request->user(),
             group: $group,
         );
+
+        return $this->formatConflictMessage($reason, $logContext);
     }
 
     protected function assertMapForGroup(Group $group, Map $map): void
     {
         abort_if($map->group_id !== $group->id, 404);
+    }
+
+    protected function resolveConflictThreshold(int $selectionCount): int
+    {
+        $ratio = config('condition_timers.circuit_breaker.conflict_ratio', 0.6);
+        $minimum = config('condition_timers.circuit_breaker.minimum_conflicts', 3);
+
+        return max($minimum, (int) ceil($selectionCount * $ratio));
+    }
+
+    protected function formatConflictMessage(string $reason, array $context): string
+    {
+        return match ($reason) {
+            'token_missing' => trans('app.condition_timer_conflicts.token_missing', [
+                'token' => $context['token_name'] ?? '#'.$context['token_id'],
+            ]),
+            'condition_missing' => trans('app.condition_timer_conflicts.condition_missing', [
+                'token' => $context['token_name'] ?? '#'.$context['token_id'],
+                'condition' => $context['condition'] ?? trans('app.condition_timer_unknown'),
+            ]),
+            'timer_absent' => trans('app.condition_timer_conflicts.timer_absent', [
+                'token' => $context['token_name'] ?? '#'.$context['token_id'],
+                'condition' => $context['condition'] ?? trans('app.condition_timer_unknown'),
+            ]),
+            'expected_mismatch' => trans('app.condition_timer_conflicts.expected_mismatch', [
+                'token' => $context['token_name'] ?? '#'.$context['token_id'],
+                'condition' => $context['condition'] ?? trans('app.condition_timer_unknown'),
+                'expected' => $context['expected'] ?? trans('app.condition_timer_unknown'),
+                'actual' => $context['actual'] ?? trans('app.condition_timer_unknown'),
+            ]),
+            'clamped_to_bounds' => trans('app.condition_timer_conflicts.clamped_to_bounds', [
+                'token' => $context['token_name'] ?? '#'.$context['token_id'],
+                'condition' => $context['condition'] ?? trans('app.condition_timer_unknown'),
+                'applied' => $context['applied'] ?? trans('app.condition_timer_unknown'),
+                'requested' => $context['requested'] ?? trans('app.condition_timer_unknown'),
+            ]),
+            default => trans('app.condition_timer_conflicts.generic'),
+        };
     }
 }
 
