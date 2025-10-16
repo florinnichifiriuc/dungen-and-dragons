@@ -7,6 +7,7 @@ use App\Models\GroupMembership;
 use App\Services\ConditionTimerAcknowledgementService;
 use App\Services\ConditionTimerChronicleService;
 use App\Services\ConditionTimerSummaryProjector;
+use App\Services\ConditionTimerSummaryShareService;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,7 +17,8 @@ class ConditionTimerSummaryController extends Controller
     public function __construct(
         private readonly ConditionTimerSummaryProjector $projector,
         private readonly ConditionTimerAcknowledgementService $acknowledgements,
-        private readonly ConditionTimerChronicleService $chronicle
+        private readonly ConditionTimerChronicleService $chronicle,
+        private readonly ConditionTimerSummaryShareService $shareService
     )
     {
     }
@@ -54,6 +56,15 @@ class ConditionTimerSummaryController extends Controller
             $canViewAggregate,
         );
 
+        $activeShare = $this->shareService->activeShareForGroup($group);
+
+        $share = $activeShare ? [
+            'id' => $activeShare->id,
+            'url' => route('shares.condition-timers.player-summary.show', $activeShare->token),
+            'created_at' => $activeShare->created_at?->toIso8601String(),
+            'expires_at' => $activeShare->expires_at?->toIso8601String(),
+        ] : null;
+
         return Inertia::render('Groups/ConditionTimerSummary', [
             'group' => [
                 'id' => $group->id,
@@ -61,6 +72,8 @@ class ConditionTimerSummaryController extends Controller
                 'viewer_role' => $viewerRole,
             ],
             'summary' => $summary,
+            'share' => $share,
+            'can_manage_share' => $canViewAggregate,
         ]);
     }
 }

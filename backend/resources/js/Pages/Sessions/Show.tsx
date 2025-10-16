@@ -7,6 +7,9 @@ import PlayerConditionTimerSummaryPanel, {
     ConditionTimerSummaryResource,
 } from '@/components/condition-timers/PlayerConditionTimerSummaryPanel';
 import { MobileConditionTimerRecapWidget } from '@/components/condition-timers/MobileConditionTimerRecapWidget';
+import ConditionTimerShareLinkControls, {
+    type ConditionTimerShareResource,
+} from '@/components/condition-timers/ConditionTimerShareLinkControls';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -161,7 +164,8 @@ type SessionShowProps = {
     };
     ai_dialogues: AiDialogueEntry[];
     condition_timer_summary: ConditionTimerSummaryResource;
-    condition_timer_summary_share_url: string;
+    condition_timer_summary_share: ConditionTimerShareResource | null;
+    can_manage_condition_timer_share: boolean;
     viewer_role?: string | null;
 };
 
@@ -272,7 +276,8 @@ export default function SessionShow({
     permissions,
     ai_dialogues: aiDialogues,
     condition_timer_summary: conditionTimerSummary,
-    condition_timer_summary_share_url: conditionTimerSummaryShareUrl,
+    condition_timer_summary_share: conditionTimerSummaryShare,
+    can_manage_condition_timer_share: canManageConditionShare,
     viewer_role: viewerRole,
 }: SessionShowProps) {
     const page = usePage();
@@ -297,6 +302,7 @@ export default function SessionShow({
     }, [conditionSummary]);
 
     const analyticsRole = resolveAnalyticsRole(viewerRole);
+    const shareUrl = conditionTimerSummaryShare?.url ?? null;
     const [isSummaryVisible, setIsSummaryVisible] = useState(true);
 
     const handleDismissSummary = (source: 'session_panel' | 'mobile_widget') => {
@@ -996,7 +1002,7 @@ export default function SessionShow({
                         <>
                             <MobileConditionTimerRecapWidget
                                 summary={conditionSummary}
-                                shareUrl={conditionTimerSummaryShareUrl}
+                                shareUrl={shareUrl ?? undefined}
                                 className="md:hidden"
                                 source="mobile_widget"
                                 viewerRole={viewerRole}
@@ -1004,7 +1010,7 @@ export default function SessionShow({
                             />
                             <PlayerConditionTimerSummaryPanel
                                 summary={conditionSummary}
-                                shareUrl={conditionTimerSummaryShareUrl}
+                                shareUrl={shareUrl ?? undefined}
                                 className="hidden md:block"
                                 source="session_panel"
                                 viewerRole={viewerRole}
@@ -1025,6 +1031,13 @@ export default function SessionShow({
                             </div>
                         </div>
                     )}
+
+                    <ConditionTimerShareLinkControls
+                        groupId={campaign.group.id}
+                        share={conditionTimerSummaryShare}
+                        canManage={canManageConditionShare}
+                        className="mt-4"
+                    />
 
                     <div className="grid gap-6 md:grid-cols-2">
                         <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">

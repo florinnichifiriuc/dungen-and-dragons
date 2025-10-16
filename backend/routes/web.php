@@ -13,6 +13,7 @@ use App\Http\Controllers\CampaignQuestController;
 use App\Http\Controllers\CampaignQuestUpdateController;
 use App\Http\Controllers\ConditionTimerAcknowledgementController;
 use App\Http\Controllers\ConditionTimerSummaryController;
+use App\Http\Controllers\ConditionTimerSummaryShareController;
 use App\Http\Controllers\DiceRollController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupJoinController;
@@ -65,6 +66,14 @@ Route::middleware('auth')->group(function (): void {
         'groups/{group}/condition-timers/acknowledgements',
         [ConditionTimerAcknowledgementController::class, 'store']
     )->name('groups.condition-timers.acknowledgements.store');
+    Route::post(
+        'groups/{group}/condition-timers/player-summary/share-links',
+        [ConditionTimerSummaryShareController::class, 'store']
+    )->name('groups.condition-timers.player-summary.share-links.store');
+    Route::delete(
+        'groups/{group}/condition-timers/player-summary/share-links/{share}',
+        [ConditionTimerSummaryShareController::class, 'destroy']
+    )->name('groups.condition-timers.player-summary.share-links.destroy');
     Route::resource('groups.memberships', GroupMembershipController::class)
         ->only(['store', 'update', 'destroy'])
         ->scoped();
@@ -130,3 +139,8 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('campaigns/{campaign}/sessions/{session}/initiative/{entry}', [InitiativeEntryController::class, 'destroy'])->name('campaigns.sessions.initiative.destroy');
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
+
+Route::get(
+    'share/condition-timers/{token}',
+    [ConditionTimerSummaryShareController::class, 'showPublic']
+)->name('shares.condition-timers.player-summary.show');

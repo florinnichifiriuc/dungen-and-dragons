@@ -56,5 +56,8 @@
 | 2025-11-01 10:45 | Condition Summary Copy Integration | Synced narrative templates with supported conditions, updated documentation, and added regression tests ensuring every timer summary renders immersive player-safe copy. |
 | 2025-11-02 11:20 | Condition Timer Acknowledgement Trails | Added acknowledgement persistence, realtime broadcasts, analytics instrumentation, and Inertia controls so players can mark conditions as reviewed while DMs track receipt counts. |
 | 2025-11-02 15:30 | Condition Timer Adjustment Chronicle | Logged timer adjustment history with analytics, timeline hydration, export hooks, and facilitator/ player privacy filters alongside UI updates and coverage. |
+| 2025-11-03 09:20 | Condition Timer Chronicle Integration | Synced condition outlook summaries and chronicle timelines into exports, added acknowledgement indicators, and refreshed PDF/Markdown views with coverage. |
+| 2025-11-03 14:45 | Condition Timer Summary Share Links | Added signed share tokens, public outlook page, session controls, and export references so facilitators can circulate condition updates safely. |
+| 2025-11-04 09:05 | Condition Timer Share Hardening | Resolved nested binding fallout and added Inertia guest headers so shared condition outlooks render reliably under test. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.
