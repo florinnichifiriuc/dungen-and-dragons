@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Minus, Plus, X } from 'lucide-react';
 
 import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -199,6 +200,7 @@ const orderTokens = (items: MapTokenSummary[]): MapTokenSummary[] =>
 
 const MAX_CONDITION_DURATION = 20;
 const CONDITION_ALERT_LIFESPAN = 90_000;
+const CRITICAL_TIMER_THRESHOLD = 3;
 
 const formatRoundsRemaining = (value: number): string =>
     `${value} ${value === 1 ? 'round' : 'rounds'}`;
@@ -334,11 +336,16 @@ export default function MapShow({
         gm_note: '',
     });
 
-    const conditionOrder = token_conditions.map((option) => option.value);
-    const conditionLabelMap = token_conditions.reduce<Record<string, string>>((acc, option) => {
-        acc[option.value] = option.label;
-        return acc;
-    }, {});
+    const conditionOrder = useMemo(
+        () => token_conditions.map((option) => option.value),
+        [token_conditions]
+    );
+    const conditionLabelMap = useMemo(() => {
+        return token_conditions.reduce<Record<string, string>>((acc, option) => {
+            acc[option.value] = option.label;
+            return acc;
+        }, {});
+    }, [token_conditions]);
 
     const conditionOrderRef = useRef(conditionOrder);
 
@@ -369,6 +376,8 @@ export default function MapShow({
     const [updatingToken, setUpdatingToken] = useState<number | null>(null);
     const [removingToken, setRemovingToken] = useState<number | null>(null);
     const [tokenFactionFilter, setTokenFactionFilter] = useState<'all' | TokenFaction>('all');
+    const [timerSearchQuery, setTimerSearchQuery] = useState('');
+    const [showCriticalTimersOnly, setShowCriticalTimersOnly] = useState(false);
     const [conditionAlerts, setConditionAlerts] = useState<ConditionAlert[]>([]);
 
     const fogBusy = fogPendingTileId !== null;
@@ -778,10 +787,74 @@ export default function MapShow({
         });
     }, [conditionOrder, liveTokens]);
 
-    const activeConditionCount = conditionTimerGroups.reduce(
-        (total, group) => total + group.timers.length,
-        0
+    const totalActiveConditionCount = useMemo(
+        () =>
+            conditionTimerGroups.reduce(
+                (total, group) => total + group.timers.length,
+                0
+            ),
+        [conditionTimerGroups]
     );
+
+    const filteredConditionTimerGroups = useMemo(() => {
+        const normalizedQuery = timerSearchQuery.trim().toLowerCase();
+
+        return conditionTimerGroups.filter((group) => {
+            if (tokenFactionFilter !== 'all' && group.faction !== tokenFactionFilter) {
+                return false;
+            }
+
+            if (
+                showCriticalTimersOnly &&
+                group.timers.every(
+                    (timer) => timer.roundsRemaining > CRITICAL_TIMER_THRESHOLD
+                )
+            ) {
+                return false;
+            }
+
+            if (normalizedQuery.length === 0) {
+                return true;
+            }
+
+            const matchesToken = group.tokenName
+                .toLowerCase()
+                .includes(normalizedQuery);
+
+            if (matchesToken) {
+                return true;
+            }
+
+            return group.timers.some((timer) => {
+                const label = (conditionLabelMap[timer.condition] ?? timer.condition).toLowerCase();
+
+                return (
+                    label.includes(normalizedQuery) ||
+                    timer.condition.toLowerCase().includes(normalizedQuery)
+                );
+            });
+        });
+    }, [
+        conditionLabelMap,
+        conditionTimerGroups,
+        showCriticalTimersOnly,
+        timerSearchQuery,
+        tokenFactionFilter,
+    ]);
+
+    const filteredActiveConditionCount = useMemo(
+        () =>
+            filteredConditionTimerGroups.reduce(
+                (total, group) => total + group.timers.length,
+                0
+            ),
+        [filteredConditionTimerGroups]
+    );
+
+    const hasTimerFiltersApplied =
+        tokenFactionFilter !== 'all' ||
+        showCriticalTimersOnly ||
+        timerSearchQuery.trim().length > 0;
 
     const displayedTokens =
         tokenFactionFilter === 'all'
@@ -903,6 +976,164 @@ export default function MapShow({
                 },
             };
         });
+    };
+
+    const handleAdjustConditionTimer = (
+        tokenId: number,
+        condition: string,
+        delta: number
+    ) => {
+        const draft = tokenEdits[tokenId];
+
+        if (!draft) {
+            return;
+        }
+
+        const orderedConditions = orderConditions(draft.status_conditions);
+        const currentValue = draft.status_condition_durations[condition];
+        const numericCurrent =
+            typeof currentValue === 'number' ? currentValue : Number(currentValue);
+        const sanitizedCurrent = Number.isNaN(numericCurrent) ? 0 : numericCurrent;
+
+        let nextValue = sanitizedCurrent + delta;
+        const nextDurationDraft = { ...draft.status_condition_durations };
+
+        if (nextValue <= 0) {
+            delete nextDurationDraft[condition];
+        } else {
+            nextValue = Math.min(
+                Math.max(Math.round(nextValue), 1),
+                MAX_CONDITION_DURATION
+            );
+            nextDurationDraft[condition] = nextValue;
+        }
+
+        const syncedDurations = syncDurationDraft(nextDurationDraft, orderedConditions);
+        const serializedDurations = serializeConditionDurations(
+            syncedDurations,
+            orderedConditions
+        );
+        const normalizedDurations = normalizeConditionDurations(
+            serializedDurations ?? {},
+            orderedConditions
+        );
+
+        setTokenEdits((drafts) => {
+            const current = drafts[tokenId];
+
+            if (!current) {
+                return drafts;
+            }
+
+            return {
+                ...drafts,
+                [tokenId]: {
+                    ...current,
+                    status_conditions: orderedConditions,
+                    status_condition_durations: syncedDurations,
+                },
+            };
+        });
+
+        setLiveTokens((tokensState) =>
+            orderTokens(
+                tokensState.map((token) =>
+                    token.id === tokenId
+                        ? {
+                              ...token,
+                              status_conditions: orderedConditions,
+                              status_condition_durations: normalizedDurations,
+                          }
+                        : token,
+                ),
+            ),
+        );
+
+        setUpdatingToken(tokenId);
+        router.patch(
+            route('groups.maps.tokens.update', [group.id, map.id, tokenId]),
+            {
+                status_conditions: orderedConditions,
+                status_condition_durations: serializedDurations ?? null,
+            },
+            {
+                preserveScroll: true,
+                onFinish: () => setUpdatingToken(null),
+            },
+        );
+    };
+
+    const handleClearConditionTimer = (tokenId: number, condition: string) => {
+        const draft = tokenEdits[tokenId];
+
+        if (!draft) {
+            return;
+        }
+
+        const filteredConditions = draft.status_conditions.filter(
+            (value) => value !== condition
+        );
+        const orderedConditions = orderConditions(filteredConditions);
+        const nextDurationDraft = { ...draft.status_condition_durations };
+
+        delete nextDurationDraft[condition];
+
+        const syncedDurations = syncDurationDraft(
+            nextDurationDraft,
+            orderedConditions
+        );
+        const serializedDurations = serializeConditionDurations(
+            syncedDurations,
+            orderedConditions
+        );
+        const normalizedDurations = normalizeConditionDurations(
+            serializedDurations ?? {},
+            orderedConditions
+        );
+
+        setTokenEdits((drafts) => {
+            const current = drafts[tokenId];
+
+            if (!current) {
+                return drafts;
+            }
+
+            return {
+                ...drafts,
+                [tokenId]: {
+                    ...current,
+                    status_conditions: orderedConditions,
+                    status_condition_durations: syncedDurations,
+                },
+            };
+        });
+
+        setLiveTokens((tokensState) =>
+            orderTokens(
+                tokensState.map((token) =>
+                    token.id === tokenId
+                        ? {
+                              ...token,
+                              status_conditions: orderedConditions,
+                              status_condition_durations: normalizedDurations,
+                          }
+                        : token
+                )
+            )
+        );
+
+        setUpdatingToken(tokenId);
+        router.patch(
+            route('groups.maps.tokens.update', [group.id, map.id, tokenId]),
+            {
+                status_conditions: orderedConditions,
+                status_condition_durations: serializedDurations ?? null,
+            },
+            {
+                preserveScroll: true,
+                onFinish: () => setUpdatingToken(null),
+            }
+        );
     };
 
     const handleTokenUpdate = (tokenId: number) => {
@@ -1080,70 +1311,192 @@ export default function MapShow({
 
                 {conditionTimerGroups.length > 0 && (
                     <section className="mx-auto max-w-4xl space-y-3 rounded-xl border border-indigo-500/40 bg-indigo-500/10 p-4 shadow-inner shadow-indigo-900/20">
-                        <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                             <div>
                                 <h2 className="text-sm font-semibold uppercase tracking-wide text-indigo-100">
                                     Active condition timers
                                 </h2>
                                 <p className="text-xs text-indigo-200/80">
-                                    Tracking {activeConditionCount} {activeConditionCount === 1 ? 'timer' : 'timers'} across{' '}
-                                    {conditionTimerGroups.length} {conditionTimerGroups.length === 1 ? 'token' : 'tokens'}.
+                                    Tracking {totalActiveConditionCount}{' '}
+                                    {totalActiveConditionCount === 1 ? 'timer' : 'timers'} across{' '}
+                                    {conditionTimerGroups.length}{' '}
+                                    {conditionTimerGroups.length === 1 ? 'token' : 'tokens'}.
                                 </p>
+                                {hasTimerFiltersApplied && (
+                                    <p className="text-xs text-indigo-200/70">
+                                        Showing {filteredActiveConditionCount}{' '}
+                                        {filteredActiveConditionCount === 1 ? 'timer' : 'timers'} across{' '}
+                                        {filteredConditionTimerGroups.length}{' '}
+                                        {filteredConditionTimerGroups.length === 1 ? 'token' : 'tokens'} after filters.
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex w-full flex-col gap-2 md:max-w-sm">
+                                <div className="flex flex-col gap-1">
+                                    <Label htmlFor="timer-search" className="sr-only">
+                                        Search timers
+                                    </Label>
+                                    <Input
+                                        id="timer-search"
+                                        type="search"
+                                        value={timerSearchQuery}
+                                        onChange={(event) => setTimerSearchQuery(event.target.value)}
+                                        placeholder="Search token or condition"
+                                        className="h-9 border border-indigo-500/40 bg-zinc-950/60 text-sm text-indigo-100 placeholder:text-indigo-200/60 focus-visible:ring-indigo-400"
+                                    />
+                                </div>
+                                <div className="flex items-center justify-between gap-3">
+                                    <label
+                                        htmlFor="critical-timers-toggle"
+                                        className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-indigo-200/80"
+                                    >
+                                        <Checkbox
+                                            id="critical-timers-toggle"
+                                            checked={showCriticalTimersOnly}
+                                            onCheckedChange={(value) => setShowCriticalTimersOnly(value === true)}
+                                            className="border-indigo-500/50 data-[state=checked]:border-rose-400 data-[state=checked]:bg-rose-500"
+                                        />
+                                        Urgent (≤ 3 rounds)
+                                    </label>
+                                    {(timerSearchQuery.trim().length > 0 || showCriticalTimersOnly) && (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-xs uppercase tracking-wide text-indigo-200 hover:text-white"
+                                            onClick={() => {
+                                                setTimerSearchQuery('');
+                                                setShowCriticalTimersOnly(false);
+                                            }}
+                                        >
+                                            Reset filters
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         </header>
-                        <ul className="space-y-3">
-                            {conditionTimerGroups.map((group) => {
-                                const soonest = Math.min(
-                                    ...group.timers.map((timer) => timer.roundsRemaining)
-                                );
-                                const factionBadgeClass = tokenFactionStyles[group.faction];
+                        {filteredConditionTimerGroups.length === 0 ? (
+                            <p className="rounded-lg border border-indigo-500/30 bg-indigo-500/5 px-4 py-3 text-sm text-indigo-200">
+                                No timers match the current filters. Adjust your search or urgency focus to bring them back into view.
+                            </p>
+                        ) : (
+                            <ul className="space-y-3">
+                                {filteredConditionTimerGroups.map((group) => {
+                                    const soonest = Math.min(
+                                        ...group.timers.map((timer) => timer.roundsRemaining)
+                                    );
+                                    const factionBadgeClass = tokenFactionStyles[group.faction];
 
-                                return (
-                                    <li
-                                        key={group.tokenId}
-                                        className="rounded-lg border border-indigo-500/30 bg-zinc-950/70 px-4 py-3 shadow-inner shadow-indigo-900/10"
-                                    >
-                                        <div className="flex flex-wrap items-center justify-between gap-3">
-                                            <div>
-                                                <p className="text-sm font-semibold text-zinc-100">
-                                                    {group.tokenName}
-                                                </p>
-                                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-zinc-400">
-                                                    <span
-                                                        className={`rounded-full border px-2 py-0.5 text-[11px] ${factionBadgeClass}`}
-                                                    >
-                                                        {tokenFactionLabels[group.faction]}
-                                                    </span>
-                                                    <span className="text-zinc-500">
-                                                        Soonest ends in{' '}
-                                                        <span className={getRoundsAccentClass(soonest)}>
-                                                            {formatRoundsRemaining(soonest)}
+                                    return (
+                                        <li
+                                            key={group.tokenId}
+                                            className="rounded-lg border border-indigo-500/30 bg-zinc-950/70 px-4 py-3 shadow-inner shadow-indigo-900/10"
+                                        >
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-sm font-semibold text-zinc-100">
+                                                        {group.tokenName}
+                                                    </p>
+                                                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-zinc-400">
+                                                        <span
+                                                            className={`rounded-full border px-2 py-0.5 text-[11px] ${factionBadgeClass}`}
+                                                        >
+                                                            {tokenFactionLabels[group.faction]}
                                                         </span>
-                                                    </span>
+                                                        <span className="text-zinc-500">
+                                                            Soonest ends in{' '}
+                                                            <span className={getRoundsAccentClass(soonest)}>
+                                                                {formatRoundsRemaining(soonest)}
+                                                            </span>
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <ul className="mt-3 flex flex-wrap gap-2">
-                                            {group.timers.map((timer) => (
-                                                <li
-                                                    key={`${group.tokenId}-${timer.condition}`}
-                                                    className="flex items-center gap-2 rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2 py-1"
-                                                >
-                                                    <span className="text-xs font-medium text-indigo-100">
-                                                        {conditionLabelMap[timer.condition] ?? timer.condition}
-                                                    </span>
-                                                    <span
-                                                        className={`text-xs font-semibold ${getRoundsAccentClass(timer.roundsRemaining)}`}
-                                                    >
-                                                        {formatRoundsRemaining(timer.roundsRemaining)}
-                                                    </span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                                            <ul className="mt-3 flex flex-wrap gap-2">
+                                                {group.timers.map((timer) => {
+                                                    const conditionLabel =
+                                                        conditionLabelMap[timer.condition] ?? timer.condition;
+
+                                                    return (
+                                                        <li
+                                                            key={`${group.tokenId}-${timer.condition}`}
+                                                            className="flex items-center gap-2 rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2 py-1"
+                                                        >
+                                                            <span className="text-xs font-medium text-indigo-100">
+                                                                {conditionLabel}
+                                                            </span>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Button
+                                                                    type="button"
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="h-7 w-7 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-100 hover:bg-indigo-500/20 hover:text-white"
+                                                                    disabled={updatingToken === group.tokenId}
+                                                                    onClick={() =>
+                                                                        handleAdjustConditionTimer(
+                                                                            group.tokenId,
+                                                                            timer.condition,
+                                                                            -1,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <Minus className="h-3 w-3" aria-hidden="true" />
+                                                                    <span className="sr-only">
+                                                                        Decrease {conditionLabel} timer
+                                                                    </span>
+                                                                </Button>
+                                                                <span
+                                                                    className={`text-xs font-semibold ${getRoundsAccentClass(timer.roundsRemaining)}`}
+                                                                >
+                                                                    {formatRoundsRemaining(timer.roundsRemaining)}
+                                                                </span>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="h-7 w-7 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-100 hover:bg-indigo-500/20 hover:text-white"
+                                                                    disabled={updatingToken === group.tokenId}
+                                                                    onClick={() =>
+                                                                        handleAdjustConditionTimer(
+                                                                            group.tokenId,
+                                                                            timer.condition,
+                                                                            1,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <Plus className="h-3 w-3" aria-hidden="true" />
+                                                                    <span className="sr-only">
+                                                                        Increase {conditionLabel} timer
+                                                                    </span>
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="h-7 w-7 rounded-full border border-rose-500/40 bg-transparent text-rose-200 hover:bg-rose-500/20 hover:text-white"
+                                                                    disabled={updatingToken === group.tokenId}
+                                                                    onClick={() =>
+                                                                        handleClearConditionTimer(
+                                                                            group.tokenId,
+                                                                            timer.condition,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <X className="h-3 w-3" aria-hidden="true" />
+                                                                    <span className="sr-only">
+                                                                        Clear {conditionLabel} timer
+                                                                    </span>
+                                                                </Button>
+                                                            </div>
+                                                        </li>
+                                                    );
+                                                })}
+                                            </ul>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
                     </section>
                 )}
 
