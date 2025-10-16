@@ -9,7 +9,10 @@ use App\Models\SessionAttendance;
 use App\Models\SessionReward;
 use App\Models\User;
 use App\Policies\CampaignPolicy;
+use App\Services\ConditionTimerAcknowledgementService;
 use App\Services\ConditionTimerChronicleService;
+use App\Services\ConditionTimerSummaryProjector;
+use App\Services\ConditionTimerSummaryShareService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -18,7 +21,10 @@ class SessionExportService
 {
     public function __construct(
         private readonly CampaignPolicy $campaignPolicy,
-        private readonly ConditionTimerChronicleService $conditionTimerChronicle
+        private readonly ConditionTimerChronicleService $conditionTimerChronicle,
+        private readonly ConditionTimerSummaryProjector $conditionTimerSummaryProjector,
+        private readonly ConditionTimerAcknowledgementService $conditionTimerAcknowledgements,
+        private readonly ConditionTimerSummaryShareService $conditionTimerSummaryShares
     )
     {
     }
@@ -162,9 +168,38 @@ class SessionExportService
             $storedRecordingName = basename($session->recording_path);
         }
 
-        $conditionChronicle = $session->campaign->group
-            ? $this->conditionTimerChronicle->exportChronicle($session->campaign->group, $canManage)
+        $group = $session->campaign->group;
+
+        $conditionChronicle = $group
+            ? $this->conditionTimerChronicle->exportChronicle($group, $canManage)
             : [];
+
+        $conditionSummary = null;
+        $conditionShare = null;
+
+        if ($group) {
+            $summary = $this->conditionTimerSummaryProjector->projectForGroup($group);
+            $summary = $this->conditionTimerAcknowledgements->hydrateSummaryForUser(
+                $summary,
+                $group,
+                $viewer,
+                $canManage,
+            );
+            $summary = $this->conditionTimerChronicle->hydrateSummaryForUser(
+                $summary,
+                $group,
+                $viewer,
+                $canManage,
+            );
+
+            $conditionSummary = $summary;
+
+            $shareRecord = $this->conditionTimerSummaryShares->activeShareForGroup($group);
+
+            if ($shareRecord) {
+                $conditionShare = $this->conditionTimerSummaryShares->presentShareForExport($shareRecord);
+            }
+        }
 
         return [
             'metadata' => [
@@ -212,6 +247,8 @@ class SessionExportService
             'recaps' => $recaps,
             'rewards' => $rewards,
             'condition_timer_chronicle' => $conditionChronicle,
+            'condition_timer_summary' => $conditionSummary,
+            'condition_timer_summary_share' => $conditionShare,
         ];
     }
 
@@ -265,6 +302,131 @@ class SessionExportService
         if ($session['summary']) {
             $lines[] = '## Summary';
             $lines[] = $session['summary'];
+            $lines[] = '';
+        }
+
+        $conditionSummary = $data['condition_timer_summary'] ?? null;
+        $conditionShare = $data['condition_timer_summary_share'] ?? null;
+
+        if ($conditionSummary && count($conditionSummary['entries'] ?? []) > 0) {
+            $lines[] = '## Active Condition Outlook';
+            if ($conditionShare && ! empty($conditionShare['url'])) {
+                $lines[] = '- Shareable view: ' . $conditionShare['url'];
+
+                if (! empty($conditionShare['expires_at'])) {
+                    $lines[] = '- Share expires: ' . $this->formatCarbonTimestamp($conditionShare['expires_at']);
+                }
+
+                $shareStats = $conditionShare['stats'] ?? null;
+
+                if ($shareStats) {
+                    $lines[] = '- Total opens: ' . ($shareStats['total_views'] ?? 0);
+
+                    if (! empty($shareStats['last_accessed_at'])) {
+                        $lines[] = '- Last opened: ' . $this->formatCarbonTimestamp($shareStats['last_accessed_at']);
+                    }
+
+                    if (! empty($shareStats['recent_accesses'])) {
+                        $lines[] = '- Recent guests:';
+
+                        foreach ($shareStats['recent_accesses'] as $access) {
+                            $timestamp = $this->formatCarbonTimestamp($access['accessed_at'] ?? null);
+                            $details = array_filter([
+                                $access['ip_address'] ?? null,
+                                $access['user_agent'] ?? null,
+                            ]);
+
+                            $detailLine = $details ? ' (' . implode(' • ', $details) . ')' : '';
+                            $lines[] = sprintf('  - %s%s', $timestamp, $detailLine);
+                        }
+                    }
+                }
+
+                $lines[] = '';
+            }
+
+            foreach ($conditionSummary['entries'] as $entry) {
+                $tokenLabel = $entry['token']['label'] ?? 'Unknown presence';
+                $mapTitle = $entry['map']['title'] ?? 'Unknown map';
+                $lines[] = sprintf('### %s — %s', $tokenLabel, $mapTitle);
+
+                foreach ($entry['conditions'] as $condition) {
+                    $conditionLabel = $condition['label'] ?? Str::headline($condition['key'] ?? 'condition');
+                    $roundsDisplay = $this->formatConditionRounds($condition);
+                    $lines[] = sprintf('- %s — %s', $conditionLabel, $roundsDisplay);
+                    $lines[] = '  - ' . ($condition['summary'] ?? 'No narrative summary available.');
+
+                    if (($condition['acknowledged_by_viewer'] ?? false) === true) {
+                        $lines[] = '  - Acknowledged by you.';
+                    }
+
+                    if (($metadata['viewer']['can_manage'] ?? false)
+                        && array_key_exists('acknowledged_count', $condition)
+                        && $condition['acknowledged_count'] !== null
+                    ) {
+                        $count = (int) $condition['acknowledged_count'];
+                        $lines[] = sprintf(
+                            '  - Acknowledged by %s.',
+                            $count === 1 ? '1 party member' : sprintf('%d party members', $count),
+                        );
+                    }
+
+                    $timeline = $condition['timeline'] ?? [];
+
+                    if ($timeline !== []) {
+                        $lines[] = '  - Timeline:';
+
+                        foreach ($timeline as $event) {
+                            $timestamp = $this->formatIsoTimestamp($event['recorded_at'] ?? null);
+                            $summaryText = $event['summary'] ?? 'Adjustment';
+                            $lines[] = sprintf('    - [%s] %s', $timestamp, $summaryText);
+
+                            $detail = $event['detail']['summary'] ?? null;
+
+                            if ($detail) {
+                                $lines[] = '      - ' . $detail;
+                            }
+                        }
+                    }
+                }
+
+                $lines[] = '';
+            }
+        } elseif ($conditionShare && ! empty($conditionShare['url'])) {
+            $lines[] = '## Active Condition Outlook';
+            $lines[] = 'No active condition timers at this time.';
+            $lines[] = '';
+            $lines[] = '- Shareable view: ' . $conditionShare['url'];
+
+            if (! empty($conditionShare['expires_at'])) {
+                $lines[] = '- Share expires: ' . $this->formatCarbonTimestamp($conditionShare['expires_at']);
+            }
+
+            $shareStats = $conditionShare['stats'] ?? null;
+
+            if ($shareStats) {
+                $lines[] = '- Total opens: ' . ($shareStats['total_views'] ?? 0);
+
+                if (! empty($shareStats['last_accessed_at'])) {
+                    $lines[] = '- Last opened: ' . $this->formatCarbonTimestamp($shareStats['last_accessed_at']);
+                }
+
+                if (! empty($shareStats['recent_accesses'])) {
+                    $lines[] = '- Recent guests:';
+
+                    foreach ($shareStats['recent_accesses'] as $access) {
+                        $timestamp = $this->formatCarbonTimestamp($access['accessed_at'] ?? null);
+                        $details = array_filter([
+                            $access['ip_address'] ?? null,
+                            $access['user_agent'] ?? null,
+                        ]);
+
+                        $detailLine = $details ? ' (' . implode(' • ', $details) . ')' : '';
+                        $lines[] = sprintf('  - %s%s', $timestamp, $detailLine);
+                    }
+                }
+            }
+
             $lines[] = '';
         }
 
@@ -431,5 +593,49 @@ class SessionExportService
         }
 
         return trim(implode("\n", $lines)) . "\n";
+    }
+
+    /**
+     * @param  array<string, mixed>  $condition
+     */
+    protected function formatConditionRounds(array $condition): string
+    {
+        $rounds = $condition['rounds'] ?? null;
+
+        if ($rounds !== null) {
+            $value = (int) $rounds;
+
+            return $value === 1 ? '1 round remaining' : sprintf('%d rounds remaining', $value);
+        }
+
+        $hint = $condition['rounds_hint'] ?? null;
+
+        if ($hint) {
+            return (string) $hint;
+        }
+
+        return 'Duration unknown';
+    }
+
+    protected function formatIsoTimestamp(?string $timestamp): string
+    {
+        if (! $timestamp) {
+            return 'Unknown time';
+        }
+
+        try {
+            return Carbon::parse($timestamp)->setTimezone('UTC')->format('Y-m-d H:i \U\T\C');
+        } catch (\Throwable $exception) {
+            return $timestamp;
+        }
+    }
+
+    protected function formatCarbonTimestamp($timestamp): string
+    {
+        if (! $timestamp instanceof \DateTimeInterface) {
+            return 'Unknown time';
+        }
+
+        return Carbon::make($timestamp)?->clone()?->setTimezone('UTC')?->format('Y-m-d H:i \U\T\C') ?? 'Unknown time';
     }
 }

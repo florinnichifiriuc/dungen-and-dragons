@@ -101,4 +101,9 @@ class Group extends Model
     {
         return $this->hasMany(Map::class);
     }
+
+    public function conditionTimerSummaryShares(): HasMany
+    {
+        return $this->hasMany(ConditionTimerSummaryShare::class);
+    }
 }

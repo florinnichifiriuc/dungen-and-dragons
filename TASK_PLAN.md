@@ -20,7 +20,12 @@
 - [x] Finalize localization, accessibility, theming, and docs.
 - [x] Task 46 – Condition Timer Acknowledgement Trails (player review toggles, GM receipt overview, analytics hooks, and realtime hydration).
 - [x] Task 47 – Condition Timer Adjustment Chronicle (persist timer adjustment history, surface timeline UI, export hooks, and privacy filters).
-- [ ] Task 48 – Condition Timer Chronicle Integration (embed acknowledgements and timelines into session recap exports, share links, and AI briefings).
+- [x] Task 48 – Condition Timer Chronicle Integration (embed acknowledgements and timelines into session recap exports, share links, and AI briefings).
+- [x] Task 49 – Condition Timer Summary Share Links (signed share tokens, public outlook view, export references, and management controls).
+- [x] Task 50 – Condition Timer Share Access Trails (share access logging, manager analytics, and export reporting).
+- [x] Task 51 – Condition Timer Share Expiry Stewardship (configurable expiry controls, warning states, and extend workflows).
+- [x] Task 52 – Condition Timer Share Access Insights (rolling seven-day trends, UI summaries, and export coverage).
+- [x] Task 53 – Condition Timer Share Guest Experience Polish (shared hero, freshness cues, and guidance copy).
 ## In Progress
 - _None_
 

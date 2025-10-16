@@ -19,6 +19,7 @@ use App\Policies\SessionPolicy;
 use App\Services\ConditionTimerAcknowledgementService;
 use App\Services\ConditionTimerChronicleService;
 use App\Services\ConditionTimerSummaryProjector;
+use App\Services\ConditionTimerSummaryShareService;
 use App\Services\SessionExportService;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\RedirectResponse;
@@ -38,7 +39,8 @@ class SessionController extends Controller
         private readonly SessionExportService $sessionExportService,
         private readonly ConditionTimerSummaryProjector $conditionTimerSummaryProjector,
         private readonly ConditionTimerAcknowledgementService $conditionTimerAcknowledgements,
-        private readonly ConditionTimerChronicleService $conditionTimerChronicle
+        private readonly ConditionTimerChronicleService $conditionTimerChronicle,
+        private readonly ConditionTimerSummaryShareService $conditionTimerSummaryShares
     )
     {
     }
@@ -182,6 +184,9 @@ class SessionController extends Controller
             $user,
             $canViewAggregate,
         );
+
+        $shareRecord = $this->conditionTimerSummaryShares->activeShareForGroup($campaign->group);
+        $share = $shareRecord ? $this->conditionTimerSummaryShares->presentShareForManagers($shareRecord) : null;
 
         $session->load([
             'creator:id,name',
@@ -379,8 +384,9 @@ class SessionController extends Controller
                 'can_log_reward' => $sessionPolicy->reward($user, $session),
             ],
             'condition_timer_summary' => $summary,
-            'condition_timer_summary_share_url' => route('groups.condition-timers.player-summary', $campaign->group),
+            'condition_timer_summary_share' => $share,
             'viewer_role' => $viewerRole,
+            'can_manage_condition_timer_share' => $isManager,
         ]);
     }
 
