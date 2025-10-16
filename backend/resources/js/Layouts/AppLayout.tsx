@@ -19,11 +19,14 @@ export default function AppLayout({ children }: PropsWithChildren) {
         csrf_token?: string;
         flash?: { success?: string; error?: string };
         auth?: { user?: { name: string } & PreferenceBag };
+        notifications?: { unread_count: number };
         preferences?: PreferenceBag;
     }>();
 
     const flash = props.flash;
     const user = props.auth?.user;
+    const unreadNotifications = props.notifications?.unread_count ?? 0;
+    const hasUnreadNotifications = unreadNotifications > 0;
     const preferences: PreferenceBag = {
         locale: props.preferences?.locale ?? locale ?? 'en',
         timezone: props.preferences?.timezone ?? 'UTC',
@@ -146,6 +149,23 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 className={`${navLinkClass} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400`}
                             >
                                 {t('navigation.search')}
+                            </Link>
+                        )}
+                        {user && (
+                            <Link
+                                href={route('notifications.index')}
+                                className={`${navLinkClass} relative focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400`}
+                                aria-label={t('navigation.notifications')}
+                            >
+                                <span>{t('navigation.notifications')}</span>
+                                {hasUnreadNotifications && (
+                                    <span className="ml-2 inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-zinc-950">
+                                        <span aria-hidden="true">{unreadNotifications}</span>
+                                        <span className="sr-only">
+                                            {`${unreadNotifications} ${t('navigation.notifications_badge')}`}
+                                        </span>
+                                    </span>
+                                )}
                             </Link>
                         )}
                         {user && (

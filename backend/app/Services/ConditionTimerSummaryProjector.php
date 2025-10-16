@@ -20,7 +20,8 @@ class ConditionTimerSummaryProjector
     public function __construct(
         private readonly CacheRepository $cache,
         private readonly AnalyticsRecorder $analytics,
-        private readonly ConditionTimerChronicleService $chronicle
+        private readonly ConditionTimerChronicleService $chronicle,
+        private readonly ConditionTimerEscalationService $escalations
     )
     {
     }
@@ -47,6 +48,8 @@ class ConditionTimerSummaryProjector
 
     public function refreshForGroup(Group $group, string $trigger = 'manual', bool $broadcast = true): array
     {
+        $previousSummary = $this->cache->get($this->cacheKey($group->id));
+
         $this->forgetForGroup($group);
 
         $startedAt = microtime(true);
@@ -61,6 +64,8 @@ class ConditionTimerSummaryProjector
             'group_id' => $group->id,
             'entries' => count($summary['entries'] ?? []),
         ]);
+
+        $this->escalations->handle($group, is_array($previousSummary) ? $previousSummary : null, $summary);
 
         $this->analytics->record(
             'timer_summary.refreshed',

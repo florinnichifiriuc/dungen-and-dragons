@@ -34,6 +34,7 @@ use App\Http\Controllers\SessionRecapController;
 use App\Http\Controllers\SessionRewardController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\UserPreferenceController;
+use App\Http\Controllers\NotificationCenterController;
 use App\Http\Controllers\WorldController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -53,6 +54,9 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
     Route::post('analytics/events', [AnalyticsEventController::class, 'store'])->name('analytics.events.store');
+    Route::get('/notifications', [NotificationCenterController::class, 'index'])->name('notifications.index');
+    Route::patch('/notifications/{notification}/read', [NotificationCenterController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationCenterController::class, 'markAll'])->name('notifications.read-all');
     Route::get('/settings/preferences', [UserPreferenceController::class, 'edit'])->name('settings.preferences.edit');
     Route::put('/settings/preferences', [UserPreferenceController::class, 'update'])->name('settings.preferences.update');
     Route::get('groups/join', [GroupJoinController::class, 'create'])->name('groups.join');

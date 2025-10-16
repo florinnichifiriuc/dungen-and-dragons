@@ -5,6 +5,8 @@ return [
     'navigation' => [
         'search' => 'Căutare',
         'preferences' => 'Preferințe',
+        'notifications' => 'Notificări',
+        'notifications_badge' => 'alerte necitite',
         'logout' => 'Deconectare',
     ],
     'a11y' => [
@@ -37,5 +39,43 @@ return [
         ],
         'submit' => 'Salvează preferințele',
         'success' => 'Preferințele au fost actualizate.',
+        'notifications' => [
+            'title' => 'Notificări de escaladare',
+            'description' => 'Alege cum ajung alertele pentru cronometre și stabilește intervalul liniștit pentru a evita ping-urile târzii.',
+            'channels' => [
+                'in_app' => 'Alerte în aplicație',
+                'in_app_hint' => 'Afișează insigne și actualizări în centrul de notificări.',
+                'push' => 'Notificări push',
+                'push_hint' => 'Necesită abonarea unui dispozitiv. Respectă orele liniștite.',
+                'email' => 'Notificări pe e-mail',
+                'email_hint' => 'Trimite rezumate urgente în căsuța ta atunci când digesturile sunt dezactivate.',
+            ],
+            'quiet_hours_start' => 'Început ore liniștite',
+            'quiet_hours_end' => 'Sfârșit ore liniștite',
+            'digest_label' => 'Livrare digest',
+            'digest_hint' => 'Combină alertele într-un singur rezumat selectând un digest.',
+            'digest_options' => [
+                'off' => 'Trimite imediat',
+                'daily' => 'Digest zilnic la răsărit (UTC)',
+                'session' => 'După fiecare sesiune',
+            ],
+        ],
+    ],
+    'notifications' => [
+        'title' => 'Centrul de notificări',
+        'description' => 'Rămâi la curent cu escaladările și anunțurile mesei.',
+        'empty' => 'Nu există notificări încă. Alertele vor apărea aici.',
+        'mark_all' => 'Marchează tot ca citit',
+        'mark_read' => 'Marchează ca citit',
+        'view_summary' => 'Deschide sumarul condițiilor',
+        'cleared' => 'Toate notificările au fost marcate ca citite.',
+        'token_label' => 'Jeton:',
+        'condition_label' => 'Condiție:',
+        'rounds_label' => 'Runde rămase',
+        'urgency' => [
+            'critical' => 'Critic',
+            'warning' => 'Avertizare',
+            'calm' => 'Calm',
+        ],
     ],
 ];
