@@ -9,11 +9,13 @@
 - Approach tasks as both a seasoned full-stack engineer and a creative D&D designer. Features should feel thematic, accessible, and extensible for multiple groups, tiles, AI-driven helpers, and turn-based pacing.
 - When implementing mechanics (e.g., initiative, tile maps, AI DM/NPC helpers), seek solutions that balance usability for casual players with depth for power users.
 - Maintain and update progress artifacts (`TASK_PLAN.md`, `PROGRESS_LOG.md`, and per-task notes under `Tasks/`) whenever work is completed or scope changes.
+- Treat condition timer transparency features (Tasks 38–44) as the current program focus. Review meeting notes, README roadmap, and task briefs before contributing so UX, narrative, and telemetry expectations stay aligned.
 
 ## Technical Conventions
 - Follow Laravel best practices: Form Requests for validation, Policies for authorization, Pest for tests, and queue/real-time integrations through Laravel Reverb as planned.
 - Frontend code should live inside `backend/resources/js` and use Inertia pages/components. Prefer composition, strong typing, and Tailwind utility classes aligned with the D&D aesthetic already established.
 - Keep code modular and well-documented. Include inline comments when domain concepts might be non-obvious (e.g., tile adjacency rules, AI hand-off flows).
+- Projection services that surface player-safe data must document cache invalidation, telemetry, and privacy checks alongside the implementation (see Tasks 39–41).
 
 ## Process Expectations
 - Before starting a task, review relevant task files under `Tasks/Week X/` and update them with intent, subtasks, and status.

@@ -43,5 +43,7 @@
 | 2025-10-27 15:35 | Token Condition Timer Quick Adjustments | Added dashboard plus/minus controls, optimistic syncing, and coverage so facilitators can tweak condition timers without opening each token editor. |
 | 2025-10-27 18:20 | Token Condition Timer Filters | Introduced faction-aware filtering, urgency toggles, and search controls so facilitators can focus on the timers that need attention most. |
 | 2025-10-27 21:30 | Token Condition Timer Quick Clearing | Delivered dashboard clear controls with optimistic syncing so facilitators can remove expired effects without diving into each token editor. |
+| 2025-10-28 09:30 | Strategic Sync | Captured cross-discipline meeting notes for condition timer transparency initiative, aligned on batch adjustment priorities, and expanded backlog with player transparency phases. |
+| 2025-10-28 10:15 | Roadmap Refresh | Updated README roadmap, AGENTS guidance, and task briefs (38–44) to clarify projection requirements, UX assets, narrative copy needs, and telemetry expectations. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.

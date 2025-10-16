@@ -35,6 +35,17 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
 - Adjust pacing when recording or running in CI with `--delay=<seconds>` (defaults to `1.1`). Provide `--delay=0` for fast local verification or automated tests.
 - Use `--source=path/to/log.md` when previewing unreleased notes or running unit tests against fixture data.
 
+## Condition Timer Transparency Roadmap
+- **Batch Adjustments (Task 38):** Expand the existing dashboard to support multi-select controls, shared delta tooling, and conflict-aware telemetry while preserving optimistic UX.
+- **Player Summaries (Task 39):** Introduce a projection cache that redacts GM-only intel, feeds immersive copy from the narrative deck, and streams realtime updates to player-facing panels.
+- **Mobile Recap Widgets (Task 40):** Deliver responsive Inertia components with offline caching, performance budgets, and analytics so tablet/phone players stay informed.
+- **Developer Guide (Task 41):** Document projection patterns, invalidation hooks, and QA rituals so future systems reuse the same privacy-conscious architecture.
+- **Interaction Wireframes (Task 42):** Provide annotated frames and accessibility notes that drive a consistent shadcn/Tailwind implementation across devices.
+- **Narrative Copy Deck (Task 43):** Supply condition-themed snippets keyed by urgency tier, localization notes, and spoiler safeguards.
+- **Research & Telemetry (Task 44):** Measure trust and immersion via surveys, analytics, and beta feedback loops, ensuring future iterations remain player-first.
+
+> All timer-related work must respect UTC turn cadence, privacy policies, and lore tone. Refer to the updated task briefs in `Tasks/Week 3` and `Tasks/Week 4` before starting implementation.
+
 ## Quest Log & Progress Tracking
 - Every campaign now includes a quest log with priority/status filters and progress journaling so story arcs stay visible alongside the task board.
 - Quests can be tied to regions, assigned a target turn, and archived when they conclude; summaries flow back into the campaign dashboard spotlight.
