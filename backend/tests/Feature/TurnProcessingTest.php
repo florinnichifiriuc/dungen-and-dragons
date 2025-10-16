@@ -1,8 +1,12 @@
 <?php
 
+use App\Events\MapTokenBroadcasted;
+use App\Events\MapTokenConditionsExpired;
 use App\Models\AiRequest;
 use App\Models\Group;
 use App\Models\GroupMembership;
+use App\Models\Map;
+use App\Models\MapToken;
 use App\Models\Region;
 use App\Models\Turn;
 use App\Models\User;
@@ -10,6 +14,7 @@ use App\Models\World;
 use App\Services\TurnScheduler;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
@@ -111,4 +116,70 @@ it('prevents players from processing region turns', function () {
 
     $response->assertForbidden();
     $this->assertDatabaseCount('turns', 0);
+});
+
+it('decrements token condition timers and clears expired conditions when a turn processes', function () {
+    $user = User::factory()->create();
+    $group = Group::factory()->for($user, 'creator')->create();
+
+    GroupMembership::create([
+        'group_id' => $group->id,
+        'user_id' => $user->id,
+        'role' => GroupMembership::ROLE_OWNER,
+    ]);
+
+    $world = World::factory()->for($group)->create();
+    $region = Region::factory()->for($group)->for($world)->create();
+    $map = Map::factory()->for($group)->for($region)->create();
+
+    $tokenWithTimers = MapToken::factory()->for($map)->create([
+        'status_conditions' => ['frightened', 'poisoned'],
+        'status_condition_durations' => ['frightened' => 1, 'poisoned' => 3],
+    ]);
+
+    $tokenWithoutTimers = MapToken::factory()->for($map)->create([
+        'status_conditions' => ['blinded'],
+        'status_condition_durations' => [],
+    ]);
+
+    Event::fake([MapTokenBroadcasted::class, MapTokenConditionsExpired::class]);
+
+    app(TurnScheduler::class)->configure($region, 24, CarbonImmutable::now('UTC'));
+
+    $turn = app(TurnScheduler::class)->process($region, $user, 'Night patrol rotates to dawn watch.');
+
+    expect($turn->number)->toBe(1);
+
+    $tokenWithTimers->refresh();
+    $tokenWithoutTimers->refresh();
+
+    expect($tokenWithTimers->status_conditions)->toBe(['poisoned']);
+    expect($tokenWithTimers->status_condition_durations)->toBe(['poisoned' => 2]);
+
+    expect($tokenWithoutTimers->status_conditions)->toBe(['blinded']);
+    expect($tokenWithoutTimers->status_condition_durations)->toBe([]);
+
+    Event::assertDispatchedTimes(MapTokenBroadcasted::class, 1);
+    Event::assertDispatched(MapTokenBroadcasted::class, function (MapTokenBroadcasted $event) use ($map, $tokenWithTimers) {
+        expect($event->map->is($map))->toBeTrue();
+        expect($event->action)->toBe('updated');
+        expect($event->token['id'])->toBe($tokenWithTimers->id);
+        expect($event->token['status_conditions'])->toBe(['poisoned']);
+        expect($event->token['status_condition_durations'])->toBe(['poisoned' => 2]);
+
+        return true;
+    });
+
+    Event::assertDispatchedTimes(MapTokenConditionsExpired::class, 1);
+    Event::assertDispatched(
+        MapTokenConditionsExpired::class,
+        function (MapTokenConditionsExpired $event) use ($map, $tokenWithTimers): bool {
+            expect($event->map->is($map))->toBeTrue();
+            expect($event->tokenId)->toBe($tokenWithTimers->id);
+            expect($event->tokenName)->toBe($tokenWithTimers->name);
+            expect($event->conditions)->toBe(['frightened']);
+
+            return true;
+        }
+    );
 });

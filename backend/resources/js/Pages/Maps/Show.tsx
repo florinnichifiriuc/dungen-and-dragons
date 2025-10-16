@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 
 import AppLayout from '@/Layouts/AppLayout';
@@ -39,6 +39,8 @@ type MapTokenSummary = {
     faction: TokenFaction;
     initiative: number | null;
     status_effects: string | null;
+    status_conditions: string[];
+    status_condition_durations: Record<string, number>;
     hit_points: number | null;
     temporary_hit_points: number | null;
     max_hit_points: number | null;
@@ -65,6 +67,7 @@ type MapShowProps = {
     tiles: MapTileSummary[];
     tile_templates: TileTemplateOption[];
     tokens: MapTokenSummary[];
+    token_conditions: { value: string; label: string }[];
 };
 
 type CreateTileForm = {
@@ -95,6 +98,8 @@ type CreateTokenForm = {
     faction: TokenFaction;
     initiative: number | '';
     status_effects: string;
+    status_conditions: string[];
+    status_condition_durations: Record<string, number | ''>;
     hit_points: number | '';
     temporary_hit_points: number | '';
     max_hit_points: number | '';
@@ -112,6 +117,8 @@ type TokenDraft = {
     faction: TokenFaction;
     initiative: number | '';
     status_effects: string;
+    status_conditions: string[];
+    status_condition_durations: Record<string, number | ''>;
     hit_points: number | '';
     temporary_hit_points: number | '';
     max_hit_points: number | '';
@@ -121,6 +128,30 @@ type TokenDraft = {
 
 type MapTokenEventPayload = {
     token: Partial<MapTokenSummary> & { id: number };
+};
+
+type ConditionExpirationEventPayload = {
+    token: { id: number; name?: string };
+    conditions: string[];
+};
+
+type ConditionAlert = {
+    tokenId: number;
+    tokenName: string;
+    conditions: string[];
+    createdAt: number;
+};
+
+type ConditionTimerEntry = {
+    condition: string;
+    roundsRemaining: number;
+};
+
+type ConditionTimerGroup = {
+    tokenId: number;
+    tokenName: string;
+    faction: TokenFaction;
+    timers: ConditionTimerEntry[];
 };
 
 const orderTiles = (items: MapTileSummary[]): MapTileSummary[] =>
@@ -166,7 +197,115 @@ const orderTokens = (items: MapTokenSummary[]): MapTokenSummary[] =>
         return a.id - b.id;
     });
 
-export default function MapShow({ group, map, tiles, tile_templates, tokens }: MapShowProps) {
+const MAX_CONDITION_DURATION = 20;
+const CONDITION_ALERT_LIFESPAN = 90_000;
+
+const formatRoundsRemaining = (value: number): string =>
+    `${value} ${value === 1 ? 'round' : 'rounds'}`;
+
+const getRoundsAccentClass = (value: number): string => {
+    if (value <= 1) {
+        return 'text-rose-200';
+    }
+
+    if (value <= 3) {
+        return 'text-amber-200';
+    }
+
+    return 'text-emerald-200';
+};
+
+const normalizeConditionDurations = (
+    durations: Record<string, number | null | undefined> | null | undefined,
+    orderedConditions: string[]
+): Record<string, number> => {
+    const next: Record<string, number> = {};
+
+    orderedConditions.forEach((condition) => {
+        const value = durations?.[condition];
+
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            next[condition] = value;
+        }
+    });
+
+    return next;
+};
+
+const syncDurationDraft = (
+    durations: Record<string, number | ''>,
+    orderedConditions: string[]
+): Record<string, number | ''> => {
+    const next: Record<string, number | ''> = {};
+
+    orderedConditions.forEach((condition) => {
+        const value = durations[condition];
+
+        if (value === '' || value === undefined || value === null) {
+            next[condition] = '';
+            return;
+        }
+
+        const numericValue = typeof value === 'number' ? value : Number(value);
+
+        if (Number.isNaN(numericValue)) {
+            next[condition] = '';
+            return;
+        }
+
+        next[condition] = Math.min(Math.max(Math.round(numericValue), 1), MAX_CONDITION_DURATION);
+    });
+
+    return next;
+};
+
+const serializeConditionDurations = (
+    durations: Record<string, number | ''>,
+    orderedConditions: string[]
+): Record<string, number> | null => {
+    const next: Record<string, number> = {};
+
+    orderedConditions.forEach((condition) => {
+        const value = durations[condition];
+
+        if (value === '' || value === undefined || value === null) {
+            return;
+        }
+
+        const numericValue = typeof value === 'number' ? value : Number(value);
+
+        if (Number.isNaN(numericValue)) {
+            return;
+        }
+
+        next[condition] = Math.min(Math.max(Math.round(numericValue), 1), MAX_CONDITION_DURATION);
+    });
+
+    return Object.keys(next).length === 0 ? null : next;
+};
+
+const prepareTokenForState = (token: MapTokenSummary): MapTokenSummary => {
+    const orderedConditions = orderConditions(token.status_conditions ?? []);
+    const normalizedDurations = normalizeConditionDurations(
+        token.status_condition_durations ?? {},
+        orderedConditions
+    );
+
+    return {
+        ...token,
+        status_conditions: orderedConditions,
+        status_condition_durations: normalizedDurations,
+    };
+};
+
+export default function MapShow({
+    group,
+    map,
+    tiles,
+    tile_templates,
+    tokens,
+    token_conditions,
+}: MapShowProps) {
     const createForm = useForm<CreateTileForm>({
         tile_template_id: tile_templates[0]?.id ?? '',
         q: 0,
@@ -185,6 +324,8 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
         faction: 'neutral',
         initiative: '',
         status_effects: '',
+        status_conditions: [],
+        status_condition_durations: {},
         hit_points: '',
         temporary_hit_points: '',
         max_hit_points: '',
@@ -193,27 +334,76 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
         gm_note: '',
     });
 
+    const conditionOrder = token_conditions.map((option) => option.value);
+    const conditionLabelMap = token_conditions.reduce<Record<string, string>>((acc, option) => {
+        acc[option.value] = option.label;
+        return acc;
+    }, {});
+
+    const conditionOrderRef = useRef(conditionOrder);
+
+    const orderConditions = (values: string[]): string[] =>
+        conditionOrder.filter((condition) => values.includes(condition));
+
+    const toggleCondition = (values: string[], condition: string): string[] => {
+        const nextValues = values.includes(condition)
+            ? values.filter((value) => value !== condition)
+            : [...values, condition];
+
+        return orderConditions(nextValues);
+    };
+
+    const statusConditionsError =
+        Object.entries(tokenForm.errors).find(([key]) => key.startsWith('status_conditions'))?.[1] ?? null;
+
     const [liveTiles, setLiveTiles] = useState<MapTileSummary[]>(() => orderTiles(tiles));
     const [tileEdits, setTileEdits] = useState<Record<number, TileDraft>>({});
     const [updatingTile, setUpdatingTile] = useState<number | null>(null);
     const [removingTile, setRemovingTile] = useState<number | null>(null);
     const [hiddenTiles, setHiddenTiles] = useState<number[]>(() => map.fog.hidden_tile_ids);
     const [fogPendingTileId, setFogPendingTileId] = useState<number | null>(null);
-    const [liveTokens, setLiveTokens] = useState<MapTokenSummary[]>(() => orderTokens(tokens));
+    const [liveTokens, setLiveTokens] = useState<MapTokenSummary[]>(() =>
+        orderTokens(tokens.map((token) => prepareTokenForState(token)))
+    );
     const [tokenEdits, setTokenEdits] = useState<Record<number, TokenDraft>>({});
     const [updatingToken, setUpdatingToken] = useState<number | null>(null);
     const [removingToken, setRemovingToken] = useState<number | null>(null);
     const [tokenFactionFilter, setTokenFactionFilter] = useState<'all' | TokenFaction>('all');
+    const [conditionAlerts, setConditionAlerts] = useState<ConditionAlert[]>([]);
 
     const fogBusy = fogPendingTileId !== null;
+
+    const dismissConditionAlert = (createdAt: number) => {
+        setConditionAlerts((current) => current.filter((alert) => alert.createdAt !== createdAt));
+    };
+
+    const clearConditionAlerts = () => {
+        setConditionAlerts([]);
+    };
+
+    useEffect(() => {
+        conditionOrderRef.current = conditionOrder;
+    }, [conditionOrder]);
 
     useEffect(() => {
         setLiveTiles(orderTiles(tiles));
     }, [tiles]);
 
     useEffect(() => {
-        setLiveTokens(orderTokens(tokens));
+        setLiveTokens(orderTokens(tokens.map((token) => prepareTokenForState(token))));
     }, [tokens]);
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            const threshold = Date.now() - CONDITION_ALERT_LIFESPAN;
+
+            setConditionAlerts((current) =>
+                current.filter((alert) => alert.createdAt >= threshold)
+            );
+        }, 5000);
+
+        return () => window.clearInterval(interval);
+    }, []);
 
     useEffect(() => {
         if (tile_templates.length > 0 && createForm.data.tile_template_id === '') {
@@ -236,6 +426,8 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
     useEffect(() => {
         const drafts: Record<number, TokenDraft> = {};
         liveTokens.forEach((token) => {
+            const orderedConditions = orderConditions(token.status_conditions ?? []);
+
             drafts[token.id] = {
                 name: token.name,
                 x: token.x,
@@ -245,6 +437,11 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
                 faction: token.faction,
                 initiative: token.initiative ?? '',
                 status_effects: token.status_effects ?? '',
+                status_conditions: orderedConditions,
+                status_condition_durations: syncDurationDraft(
+                    token.status_condition_durations as Record<string, number | ''>,
+                    orderedConditions
+                ),
                 hit_points: token.hit_points ?? '',
                 temporary_hit_points: token.temporary_hit_points ?? '',
                 max_hit_points: token.max_hit_points ?? '',
@@ -299,10 +496,20 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
         channel.listen('.map-tile.deleted', handleDeleted);
 
         const upsertToken = (incoming: MapTokenSummary) => {
+            const statusConditions = incoming.status_conditions ?? [];
+            const orderedConditions = orderConditions(statusConditions);
+
             setLiveTokens((current) =>
                 orderTokens([
                     ...current.filter((existing) => existing.id !== incoming.id),
-                    incoming,
+                    {
+                        ...incoming,
+                        status_conditions: orderedConditions,
+                        status_condition_durations: normalizeConditionDurations(
+                            incoming.status_condition_durations ?? {},
+                            orderedConditions
+                        ),
+                    },
                 ]),
             );
         };
@@ -326,9 +533,40 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
             setLiveTokens((current) => current.filter((token) => token.id !== payload.token.id));
         };
 
+        const handleConditionsExpired = (payload: ConditionExpirationEventPayload) => {
+            if (
+                payload.token?.id === undefined ||
+                !Array.isArray(payload.conditions) ||
+                payload.conditions.length === 0
+            ) {
+                return;
+            }
+
+            const order = conditionOrderRef.current ?? [];
+            const sanitized = order.filter((condition) => payload.conditions.includes(condition));
+
+            if (sanitized.length === 0) {
+                return;
+            }
+
+            setConditionAlerts((current) => {
+                const nextAlert: ConditionAlert = {
+                    tokenId: payload.token.id,
+                    tokenName: payload.token.name ?? 'Token',
+                    conditions: sanitized,
+                    createdAt: Date.now(),
+                };
+
+                const merged = [...current, nextAlert];
+
+                return merged.slice(-8);
+            });
+        };
+
         channel.listen('.map-token.created', handleTokenCreatedOrUpdated);
         channel.listen('.map-token.updated', handleTokenCreatedOrUpdated);
         channel.listen('.map-token.deleted', handleTokenDeleted);
+        channel.listen('.map-token.conditions-expired', handleConditionsExpired);
 
         return () => {
             channel.stopListening('.map-tile.created');
@@ -337,6 +575,7 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
             channel.stopListening('.map-token.created');
             channel.stopListening('.map-token.updated');
             channel.stopListening('.map-token.deleted');
+            channel.stopListening('.map-token.conditions-expired');
             echo.leave(channelName);
         };
     }, [group.id, map.id]);
@@ -454,6 +693,96 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
         hazard: 0,
     });
 
+    const conditionTimerGroups = useMemo<ConditionTimerGroup[]>(() => {
+        if (liveTokens.length === 0) {
+            return [];
+        }
+
+        const grouped = liveTokens.reduce<ConditionTimerGroup[]>((acc, token) => {
+            const durations = token.status_condition_durations ?? {};
+            const orderedConditions = (token.status_conditions ?? []).filter((condition) =>
+                conditionOrder.includes(condition)
+            );
+
+            if (orderedConditions.length === 0) {
+                return acc;
+            }
+
+            const timers: ConditionTimerEntry[] = [];
+
+            orderedConditions.forEach((condition) => {
+                const rawValue = durations[condition];
+
+                if (typeof rawValue !== 'number' || Number.isNaN(rawValue)) {
+                    return;
+                }
+
+                const normalized = Math.min(
+                    Math.max(Math.round(rawValue), 0),
+                    MAX_CONDITION_DURATION
+                );
+
+                if (normalized <= 0) {
+                    return;
+                }
+
+                timers.push({
+                    condition,
+                    roundsRemaining: normalized,
+                });
+            });
+
+            if (timers.length === 0) {
+                return acc;
+            }
+
+            const sortedTimers = [...timers].sort((a, b) => {
+                if (a.roundsRemaining !== b.roundsRemaining) {
+                    return a.roundsRemaining - b.roundsRemaining;
+                }
+
+                const aIndex = conditionOrder.indexOf(a.condition);
+                const bIndex = conditionOrder.indexOf(b.condition);
+
+                return (aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex) -
+                    (bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex);
+            });
+
+            acc.push({
+                tokenId: token.id,
+                tokenName: token.name,
+                faction: token.faction,
+                timers: sortedTimers,
+            });
+
+            return acc;
+        }, []);
+
+        return grouped.sort((a, b) => {
+            const soonestA = Math.min(...a.timers.map((timer) => timer.roundsRemaining));
+            const soonestB = Math.min(...b.timers.map((timer) => timer.roundsRemaining));
+
+            if (soonestA !== soonestB) {
+                return soonestA - soonestB;
+            }
+
+            const nameComparison = a.tokenName.localeCompare(b.tokenName, undefined, {
+                sensitivity: 'base',
+            });
+
+            if (nameComparison !== 0) {
+                return nameComparison;
+            }
+
+            return a.tokenId - b.tokenId;
+        });
+    }, [conditionOrder, liveTokens]);
+
+    const activeConditionCount = conditionTimerGroups.reduce(
+        (total, group) => total + group.timers.length,
+        0
+    );
+
     const displayedTokens =
         tokenFactionFilter === 'all'
             ? liveTokens
@@ -506,18 +835,74 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
         submitFogUpdate([], -1, previous);
     };
 
-    const handleTokenDraftChange = (
+    const handleTokenDraftChange = <K extends keyof TokenDraft>(
         tokenId: number,
-        field: keyof TokenDraft,
-        value: string | number
+        field: K,
+        value: TokenDraft[K]
     ) => {
-        setTokenEdits((drafts) => ({
-            ...drafts,
-            [tokenId]: {
-                ...drafts[tokenId],
-                [field]: value,
-            },
-        }));
+        setTokenEdits((drafts) => {
+            const current = drafts[tokenId];
+
+            if (!current) {
+                return drafts;
+            }
+
+            if (field === 'status_conditions') {
+                const ordered = orderConditions(value as string[]);
+
+                return {
+                    ...drafts,
+                    [tokenId]: {
+                        ...current,
+                        status_conditions: ordered,
+                        status_condition_durations: syncDurationDraft(
+                            current.status_condition_durations,
+                            ordered
+                        ),
+                    },
+                };
+            }
+
+            return {
+                ...drafts,
+                [tokenId]: {
+                    ...current,
+                    [field]: value,
+                },
+            };
+        });
+    };
+
+    const handleTokenDurationDraftChange = (
+        tokenId: number,
+        condition: string,
+        rawValue: string
+    ) => {
+        setTokenEdits((drafts) => {
+            const current = drafts[tokenId];
+
+            if (!current) {
+                return drafts;
+            }
+
+            const sanitized = rawValue === '' ? '' : Number(rawValue);
+
+            const nextValue =
+                sanitized === '' || Number.isNaN(sanitized)
+                    ? ''
+                    : Math.min(Math.max(Math.round(sanitized), 1), MAX_CONDITION_DURATION);
+
+            return {
+                ...drafts,
+                [tokenId]: {
+                    ...current,
+                    status_condition_durations: {
+                        ...current.status_condition_durations,
+                        [condition]: rawValue === '' ? '' : nextValue,
+                    },
+                },
+            };
+        });
     };
 
     const handleTokenUpdate = (tokenId: number) => {
@@ -526,6 +911,12 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
         if (!draft) {
             return;
         }
+
+        const orderedConditions = orderConditions(draft.status_conditions);
+        const durationPayload = serializeConditionDurations(
+            draft.status_condition_durations,
+            orderedConditions
+        );
 
         const payload: Record<string, unknown> = {
             name: draft.name,
@@ -537,6 +928,8 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
             initiative: draft.initiative === '' ? null : Number(draft.initiative),
             status_effects:
                 draft.status_effects.trim() === '' ? null : draft.status_effects,
+            status_conditions: orderedConditions,
+            status_condition_durations: durationPayload ?? null,
             hit_points: draft.hit_points === '' ? null : Number(draft.hit_points),
             temporary_hit_points:
                 draft.temporary_hit_points === '' ? null : Number(draft.temporary_hit_points),
@@ -585,6 +978,12 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
                 initiative: data.initiative === '' ? null : data.initiative,
                 status_effects:
                     data.status_effects.trim() === '' ? null : data.status_effects,
+                status_conditions: orderConditions(data.status_conditions),
+                status_condition_durations:
+                    serializeConditionDurations(
+                        data.status_condition_durations,
+                        orderConditions(data.status_conditions)
+                    ) ?? null,
                 hit_points: data.hit_points === '' ? null : Number(data.hit_points),
                 temporary_hit_points:
                     data.temporary_hit_points === '' ? null : Number(data.temporary_hit_points),
@@ -602,6 +1001,29 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
                     tokenForm.transform((original) => original);
                 },
             });
+    };
+
+    const handleCreateConditionToggle = (condition: string) => {
+        const toggled = toggleCondition(tokenForm.data.status_conditions, condition);
+
+        tokenForm.setData('status_conditions', toggled);
+        tokenForm.setData(
+            'status_condition_durations',
+            syncDurationDraft(tokenForm.data.status_condition_durations, toggled)
+        );
+    };
+
+    const handleCreateConditionDurationChange = (condition: string, rawValue: string) => {
+        const sanitized = rawValue === '' ? '' : Number(rawValue);
+        const nextValue =
+            sanitized === '' || Number.isNaN(sanitized)
+                ? ''
+                : Math.min(Math.max(Math.round(sanitized), 1), MAX_CONDITION_DURATION);
+
+        tokenForm.setData('status_condition_durations', {
+            ...tokenForm.data.status_condition_durations,
+            [condition]: rawValue === '' ? '' : nextValue,
+        });
     };
 
     const templateOptions = tile_templates.map((template) => ({
@@ -655,6 +1077,133 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
                         </div>
                     </div>
                 </div>
+
+                {conditionTimerGroups.length > 0 && (
+                    <section className="mx-auto max-w-4xl space-y-3 rounded-xl border border-indigo-500/40 bg-indigo-500/10 p-4 shadow-inner shadow-indigo-900/20">
+                        <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <h2 className="text-sm font-semibold uppercase tracking-wide text-indigo-100">
+                                    Active condition timers
+                                </h2>
+                                <p className="text-xs text-indigo-200/80">
+                                    Tracking {activeConditionCount} {activeConditionCount === 1 ? 'timer' : 'timers'} across{' '}
+                                    {conditionTimerGroups.length} {conditionTimerGroups.length === 1 ? 'token' : 'tokens'}.
+                                </p>
+                            </div>
+                        </header>
+                        <ul className="space-y-3">
+                            {conditionTimerGroups.map((group) => {
+                                const soonest = Math.min(
+                                    ...group.timers.map((timer) => timer.roundsRemaining)
+                                );
+                                const factionBadgeClass = tokenFactionStyles[group.faction];
+
+                                return (
+                                    <li
+                                        key={group.tokenId}
+                                        className="rounded-lg border border-indigo-500/30 bg-zinc-950/70 px-4 py-3 shadow-inner shadow-indigo-900/10"
+                                    >
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm font-semibold text-zinc-100">
+                                                    {group.tokenName}
+                                                </p>
+                                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-zinc-400">
+                                                    <span
+                                                        className={`rounded-full border px-2 py-0.5 text-[11px] ${factionBadgeClass}`}
+                                                    >
+                                                        {tokenFactionLabels[group.faction]}
+                                                    </span>
+                                                    <span className="text-zinc-500">
+                                                        Soonest ends in{' '}
+                                                        <span className={getRoundsAccentClass(soonest)}>
+                                                            {formatRoundsRemaining(soonest)}
+                                                        </span>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <ul className="mt-3 flex flex-wrap gap-2">
+                                            {group.timers.map((timer) => (
+                                                <li
+                                                    key={`${group.tokenId}-${timer.condition}`}
+                                                    className="flex items-center gap-2 rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2 py-1"
+                                                >
+                                                    <span className="text-xs font-medium text-indigo-100">
+                                                        {conditionLabelMap[timer.condition] ?? timer.condition}
+                                                    </span>
+                                                    <span
+                                                        className={`text-xs font-semibold ${getRoundsAccentClass(timer.roundsRemaining)}`}
+                                                    >
+                                                        {formatRoundsRemaining(timer.roundsRemaining)}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </section>
+                )}
+
+                {conditionAlerts.length > 0 && (
+                    <section className="mx-auto max-w-4xl space-y-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 shadow-inner shadow-amber-900/30">
+                        <header className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-sm font-semibold uppercase tracking-wide text-amber-100">
+                                    Conditions cleared
+                                </h2>
+                                <p className="text-xs text-amber-200/80">
+                                    Timers expired for these tokens during the latest region turn.
+                                </p>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs uppercase tracking-wide text-amber-200 hover:bg-amber-500/20 hover:text-amber-50"
+                                onClick={clearConditionAlerts}
+                            >
+                                Dismiss all
+                            </Button>
+                        </header>
+                        <ul className="space-y-2">
+                            {conditionAlerts.map((alert) => (
+                                <li
+                                    key={`${alert.tokenId}-${alert.createdAt}`}
+                                    className="flex items-start justify-between gap-4 rounded-lg border border-amber-500/30 bg-amber-500/15 px-3 py-2 text-amber-50"
+                                >
+                                    <div>
+                                        <p className="text-sm font-semibold leading-5 text-amber-100">
+                                            {alert.tokenName}
+                                        </p>
+                                        <p className="text-xs uppercase tracking-wide text-amber-200">
+                                            {alert.conditions
+                                                .map((condition) => conditionLabelMap[condition] ?? condition)
+                                                .join(', ')}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[11px] uppercase tracking-wide text-amber-200/80">
+                                            Cleared
+                                        </span>
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-6 w-6 rounded-full text-amber-200 hover:bg-amber-500/20 hover:text-amber-50"
+                                            onClick={() => dismissConditionAlert(alert.createdAt)}
+                                        >
+                                            <span aria-hidden>×</span>
+                                            <span className="sr-only">Dismiss alert</span>
+                                        </Button>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
 
                 <section className="mx-auto max-w-4xl rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/30">
                     <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -955,6 +1504,82 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
                             )}
                         </div>
                         <div className="space-y-2 md:col-span-2">
+                            <span className="text-sm font-medium text-zinc-200">Condition presets</span>
+                            <div className="flex flex-wrap gap-2">
+                                {token_conditions.map((option) => {
+                                    const active = tokenForm.data.status_conditions.includes(option.value);
+
+                                    return (
+                                        <Button
+                                            key={option.value}
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            className={`rounded-full border px-3 py-1 text-xs uppercase tracking-wide transition-colors ${
+                                                active
+                                                    ? 'border-amber-500/60 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
+                                                    : 'border-zinc-700 text-zinc-200 hover:border-amber-400/40 hover:text-amber-100'
+                                            }`}
+                                            onClick={() => handleCreateConditionToggle(option.value)}
+                                            disabled={tokenForm.processing}
+                                        >
+                                            {option.label}
+                                        </Button>
+                                    );
+                                })}
+                            </div>
+                            {statusConditionsError && (
+                                <p className="text-sm text-rose-400">{statusConditionsError}</p>
+                            )}
+                        </div>
+                        {tokenForm.data.status_conditions.length > 0 && (
+                            <div className="space-y-2 md:col-span-2">
+                                <span className="text-xs uppercase tracking-wide text-zinc-500">
+                                    Condition timers (rounds)
+                                </span>
+                                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+                                    {tokenForm.data.status_conditions.map((condition) => {
+                                        const value = tokenForm.data.status_condition_durations[condition] ?? '';
+                                        const error =
+                                            (tokenForm.errors as Record<string, string>)[
+                                                `status_condition_durations.${condition}`
+                                            ] ?? null;
+
+                                        return (
+                                            <div key={condition} className="space-y-1">
+                                                <Label
+                                                    htmlFor={`token-condition-duration-${condition}`}
+                                                    className="text-xs uppercase tracking-wide text-zinc-500"
+                                                >
+                                                    {conditionLabelMap[condition]}
+                                                </Label>
+                                                <Input
+                                                    id={`token-condition-duration-${condition}`}
+                                                    type="number"
+                                                    min={1}
+                                                    max={MAX_CONDITION_DURATION}
+                                                    value={value === '' ? '' : value}
+                                                    onChange={(event) =>
+                                                        handleCreateConditionDurationChange(
+                                                            condition,
+                                                            event.target.value
+                                                        )
+                                                    }
+                                                    disabled={tokenForm.processing}
+                                                />
+                                                <p className="text-[11px] text-zinc-500">
+                                                    Leave blank to track manually.
+                                                </p>
+                                                {error && (
+                                                    <p className="text-xs text-rose-400">{error}</p>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                        <div className="space-y-2 md:col-span-2">
                             <Label htmlFor="token-status">Status effects (optional)</Label>
                             <Textarea
                                 id="token-status"
@@ -1206,6 +1831,11 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
                                     faction: token.faction,
                                     initiative: token.initiative ?? '',
                                     status_effects: token.status_effects ?? '',
+                                    status_conditions: orderConditions(token.status_conditions ?? []),
+                                    status_condition_durations: syncDurationDraft(
+                                        token.status_condition_durations as Record<string, number | ''>,
+                                        orderConditions(token.status_conditions ?? [])
+                                    ),
                                     z_index: token.z_index ?? 0,
                                     gm_note: token.gm_note ?? '',
                                 };
@@ -1250,17 +1880,38 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
                                                         Temp {token.temporary_hit_points}
                                                     </span>
                                                 )}
-                                                {token.hidden && (
-                                                    <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[11px] uppercase tracking-wide text-sky-200">
-                                                        Hidden from players
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {token.status_effects && (
-                                                <p className="text-sm text-amber-200">
-                                                    {token.status_effects}
-                                                </p>
+                                            {token.hidden && (
+                                                <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[11px] uppercase tracking-wide text-sky-200">
+                                                    Hidden from players
+                                                </span>
                                             )}
+                                        </div>
+                                        {token.status_conditions.length > 0 && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {token.status_conditions.map((condition) => {
+                                                    const duration = token.status_condition_durations?.[condition];
+
+                                                    return (
+                                                        <span
+                                                            key={condition}
+                                                            className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] uppercase tracking-wide text-amber-200"
+                                                        >
+                                                            {conditionLabelMap[condition] ?? condition}
+                                                            {duration !== undefined && (
+                                                                <span className="ml-1 text-[10px] lowercase text-amber-100/80">
+                                                                    ({duration}r)
+                                                                </span>
+                                                            )}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                        {token.status_effects && (
+                                            <p className="text-sm text-amber-200">
+                                                {token.status_effects}
+                                            </p>
+                                        )}
                                             <div className="grid gap-3 sm:grid-cols-2">
                                                 <div className="space-y-1">
                                                     <Label htmlFor={`token-name-${token.id}`} className="text-xs uppercase tracking-wide text-zinc-500">
@@ -1474,6 +2125,80 @@ export default function MapShow({ group, map, tiles, tile_templates, tokens }: M
                                                     <p className="text-[11px] text-zinc-500">
                                                         Higher values draw above lower ones when initiative matches.
                                                     </p>
+                                                </div>
+                                                <div className="space-y-1 sm:col-span-2">
+                                                    <span className="text-xs uppercase tracking-wide text-zinc-500">
+                                                        Condition presets
+                                                    </span>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {token_conditions.map((option) => {
+                                                            const active = draft.status_conditions.includes(option.value);
+
+                                                            return (
+                                                                <Button
+                                                                    key={option.value}
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className={`rounded-full border px-2.5 py-0.5 text-[11px] uppercase tracking-wide transition-colors ${
+                                                                        active
+                                                                            ? 'border-amber-500/60 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
+                                                                            : 'border-zinc-700 text-zinc-200 hover:border-amber-400/40 hover:text-amber-100'
+                                                                    }`}
+                                                                    onClick={() =>
+                                                                        handleTokenDraftChange(
+                                                                            token.id,
+                                                                            'status_conditions',
+                                                                            toggleCondition(
+                                                                                draft.status_conditions,
+                                                                                option.value
+                                                                            )
+                                                                        )
+                                                                    }
+                                                                    disabled={updatingToken === token.id}
+                                                                >
+                                                                    {option.label}
+                                                                </Button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    {draft.status_conditions.length > 0 && (
+                                                        <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                                                            {draft.status_conditions.map((condition) => {
+                                                                const value =
+                                                                    draft.status_condition_durations[condition] ?? '';
+
+                                                                return (
+                                                                    <div key={condition} className="space-y-1">
+                                                                        <Label
+                                                                            htmlFor={`token-condition-duration-${token.id}-${condition}`}
+                                                                            className="text-[11px] uppercase tracking-wide text-zinc-500"
+                                                                        >
+                                                                            {conditionLabelMap[condition]}
+                                                                        </Label>
+                                                                        <Input
+                                                                            id={`token-condition-duration-${token.id}-${condition}`}
+                                                                            type="number"
+                                                                            min={1}
+                                                                            max={MAX_CONDITION_DURATION}
+                                                                            value={value === '' ? '' : value}
+                                                                            onChange={(event) =>
+                                                                                handleTokenDurationDraftChange(
+                                                                                    token.id,
+                                                                                    condition,
+                                                                                    event.target.value
+                                                                                )
+                                                                            }
+                                                                            disabled={updatingToken === token.id}
+                                                                        />
+                                                                        <p className="text-[11px] text-zinc-500">
+                                                                            Leave blank to track manually.
+                                                                        </p>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="space-y-1 sm:col-span-2">
                                                     <Label htmlFor={`token-status-${token.id}`} className="text-xs uppercase tracking-wide text-zinc-500">

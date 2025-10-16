@@ -23,6 +23,8 @@ class MapTokenPayload
             'faction' => $token->faction,
             'initiative' => $token->initiative,
             'status_effects' => $token->status_effects,
+            'status_conditions' => $token->status_conditions ?? [],
+            'status_condition_durations' => $token->status_condition_durations ?? [],
             'hit_points' => $token->hit_points,
             'temporary_hit_points' => $token->temporary_hit_points,
             'max_hit_points' => $token->max_hit_points,

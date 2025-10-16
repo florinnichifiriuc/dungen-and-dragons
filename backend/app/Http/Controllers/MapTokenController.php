@@ -20,6 +20,8 @@ class MapTokenController extends Controller
 
         $validated = $request->validated();
 
+        $statusConditions = $this->normalizeStatusConditions($validated['status_conditions'] ?? null);
+
         $token = $map->tokens()->create([
             'name' => $validated['name'],
             'x' => $validated['x'],
@@ -29,6 +31,11 @@ class MapTokenController extends Controller
             'faction' => $validated['faction'] ?? MapToken::FACTION_NEUTRAL,
             'initiative' => $this->normalizeOptionalInteger($validated['initiative'] ?? null),
             'status_effects' => $this->normalizeOptionalString($validated['status_effects'] ?? null),
+            'status_conditions' => $statusConditions,
+            'status_condition_durations' => $this->normalizeStatusConditionDurations(
+                $validated['status_condition_durations'] ?? null,
+                $statusConditions
+            ),
             'hit_points' => $this->normalizeOptionalInteger($validated['hit_points'] ?? null),
             'temporary_hit_points' => $this->normalizeOptionalInteger($validated['temporary_hit_points'] ?? null),
             'max_hit_points' => $this->normalizeOptionalInteger($validated['max_hit_points'] ?? null),
@@ -81,6 +88,26 @@ class MapTokenController extends Controller
 
         if (array_key_exists('status_effects', $validated)) {
             $data['status_effects'] = $this->normalizeOptionalString($validated['status_effects']);
+        }
+
+        $statusConditions = null;
+
+        if (array_key_exists('status_conditions', $validated)) {
+            $statusConditions = $this->normalizeStatusConditions($validated['status_conditions']);
+            $data['status_conditions'] = $statusConditions;
+        }
+
+        if (array_key_exists('status_condition_durations', $validated)) {
+            $activeConditions = $statusConditions;
+
+            if ($activeConditions === null) {
+                $activeConditions = $data['status_conditions'] ?? ($token->status_conditions ?? []);
+            }
+
+            $data['status_condition_durations'] = $this->normalizeStatusConditionDurations(
+                $validated['status_condition_durations'],
+                $activeConditions
+            );
         }
 
         if (array_key_exists('hit_points', $validated)) {
@@ -152,6 +179,85 @@ class MapTokenController extends Controller
         $trimmed = trim($value);
 
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    protected function normalizeStatusConditions(mixed $value): ?array
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (! is_array($value)) {
+            return null;
+        }
+
+        $filtered = array_values(array_filter($value, function ($condition) {
+            return is_string($condition) && in_array($condition, MapToken::CONDITIONS, true);
+        }));
+
+        if ($filtered === []) {
+            return null;
+        }
+
+        $unique = array_values(array_unique($filtered));
+
+        return array_values(array_filter(
+            MapToken::CONDITIONS,
+            fn ($condition) => in_array($condition, $unique, true),
+        ));
+    }
+
+    protected function normalizeStatusConditionDurations(mixed $value, ?array $activeConditions): ?array
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (! is_array($value)) {
+            return null;
+        }
+
+        if ($activeConditions === null || $activeConditions === []) {
+            return null;
+        }
+
+        $filtered = [];
+
+        foreach ($value as $condition => $duration) {
+            if (! is_string($condition)) {
+                continue;
+            }
+
+            if (! in_array($condition, $activeConditions, true)) {
+                continue;
+            }
+
+            if ($duration === null || $duration === '') {
+                continue;
+            }
+
+            $durationInt = (int) $duration;
+
+            if ($durationInt < 1 || $durationInt > MapToken::MAX_CONDITION_DURATION) {
+                continue;
+            }
+
+            $filtered[$condition] = $durationInt;
+        }
+
+        if ($filtered === []) {
+            return null;
+        }
+
+        $ordered = [];
+
+        foreach (MapToken::CONDITIONS as $condition) {
+            if (array_key_exists($condition, $filtered)) {
+                $ordered[$condition] = $filtered[$condition];
+            }
+        }
+
+        return $ordered;
     }
 
     protected function normalizeOptionalInteger(mixed $value): ?int
