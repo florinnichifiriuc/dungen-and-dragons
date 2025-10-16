@@ -63,6 +63,7 @@ type PlayerConditionTimerSummaryPanelProps = {
     viewerRole?: string | null;
     onDismiss?: () => void;
     onSummaryUpdate?: (next: ConditionTimerSummaryResource) => void;
+    allowAcknowledgements?: boolean;
 };
 
 const urgencyStyles: Record<ConditionTimerSummaryCondition['urgency'], string> = {
@@ -161,13 +162,15 @@ export function PlayerConditionTimerSummaryPanel({
     viewerRole,
     onDismiss,
     onSummaryUpdate,
+    allowAcknowledgements,
 }: PlayerConditionTimerSummaryPanelProps) {
     const entries = useMemo(() => summary.entries ?? [], [summary.entries]);
     const [pendingAcknowledgements, setPendingAcknowledgements] = useState<Record<string, boolean>>({});
     const viewerIsFacilitator = viewerRole === 'owner' || viewerRole === 'dungeon-master';
+    const acknowledgementsEnabled = allowAcknowledgements ?? true;
 
     const acknowledgeCondition = async (tokenId: number, conditionKey: string) => {
-        if (!summary.generated_at) {
+        if (!summary.generated_at || !acknowledgementsEnabled) {
             return;
         }
 
@@ -287,7 +290,7 @@ export function PlayerConditionTimerSummaryPanel({
                                     const compositeKey = `${entry.token.id}:${condition.key}`;
                                     const isAcknowledged = Boolean(condition.acknowledged_by_viewer);
                                     const isPending = Boolean(pendingAcknowledgements[compositeKey]);
-                                    const canAcknowledge = !isAcknowledged && !isPending;
+                                    const canAcknowledge = acknowledgementsEnabled && !isAcknowledged && !isPending;
 
                                     const aggregateCount =
                                         typeof condition.acknowledged_count === 'number'

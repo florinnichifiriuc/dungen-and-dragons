@@ -4,10 +4,17 @@ use App\Models\Campaign;
 use App\Models\CampaignSession;
 use App\Models\Group;
 use App\Models\GroupMembership;
+use App\Models\Map;
+use App\Models\MapToken;
 use App\Models\SessionNote;
 use App\Models\SessionRecap;
 use App\Models\SessionReward;
 use App\Models\User;
+use App\Services\ConditionTimerAcknowledgementService;
+use App\Services\ConditionTimerChronicleService;
+use App\Services\ConditionTimerSummaryProjector;
+use App\Services\ConditionTimerSummaryShareService;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -182,6 +189,67 @@ it('includes session recaps in markdown exports for all viewers', function () {
     expect($playerExport->getContent())
         ->toContain('GM Chronicle')
         ->toContain('Player Notes');
+});
+
+it('includes condition timer outlook and chronicle in markdown exports', function () {
+    [$manager, $campaign, $group, $session] = seedCampaignSession();
+
+    $map = Map::factory()->for($group)->create([
+        'title' => 'Vault Approach',
+    ]);
+
+    $token = MapToken::factory()->for($map)->create([
+        'name' => 'Specter Vanguard',
+        'faction' => MapToken::FACTION_ALLIED,
+        'hidden' => false,
+        'status_conditions' => ['blinded'],
+        'status_condition_durations' => ['blinded' => 3],
+    ]);
+
+    /** @var ConditionTimerChronicleService $chronicle */
+    $chronicle = app(ConditionTimerChronicleService::class);
+    $chronicle->recordAdjustments($group, $token, [
+        ['condition' => 'blinded', 'previous' => null, 'next' => 3],
+    ], 'token_created', $manager);
+
+    /** @var ConditionTimerSummaryProjector $projector */
+    $projector = app(ConditionTimerSummaryProjector::class);
+    $summary = $projector->refreshForGroup($group, trigger: 'test', broadcast: false);
+
+    /** @var ConditionTimerAcknowledgementService $acknowledgements */
+    $acknowledgements = app(ConditionTimerAcknowledgementService::class);
+    $acknowledgements->recordAcknowledgement(
+        $group,
+        $token,
+        'blinded',
+        CarbonImmutable::parse($summary['generated_at']),
+        $manager,
+    );
+
+    /** @var ConditionTimerSummaryShareService $shareService */
+    $shareService = app(ConditionTimerSummaryShareService::class);
+    $share = $shareService->createShareForGroup($group, $manager);
+    $shareUrl = route('shares.condition-timers.player-summary.show', $share->token);
+
+    $response = $this->actingAs($manager)->get(route('campaigns.sessions.exports.markdown', [
+        'campaign' => $campaign,
+        'session' => $session,
+    ]));
+
+    $response->assertOk();
+
+    $markdown = $response->getContent();
+
+    expect($markdown)
+        ->toContain('## Active Condition Outlook')
+        ->toContain('### Specter Vanguard — Vault Approach')
+        ->toContain('Blinded — 3 rounds remaining')
+        ->toContain('Acknowledged by you.')
+        ->toContain('Acknowledged by 1 party member.')
+        ->toContain($shareUrl)
+        ->toContain('Timer started at 3 rounds.')
+        ->toContain('## Condition Timer Chronicle')
+        ->toContain('Specter Vanguard • Blinded');
 });
 
 it('renders reward ledger entries in markdown exports for all viewers', function () {

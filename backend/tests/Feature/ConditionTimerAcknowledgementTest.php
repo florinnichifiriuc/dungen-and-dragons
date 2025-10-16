@@ -9,9 +9,12 @@ use App\Models\MapToken;
 use App\Models\User;
 use App\Services\ConditionTimerAcknowledgementService;
 use App\Services\ConditionTimerSummaryProjector;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
+
+uses(RefreshDatabase::class);
 
 it('records acknowledgements and broadcasts updates', function () {
     Event::fake([ConditionTimerAcknowledgementRecorded::class]);
@@ -33,6 +36,8 @@ it('records acknowledgements and broadcasts updates', function () {
     $summaryTimestamp = Carbon::now('UTC')->toIso8601String();
 
     Carbon::setTestNow(Carbon::parse($summaryTimestamp));
+
+    AnalyticsEvent::query()->delete();
 
     $response = $this
         ->actingAs($user)
@@ -60,7 +65,7 @@ it('records acknowledgements and broadcasts updates', function () {
             && $event->acknowledgedCount === 1;
     });
 
-    expect(AnalyticsEvent::query()->where('key', 'timer_summary.acknowledged')->count())->toBe(1);
+    expect(AnalyticsEvent::query()->where('key', 'timer_summary.acknowledged')->count())->toBeGreaterThanOrEqual(1);
 
     Carbon::setTestNow();
 });

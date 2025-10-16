@@ -83,7 +83,35 @@
     $session = $metadata['session'];
     $campaign = $metadata['campaign'];
     $viewer = $metadata['viewer'];
+    $conditionSummary = $condition_timer_summary ?? null;
+    $conditionShare = $condition_timer_summary_share ?? null;
+    $conditionChronicle = $condition_timer_chronicle ?? [];
+    $viewerCanManage = $viewer['can_manage'] ?? false;
     $format = fn($carbon) => $carbon ? $carbon->format('Y-m-d H:i \U\T\C') : null;
+    $formatIso = static function (?string $timestamp) {
+        if (! $timestamp) {
+            return 'Unknown time';
+        }
+
+        try {
+            return \Carbon\CarbonImmutable::parse($timestamp)->setTimezone('UTC')->format('Y-m-d H:i \U\T\C');
+        } catch (\Throwable $exception) {
+            return $timestamp;
+        }
+    };
+    $formatRounds = static function (array $condition): string {
+        if (array_key_exists('rounds', $condition) && $condition['rounds'] !== null) {
+            $value = (int) $condition['rounds'];
+
+            return $value === 1 ? '1 round remaining' : sprintf('%d rounds remaining', $value);
+        }
+
+        if (! empty($condition['rounds_hint'])) {
+            return (string) $condition['rounds_hint'];
+        }
+
+        return 'Duration unknown';
+    };
 @endphp
 
     <h1>{{ $session['title'] }}</h1>
@@ -119,6 +147,108 @@
     <div class="section">
         <h2>Summary</h2>
         <p>{!! nl2br(e($session['summary'] ?? 'No summary captured yet.')) !!}</p>
+    </div>
+
+    <div class="section">
+        <h2>Active Condition Outlook</h2>
+        @if($conditionSummary && count($conditionSummary['entries'] ?? []) > 0)
+            @if($conditionShare && !empty($conditionShare['url']))
+                <p class="muted">
+                    Shareable view: <a href="{{ $conditionShare['url'] }}">{{ $conditionShare['url'] }}</a>
+                    @if(!empty($conditionShare['expires_at']))
+                        <br>
+                        Expires {{ $formatIso(optional($conditionShare['expires_at'])->toIso8601String()) }}
+                    @endif
+                </p>
+            @endif
+            @foreach($conditionSummary['entries'] as $entry)
+                <div class="note-card">
+                    <h3>{{ $entry['token']['label'] ?? 'Unknown presence' }}</h3>
+                    <p class="muted">
+                        {{ \Illuminate\Support\Str::headline($entry['token']['disposition'] ?? 'unknown') }}
+                        • {{ $entry['map']['title'] ?? 'Unknown map' }}
+                    </p>
+
+                    @foreach($entry['conditions'] as $condition)
+                        @if(!$loop->first)
+                            <div class="divider"></div>
+                        @endif
+                        <h4>{{ $condition['label'] ?? \Illuminate\Support\Str::headline($condition['key'] ?? 'Condition') }}</h4>
+                        <p class="muted">{{ $formatRounds($condition) }} • {{ ucfirst($condition['urgency'] ?? 'calm') }}</p>
+                        <p>{!! nl2br(e($condition['summary'] ?? 'No narrative summary available.')) !!}</p>
+
+                        @if(!empty($condition['acknowledged_by_viewer']))
+                            <p class="muted">You have acknowledged this condition.</p>
+                        @endif
+
+                        @if($viewerCanManage && array_key_exists('acknowledged_count', $condition))
+                            <p class="muted">
+                                @php $count = (int) ($condition['acknowledged_count'] ?? 0); @endphp
+                                {{ $count === 1 ? 'Acknowledged by 1 party member.' : 'Acknowledged by ' . $count . ' party members.' }}
+                            </p>
+                        @endif
+
+                        @if(!empty($condition['timeline']))
+                            <div class="muted" style="margin-top: 0.75rem;">Timeline</div>
+                            <ul class="muted" style="margin: 0.5rem 0 0 1rem;">
+                                @foreach($condition['timeline'] as $event)
+                                    <li style="margin-bottom: 0.35rem;">
+                                        <strong>{{ $formatIso($event['recorded_at'] ?? null) }}</strong>
+                                        — {{ $event['summary'] ?? 'Adjustment' }}
+                                        @if(!empty($event['detail']['summary']))
+                                            <div>{{ $event['detail']['summary'] }}</div>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    @endforeach
+                </div>
+            @endforeach
+        @elseif($conditionShare && !empty($conditionShare['url']))
+            <p class="muted">No active condition timers at this time.</p>
+            <p class="muted mt-2">
+                Shareable view: <a href="{{ $conditionShare['url'] }}">{{ $conditionShare['url'] }}</a>
+                @if(!empty($conditionShare['expires_at']))
+                    <br>
+                    Expires {{ $formatIso(optional($conditionShare['expires_at'])->toIso8601String()) }}
+                @endif
+            </p>
+        @else
+            <p class="muted">No active condition timers at this time.</p>
+        @endif
+    </div>
+
+    <div class="section">
+        <h2>Condition Timer Chronicle</h2>
+        @forelse($conditionChronicle as $entry)
+            <div class="note-card">
+                <h3>{{ $entry['token']['label'] ?? 'Unknown presence' }}</h3>
+                <p class="muted">
+                    {{ $formatIso($entry['recorded_at'] instanceof \Carbon\CarbonInterface ? $entry['recorded_at']->toIso8601String() : ($entry['recorded_at'] ?? null)) }}
+                    • {{ \Illuminate\Support\Str::headline($entry['condition_key']) }}
+                </p>
+                <p>{!! nl2br(e($entry['summary'])) !!}</p>
+
+                @if(!empty($entry['actor']))
+                    <p class="muted">
+                        Recorded by {{ $entry['actor']['name'] }}@if(!empty($entry['actor']['role'])) ({{ $entry['actor']['role'] }})@endif
+                    </p>
+                @endif
+
+                @if($entry['previous_rounds'] !== null || $entry['new_rounds'] !== null)
+                    <p class="muted">
+                        Rounds: {{ $entry['previous_rounds'] ?? '—' }} → {{ $entry['new_rounds'] ?? '—' }}
+                    </p>
+                @endif
+
+                @if(!empty($entry['context']) && $viewerCanManage)
+                    <pre style="background-color: #f8fafc; padding: 0.75rem; border-radius: 8px; border: 1px solid #e2e8f0;">{{ json_encode($entry['context'], JSON_PRETTY_PRINT) }}</pre>
+                @endif
+            </div>
+        @empty
+            <p class="muted">No timer adjustments have been recorded yet.</p>
+        @endforelse
     </div>
 
     <div class="section">

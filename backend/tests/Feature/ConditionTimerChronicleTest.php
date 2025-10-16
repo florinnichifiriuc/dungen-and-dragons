@@ -7,6 +7,9 @@ use App\Models\MapToken;
 use App\Models\User;
 use App\Services\ConditionTimerChronicleService;
 use App\Services\ConditionTimerSummaryProjector;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
 
 it('records adjustments and hydrates timelines by role', function () {
     $dm = User::factory()->create();

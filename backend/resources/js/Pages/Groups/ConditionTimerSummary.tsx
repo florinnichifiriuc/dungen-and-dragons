@@ -6,6 +6,9 @@ import PlayerConditionTimerSummaryPanel, {
     ConditionTimerSummaryResource,
 } from '@/components/condition-timers/PlayerConditionTimerSummaryPanel';
 import { MobileConditionTimerRecapWidget } from '@/components/condition-timers/MobileConditionTimerRecapWidget';
+import ConditionTimerShareLinkControls, {
+    type ConditionTimerShareResource,
+} from '@/components/condition-timers/ConditionTimerShareLinkControls';
 import { useConditionTimerSummaryCache } from '@/hooks/useConditionTimerSummaryCache';
 import {
     applyAcknowledgementToSummary,
@@ -16,9 +19,16 @@ import { getEcho } from '@/lib/realtime';
 type ConditionTimerSummaryPageProps = {
     group: { id: number; name: string; viewer_role?: string | null };
     summary: ConditionTimerSummaryResource;
+    share: ConditionTimerShareResource | null;
+    can_manage_share: boolean;
 };
 
-export default function ConditionTimerSummaryPage({ group, summary }: ConditionTimerSummaryPageProps) {
+export default function ConditionTimerSummaryPage({
+    group,
+    summary,
+    share,
+    can_manage_share: canManageShare,
+}: ConditionTimerSummaryPageProps) {
     const page = usePage();
     const currentUserId = (page.props.auth?.user?.id as number | undefined) ?? null;
     const storageKey = `group.${group.id}.condition-summary`;
@@ -71,6 +81,8 @@ export default function ConditionTimerSummaryPage({ group, summary }: ConditionT
         };
     }, [group.id, updateHydratedSummary, currentUserId]);
 
+    const shareUrl = share?.url ?? null;
+
     return (
         <AppLayout>
             <Head title={`${group.name} • Condition Timers`} />
@@ -83,16 +95,23 @@ export default function ConditionTimerSummaryPage({ group, summary }: ConditionT
                 </div>
                 <MobileConditionTimerRecapWidget
                     summary={hydratedSummary}
+                    shareUrl={shareUrl ?? undefined}
                     className="md:hidden"
                     source="group_mobile_widget"
                     viewerRole={group.viewer_role}
                 />
                 <PlayerConditionTimerSummaryPanel
                     summary={hydratedSummary}
+                    shareUrl={shareUrl ?? undefined}
                     className="hidden md:block"
                     source="group_summary_page"
                     viewerRole={group.viewer_role}
                     onSummaryUpdate={(next) => updateHydratedSummary(next, { allowStale: true })}
+                />
+                <ConditionTimerShareLinkControls
+                    groupId={group.id}
+                    share={share}
+                    canManage={canManageShare}
                 />
             </div>
         </AppLayout>
