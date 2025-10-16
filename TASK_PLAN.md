@@ -3,7 +3,15 @@
 ## Backlog
 - [ ] Task 38 – Token Condition Timer Batch Adjustments (multi-select timers, bulk delta tooling, optimistic syncing).
 - [ ] Task 39 – Condition Timer Player Summaries (redacted player view, realtime updates, narrative-friendly copy).
-
+- [x] Create group management (create/join/roles) and policies.
+- [x] Establish milestone demo flow automation that runs at a human reading pace with verbose console narration to showcase completed work for each milestone.
+- [x] Develop turn scheduler service and API (process turn, AI fallback).
+- [x] Integrate Laravel Reverb for realtime initiative, chat, map tokens.
+- [x] Build task board with turn-based due dates and Kanban UI.
+- [x] Implement AI services (Ollama Gemma3) for NPC and DM takeover workflows.
+- [x] Add search/filter infrastructure across entities, tasks, notes.
+- [x] Implement exports (Markdown/PDF) and session recording storage.
+- [x] Finalize localization, accessibility, theming, and docs.
 ## In Progress
 - _None_
 
