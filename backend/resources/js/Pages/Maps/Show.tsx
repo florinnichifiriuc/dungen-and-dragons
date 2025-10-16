@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 
 import AppLayout from '@/Layouts/AppLayout';
@@ -142,6 +142,18 @@ type ConditionAlert = {
     createdAt: number;
 };
 
+type ConditionTimerEntry = {
+    condition: string;
+    roundsRemaining: number;
+};
+
+type ConditionTimerGroup = {
+    tokenId: number;
+    tokenName: string;
+    faction: TokenFaction;
+    timers: ConditionTimerEntry[];
+};
+
 const orderTiles = (items: MapTileSummary[]): MapTileSummary[] =>
     [...items].sort((a, b) => {
         if (a.q !== b.q) {
@@ -187,6 +199,21 @@ const orderTokens = (items: MapTokenSummary[]): MapTokenSummary[] =>
 
 const MAX_CONDITION_DURATION = 20;
 const CONDITION_ALERT_LIFESPAN = 90_000;
+
+const formatRoundsRemaining = (value: number): string =>
+    `${value} ${value === 1 ? 'round' : 'rounds'}`;
+
+const getRoundsAccentClass = (value: number): string => {
+    if (value <= 1) {
+        return 'text-rose-200';
+    }
+
+    if (value <= 3) {
+        return 'text-amber-200';
+    }
+
+    return 'text-emerald-200';
+};
 
 const normalizeConditionDurations = (
     durations: Record<string, number | null | undefined> | null | undefined,
@@ -666,6 +693,96 @@ export default function MapShow({
         hazard: 0,
     });
 
+    const conditionTimerGroups = useMemo<ConditionTimerGroup[]>(() => {
+        if (liveTokens.length === 0) {
+            return [];
+        }
+
+        const grouped = liveTokens.reduce<ConditionTimerGroup[]>((acc, token) => {
+            const durations = token.status_condition_durations ?? {};
+            const orderedConditions = (token.status_conditions ?? []).filter((condition) =>
+                conditionOrder.includes(condition)
+            );
+
+            if (orderedConditions.length === 0) {
+                return acc;
+            }
+
+            const timers: ConditionTimerEntry[] = [];
+
+            orderedConditions.forEach((condition) => {
+                const rawValue = durations[condition];
+
+                if (typeof rawValue !== 'number' || Number.isNaN(rawValue)) {
+                    return;
+                }
+
+                const normalized = Math.min(
+                    Math.max(Math.round(rawValue), 0),
+                    MAX_CONDITION_DURATION
+                );
+
+                if (normalized <= 0) {
+                    return;
+                }
+
+                timers.push({
+                    condition,
+                    roundsRemaining: normalized,
+                });
+            });
+
+            if (timers.length === 0) {
+                return acc;
+            }
+
+            const sortedTimers = [...timers].sort((a, b) => {
+                if (a.roundsRemaining !== b.roundsRemaining) {
+                    return a.roundsRemaining - b.roundsRemaining;
+                }
+
+                const aIndex = conditionOrder.indexOf(a.condition);
+                const bIndex = conditionOrder.indexOf(b.condition);
+
+                return (aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex) -
+                    (bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex);
+            });
+
+            acc.push({
+                tokenId: token.id,
+                tokenName: token.name,
+                faction: token.faction,
+                timers: sortedTimers,
+            });
+
+            return acc;
+        }, []);
+
+        return grouped.sort((a, b) => {
+            const soonestA = Math.min(...a.timers.map((timer) => timer.roundsRemaining));
+            const soonestB = Math.min(...b.timers.map((timer) => timer.roundsRemaining));
+
+            if (soonestA !== soonestB) {
+                return soonestA - soonestB;
+            }
+
+            const nameComparison = a.tokenName.localeCompare(b.tokenName, undefined, {
+                sensitivity: 'base',
+            });
+
+            if (nameComparison !== 0) {
+                return nameComparison;
+            }
+
+            return a.tokenId - b.tokenId;
+        });
+    }, [conditionOrder, liveTokens]);
+
+    const activeConditionCount = conditionTimerGroups.reduce(
+        (total, group) => total + group.timers.length,
+        0
+    );
+
     const displayedTokens =
         tokenFactionFilter === 'all'
             ? liveTokens
@@ -960,6 +1077,75 @@ export default function MapShow({
                         </div>
                     </div>
                 </div>
+
+                {conditionTimerGroups.length > 0 && (
+                    <section className="mx-auto max-w-4xl space-y-3 rounded-xl border border-indigo-500/40 bg-indigo-500/10 p-4 shadow-inner shadow-indigo-900/20">
+                        <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <h2 className="text-sm font-semibold uppercase tracking-wide text-indigo-100">
+                                    Active condition timers
+                                </h2>
+                                <p className="text-xs text-indigo-200/80">
+                                    Tracking {activeConditionCount} {activeConditionCount === 1 ? 'timer' : 'timers'} across{' '}
+                                    {conditionTimerGroups.length} {conditionTimerGroups.length === 1 ? 'token' : 'tokens'}.
+                                </p>
+                            </div>
+                        </header>
+                        <ul className="space-y-3">
+                            {conditionTimerGroups.map((group) => {
+                                const soonest = Math.min(
+                                    ...group.timers.map((timer) => timer.roundsRemaining)
+                                );
+                                const factionBadgeClass = tokenFactionStyles[group.faction];
+
+                                return (
+                                    <li
+                                        key={group.tokenId}
+                                        className="rounded-lg border border-indigo-500/30 bg-zinc-950/70 px-4 py-3 shadow-inner shadow-indigo-900/10"
+                                    >
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm font-semibold text-zinc-100">
+                                                    {group.tokenName}
+                                                </p>
+                                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide text-zinc-400">
+                                                    <span
+                                                        className={`rounded-full border px-2 py-0.5 text-[11px] ${factionBadgeClass}`}
+                                                    >
+                                                        {tokenFactionLabels[group.faction]}
+                                                    </span>
+                                                    <span className="text-zinc-500">
+                                                        Soonest ends in{' '}
+                                                        <span className={getRoundsAccentClass(soonest)}>
+                                                            {formatRoundsRemaining(soonest)}
+                                                        </span>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <ul className="mt-3 flex flex-wrap gap-2">
+                                            {group.timers.map((timer) => (
+                                                <li
+                                                    key={`${group.tokenId}-${timer.condition}`}
+                                                    className="flex items-center gap-2 rounded-md border border-indigo-500/30 bg-indigo-500/10 px-2 py-1"
+                                                >
+                                                    <span className="text-xs font-medium text-indigo-100">
+                                                        {conditionLabelMap[timer.condition] ?? timer.condition}
+                                                    </span>
+                                                    <span
+                                                        className={`text-xs font-semibold ${getRoundsAccentClass(timer.roundsRemaining)}`}
+                                                    >
+                                                        {formatRoundsRemaining(timer.roundsRemaining)}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </section>
+                )}
 
                 {conditionAlerts.length > 0 && (
                     <section className="mx-auto max-w-4xl space-y-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 shadow-inner shadow-amber-900/30">

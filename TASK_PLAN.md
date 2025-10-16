@@ -49,3 +49,4 @@
 - Task 31 – Token Condition Timers (preset duration inputs, realtime syncing, and badge readouts)
 - Task 32 – Token Condition Countdown Automation (auto-decrement timers on region turns, clearing expired conditions and broadcasting updates)
 - Task 33 – Token Condition Expiration Alerts (broadcast alert payloads and realtime UI notices when presets lapse)
+- Task 34 – Token Condition Timer Dashboard (aggregate active timers with urgency highlights in the map workspace)

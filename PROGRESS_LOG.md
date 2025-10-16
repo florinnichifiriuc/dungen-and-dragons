@@ -39,5 +39,6 @@
 | 2025-10-27 01:35 | Token Condition Timers | Extended condition presets with duration tracking, workspace inputs, realtime badge readouts, and normalization coverage so rounds remaining stay visible. |
 | 2025-10-27 05:15 | Token Condition Countdown Automation | Automated timer decrements during region turn processing, clearing expired conditions and broadcasting refreshed token payloads for encounter clarity. |
 | 2025-10-27 09:10 | Token Condition Expiration Alerts | Broadcast expiration alerts during turn processing and surface realtime notices in the map workspace so facilitators see which presets have cleared. |
+| 2025-10-27 12:10 | Token Condition Timer Dashboard | Rolled out an aggregated countdown dashboard with urgency styling so facilitators can track all active condition timers at a glance. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.
