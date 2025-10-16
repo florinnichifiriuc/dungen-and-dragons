@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\World;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 
 uses(RefreshDatabase::class);
 
@@ -236,6 +237,130 @@ it('allows owners to clear individual condition timers from tokens', function ()
 
         return true;
     });
+});
+
+it('allows owners to batch adjust multiple condition timers with optimistic guards', function () {
+    [$group, $owner] = createGroupWithOwnerForTokens();
+    $world = World::factory()->for($group)->create();
+    $region = \App\Models\Region::factory()->for($world)->create();
+    $map = Map::factory()->for($group)->for($region)->create();
+
+    $tokenA = MapToken::factory()->for($map)->create([
+        'name' => 'Bladesinger',
+        'status_conditions' => ['blinded', 'restrained'],
+        'status_condition_durations' => ['blinded' => 1, 'restrained' => 3],
+    ]);
+
+    $tokenB = MapToken::factory()->for($map)->create([
+        'name' => 'Mindwitness',
+        'status_conditions' => ['poisoned'],
+        'status_condition_durations' => ['poisoned' => 2],
+    ]);
+
+    Event::fake([MapTokenBroadcasted::class]);
+
+    $response = $this->actingAs($owner)->post(
+        route('groups.maps.tokens.condition-timers.batch', [$group, $map]),
+        [
+            'adjustments' => [
+                [
+                    'token_id' => $tokenA->id,
+                    'condition' => 'restrained',
+                    'delta' => -1,
+                    'expected_rounds' => 3,
+                ],
+                [
+                    'token_id' => $tokenA->id,
+                    'condition' => 'blinded',
+                    'delta' => 2,
+                    'expected_rounds' => 1,
+                ],
+                [
+                    'token_id' => $tokenB->id,
+                    'condition' => 'poisoned',
+                    'set_to' => 5,
+                    'expected_rounds' => 2,
+                ],
+            ],
+        ],
+    );
+
+    $response->assertRedirect(route('groups.maps.show', [$group, $map]));
+    $response->assertSessionHas('success');
+
+    $tokenA->refresh();
+    $tokenB->refresh();
+
+    expect($tokenA->status_condition_durations)->toBe([
+        'blinded' => 3,
+        'restrained' => 2,
+    ]);
+
+    expect($tokenB->status_condition_durations)->toBe([
+        'poisoned' => 5,
+    ]);
+
+    Event::assertDispatchedTimes(MapTokenBroadcasted::class, 2);
+    Event::assertDispatched(MapTokenBroadcasted::class, function (MapTokenBroadcasted $event) use ($map, $tokenA) {
+        return $event->map->is($map) && $event->token['id'] === $tokenA->id;
+    });
+    Event::assertDispatched(MapTokenBroadcasted::class, function (MapTokenBroadcasted $event) use ($map, $tokenB) {
+        return $event->map->is($map) && $event->token['id'] === $tokenB->id;
+    });
+});
+
+it('logs conflicts when optimistic checks fail for batch condition adjustments', function () {
+    [$group, $owner] = createGroupWithOwnerForTokens();
+    $world = World::factory()->for($group)->create();
+    $region = \App\Models\Region::factory()->for($world)->create();
+    $map = Map::factory()->for($group)->for($region)->create();
+
+    $token = MapToken::factory()->for($map)->create([
+        'name' => 'Storm Herald',
+        'status_conditions' => ['restrained'],
+        'status_condition_durations' => ['restrained' => 3],
+    ]);
+
+    Event::fake([MapTokenBroadcasted::class]);
+    Log::spy();
+
+    $response = $this->actingAs($owner)->post(
+        route('groups.maps.tokens.condition-timers.batch', [$group, $map]),
+        [
+            'adjustments' => [
+                [
+                    'token_id' => $token->id,
+                    'condition' => 'restrained',
+                    'delta' => 1,
+                    'expected_rounds' => 9,
+                ],
+            ],
+        ],
+    );
+
+    $response->assertRedirect(route('groups.maps.show', [$group, $map]));
+    $response->assertSessionHas('success', fn ($message) => str_contains($message, 'conflict'));
+
+    $token->refresh();
+
+    expect($token->status_condition_durations)->toBe([
+        'restrained' => 3,
+    ]);
+
+    Event::assertNotDispatched(MapTokenBroadcasted::class);
+
+    Log::shouldHaveReceived('warning')->once()->withArgs(
+        function (string $message, array $context) use ($group, $map, $token): bool {
+            return $message === 'condition_timer_batch_adjustment_conflict'
+                && $context['reason'] === 'expected_mismatch'
+                && $context['group_id'] === $group->id
+                && $context['map_id'] === $map->id
+                && $context['token_id'] === $token->id
+                && $context['condition'] === 'restrained'
+                && $context['expected'] === 9
+                && $context['actual'] === 3;
+        }
+    );
 });
 
 it('normalizes condition duration payloads to active presets within bounds', function () {

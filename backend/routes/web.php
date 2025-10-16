@@ -20,6 +20,7 @@ use App\Http\Controllers\RegionAiDelegationController;
 use App\Http\Controllers\RegionTurnController;
 use App\Http\Controllers\MapController;
 use App\Http\Controllers\MapTileController;
+use App\Http\Controllers\MapTokenConditionTimerBatchController;
 use App\Http\Controllers\MapTokenController;
 use App\Http\Controllers\TileTemplateController;
 use App\Http\Controllers\SessionController;
@@ -72,6 +73,10 @@ Route::middleware('auth')->group(function (): void {
     Route::resource('groups.maps.tokens', MapTokenController::class)
         ->only(['store', 'update', 'destroy'])
         ->scoped();
+    Route::post(
+        'groups/{group}/maps/{map}/tokens/condition-timers/batch',
+        MapTokenConditionTimerBatchController::class
+    )->name('groups.maps.tokens.condition-timers.batch');
     Route::get('groups/{group}/regions/{region}/turns/create', [RegionTurnController::class, 'create'])->name('groups.regions.turns.create');
     Route::post('groups/{group}/regions/{region}/turns', [RegionTurnController::class, 'store'])->name('groups.regions.turns.store');
     Route::post('groups/{group}/regions/{region}/ai-delegate', [RegionAiDelegationController::class, 'store'])->name('groups.regions.ai-delegate.store');

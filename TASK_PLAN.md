@@ -1,7 +1,7 @@
 # Task Plan
 
 ## Backlog
-- [ ] Task 38 – Token Condition Timer Batch Adjustments (finalize API contract, multi-select UX, bulk delta tooling, conflict telemetry, optimistic syncing safeguards, and expanded Form Request validation).
+- [x] Task 38 – Token Condition Timer Batch Adjustments (finalize API contract, multi-select UX, bulk delta tooling, conflict telemetry, optimistic syncing safeguards, and expanded Form Request validation).
 - [ ] Task 39 – Condition Timer Player Summaries (projection cache layer, redacted payloads, narrative-friendly copy seeded from curated condition templates, automated visibility regression suite).
 - [ ] Task 40 – Condition Timer Mobile Recap Widgets (responsive Inertia panels, offline-friendly state caching, and integration with player summaries, plus performance/lighthouse budget).
 - [ ] Task 41 – Timer Projection Developer Guide (document reusable projection/service pattern, invalidation hooks, ops logging, and QA checklist in developer docs).
