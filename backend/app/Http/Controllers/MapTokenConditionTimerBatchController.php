@@ -8,6 +8,7 @@ use App\Models\Group;
 use App\Models\Map;
 use App\Models\MapToken;
 use App\Services\AnalyticsRecorder;
+use App\Services\ConditionTimerChronicleService;
 use App\Services\ConditionTimerSummaryProjector;
 use App\Support\Broadcasting\MapTokenPayload;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +19,8 @@ class MapTokenConditionTimerBatchController extends Controller
 {
     public function __construct(
         private readonly AnalyticsRecorder $analytics,
-        private readonly ConditionTimerSummaryProjector $conditionTimerSummaryProjector
+        private readonly ConditionTimerSummaryProjector $conditionTimerSummaryProjector,
+        private readonly ConditionTimerChronicleService $chronicle
     ) {
     }
 
@@ -74,6 +76,7 @@ class MapTokenConditionTimerBatchController extends Controller
             $statusConditions = $token->status_conditions ?? [];
             $durations = $token->status_condition_durations ?? [];
             $dirty = false;
+            $tokenEvents = [];
 
             foreach ($tokenAdjustments as $adjustment) {
                 $condition = $adjustment['condition'] ?? null;
@@ -151,6 +154,12 @@ class MapTokenConditionTimerBatchController extends Controller
 
                 if ($target <= 0) {
                     if (array_key_exists($condition, $durations)) {
+                        $tokenEvents[] = [
+                            'condition' => $condition,
+                            'previous' => $durations[$condition] ?? null,
+                            'next' => null,
+                            'context' => ['cleared' => true],
+                        ];
                         unset($durations[$condition]);
                         $dirty = true;
                         $applied++;
@@ -184,6 +193,12 @@ class MapTokenConditionTimerBatchController extends Controller
                     continue;
                 }
 
+                $tokenEvents[] = [
+                    'condition' => $condition,
+                    'previous' => $current,
+                    'next' => $clamped,
+                ];
+
                 $durations[$condition] = $clamped;
                 $dirty = true;
                 $applied++;
@@ -204,6 +219,17 @@ class MapTokenConditionTimerBatchController extends Controller
             $token->forceFill([
                 'status_condition_durations' => $orderedDurations === [] ? null : $orderedDurations,
             ])->save();
+
+            if ($tokenEvents !== []) {
+                $this->chronicle->recordAdjustments(
+                    $group,
+                    $token,
+                    $tokenEvents,
+                    'manual_adjustment',
+                    $request->user(),
+                    ['source' => 'batch_adjustment'],
+                );
+            }
 
             $broadcastTokens[] = $token->fresh();
         }

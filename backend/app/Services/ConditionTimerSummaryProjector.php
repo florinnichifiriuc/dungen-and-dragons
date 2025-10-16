@@ -6,7 +6,9 @@ use App\Events\ConditionTimerSummaryBroadcasted;
 use App\Models\Group;
 use App\Models\MapToken;
 use App\Services\AnalyticsRecorder;
+use App\Services\ConditionTimerChronicleService;
 use App\Support\ConditionSummaryCopy;
+use App\Support\ConditionTimerInsights;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Support\Arr;
@@ -17,7 +19,8 @@ class ConditionTimerSummaryProjector
 {
     public function __construct(
         private readonly CacheRepository $cache,
-        private readonly AnalyticsRecorder $analytics
+        private readonly AnalyticsRecorder $analytics,
+        private readonly ConditionTimerChronicleService $chronicle
     )
     {
     }
@@ -142,6 +145,7 @@ class ConditionTimerSummaryProjector
                     'rounds_hint' => $shouldExposeRounds ? null : $this->resolveRoundsDescriptor($rounds),
                     'urgency' => $urgency,
                     'summary' => $summaryText,
+                    'exposes_exact_rounds' => $shouldExposeRounds,
                 ];
             }
 
@@ -187,11 +191,13 @@ class ConditionTimerSummaryProjector
             return $aLabel <=> $bLabel;
         });
 
-        return [
+        $summary = [
             'group_id' => $group->id,
             'generated_at' => CarbonImmutable::now('UTC')->toIso8601String(),
             'entries' => array_values($entries),
         ];
+
+        return $this->chronicle->attachPublicTimeline($group, $summary);
     }
 
     protected function sortConditions(array $conditions): array
@@ -218,19 +224,7 @@ class ConditionTimerSummaryProjector
 
     protected function resolveUrgency(?int $rounds): string
     {
-        if ($rounds === null) {
-            return 'warning';
-        }
-
-        if ($rounds <= 2) {
-            return 'critical';
-        }
-
-        if ($rounds <= 4) {
-            return 'warning';
-        }
-
-        return 'calm';
+        return ConditionTimerInsights::urgency($rounds);
     }
 
     protected function formatConditionLabel(string $condition): string

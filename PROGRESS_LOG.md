@@ -54,5 +54,7 @@
 | 2025-10-31 15:10 | Player Transparency Research & Telemetry | Established research brief, surveys, analytics events, success metrics, and beta rollout plan for transparency initiative. |
 | 2025-10-31 17:40 | Condition Timer Analytics Instrumentation | Implemented telemetry event pipeline, group opt-out controls, and UI hooks for summary views/dismissals plus refreshed projector analytics. |
 | 2025-11-01 10:45 | Condition Summary Copy Integration | Synced narrative templates with supported conditions, updated documentation, and added regression tests ensuring every timer summary renders immersive player-safe copy. |
+| 2025-11-02 11:20 | Condition Timer Acknowledgement Trails | Added acknowledgement persistence, realtime broadcasts, analytics instrumentation, and Inertia controls so players can mark conditions as reviewed while DMs track receipt counts. |
+| 2025-11-02 15:30 | Condition Timer Adjustment Chronicle | Logged timer adjustment history with analytics, timeline hydration, export hooks, and facilitator/ player privacy filters alongside UI updates and coverage. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.

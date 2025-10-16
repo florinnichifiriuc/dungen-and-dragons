@@ -1,8 +1,13 @@
 import { Link } from '@inertiajs/react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, Circle, History, Users2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { recordAnalyticsEventSync } from '@/lib/analytics';
+import {
+    applyAcknowledgementToSummary,
+    type ConditionAcknowledgementPayload,
+} from '@/lib/conditionAcknowledgements';
 
 export type ConditionTimerSummaryCondition = {
     key: string;
@@ -11,6 +16,10 @@ export type ConditionTimerSummaryCondition = {
     rounds_hint: string | null;
     urgency: 'calm' | 'warning' | 'critical';
     summary: string;
+    acknowledged_by_viewer?: boolean;
+    acknowledged_count?: number;
+    exposes_exact_rounds?: boolean;
+    timeline?: ConditionTimerTimelineEntry[];
 };
 
 export type ConditionTimerSummaryEntry = {
@@ -30,6 +39,22 @@ export type ConditionTimerSummaryResource = {
     entries: ConditionTimerSummaryEntry[];
 };
 
+export type ConditionTimerTimelineEntry = {
+    id: number;
+    recorded_at: string;
+    reason: string;
+    kind: 'started' | 'extended' | 'reduced' | 'cleared' | 'ticked' | 'adjusted';
+    summary: string;
+    detail?: {
+        summary?: string;
+        previous_rounds?: number | null;
+        new_rounds?: number | null;
+        delta?: number | null;
+        actor?: { id: number | null; name: string | null; role: string | null } | null;
+        context?: Record<string, unknown> | null;
+    };
+};
+
 type PlayerConditionTimerSummaryPanelProps = {
     summary: ConditionTimerSummaryResource;
     shareUrl?: string;
@@ -37,6 +62,7 @@ type PlayerConditionTimerSummaryPanelProps = {
     source: string;
     viewerRole?: string | null;
     onDismiss?: () => void;
+    onSummaryUpdate?: (next: ConditionTimerSummaryResource) => void;
 };
 
 const urgencyStyles: Record<ConditionTimerSummaryCondition['urgency'], string> = {
@@ -89,6 +115,44 @@ function stalenessMs(timestamp: string): number | null {
     return diff < 0 ? 0 : diff;
 }
 
+function formatRelativeTimestamp(timestamp: string): string {
+    const parsed = Date.parse(timestamp);
+
+    if (Number.isNaN(parsed)) {
+        return timestamp;
+    }
+
+    const diffMilliseconds = Date.now() - parsed;
+    const diffSeconds = Math.round(diffMilliseconds / 1000);
+    const formatter = new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' });
+
+    if (Math.abs(diffSeconds) < 60) {
+        return formatter.format(-diffSeconds, 'second');
+    }
+
+    const diffMinutes = Math.round(diffSeconds / 60);
+
+    if (Math.abs(diffMinutes) < 60) {
+        return formatter.format(-diffMinutes, 'minute');
+    }
+
+    const diffHours = Math.round(diffMinutes / 60);
+
+    if (Math.abs(diffHours) < 24) {
+        return formatter.format(-diffHours, 'hour');
+    }
+
+    const diffDays = Math.round(diffHours / 24);
+
+    if (Math.abs(diffDays) < 30) {
+        return formatter.format(-diffDays, 'day');
+    }
+
+    const diffMonths = Math.round(diffDays / 30);
+
+    return formatter.format(-diffMonths, 'month');
+}
+
 export function PlayerConditionTimerSummaryPanel({
     summary,
     shareUrl,
@@ -96,8 +160,61 @@ export function PlayerConditionTimerSummaryPanel({
     source,
     viewerRole,
     onDismiss,
+    onSummaryUpdate,
 }: PlayerConditionTimerSummaryPanelProps) {
     const entries = useMemo(() => summary.entries ?? [], [summary.entries]);
+    const [pendingAcknowledgements, setPendingAcknowledgements] = useState<Record<string, boolean>>({});
+    const viewerIsFacilitator = viewerRole === 'owner' || viewerRole === 'dungeon-master';
+
+    const acknowledgeCondition = async (tokenId: number, conditionKey: string) => {
+        if (!summary.generated_at) {
+            return;
+        }
+
+        const composite = `${tokenId}:${conditionKey}`;
+
+        setPendingAcknowledgements((current) => ({ ...current, [composite]: true }));
+
+        try {
+            const csrf =
+                (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content ?? undefined;
+
+            const response = await fetch(
+                route('groups.condition-timers.acknowledgements.store', summary.group_id),
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
+                    },
+                    body: JSON.stringify({
+                        map_token_id: tokenId,
+                        condition_key: conditionKey,
+                        summary_generated_at: summary.generated_at,
+                    }),
+                },
+            );
+
+            if (!response.ok) {
+                throw new Error(`Failed with status ${response.status}`);
+            }
+
+            const payload = (await response.json()) as { acknowledgement?: ConditionAcknowledgementPayload };
+
+            if (payload.acknowledgement && onSummaryUpdate) {
+                onSummaryUpdate(applyAcknowledgementToSummary(summary, payload.acknowledgement));
+            }
+        } catch (error) {
+            console.error('Unable to record acknowledgement', error);
+        } finally {
+            setPendingAcknowledgements((current) => {
+                const next = { ...current };
+                delete next[composite];
+                return next;
+            });
+        }
+    };
 
     useEffect(() => {
         const stale = stalenessMs(summary.generated_at);
@@ -166,27 +283,92 @@ export function PlayerConditionTimerSummaryPanel({
                             </div>
 
                             <ul className="mt-3 space-y-3">
-                                {entry.conditions.map((condition) => (
-                                    <li
-                                        key={condition.key}
-                                        className="rounded-lg border border-zinc-800/40 bg-zinc-950/80 p-3"
-                                    >
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                            <div className="flex items-center gap-2">
-                                                <span
+                                {entry.conditions.map((condition) => {
+                                    const compositeKey = `${entry.token.id}:${condition.key}`;
+                                    const isAcknowledged = Boolean(condition.acknowledged_by_viewer);
+                                    const isPending = Boolean(pendingAcknowledgements[compositeKey]);
+                                    const canAcknowledge = !isAcknowledged && !isPending;
+
+                                    const aggregateCount =
+                                        typeof condition.acknowledged_count === 'number'
+                                            ? condition.acknowledged_count
+                                            : null;
+
+                                    return (
+                                        <li
+                                            key={condition.key}
+                                            className="rounded-lg border border-zinc-800/40 bg-zinc-950/80 p-3"
+                                        >
+                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span
+                                                        className={cn(
+                                                            'rounded-full border px-2 py-0.5 text-xs uppercase tracking-wide',
+                                                            urgencyStyles[condition.urgency],
+                                                        )}
+                                                    >
+                                                        {condition.label}
+                                                    </span>
+                                                </div>
+                                                <span className="text-xs text-zinc-400">{roundsDisplay(condition)}</span>
+                                            </div>
+                                            <p className="mt-2 text-sm text-zinc-300">{condition.summary}</p>
+                                            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => acknowledgeCondition(entry.token.id, condition.key)}
+                                                    disabled={!canAcknowledge}
                                                     className={cn(
-                                                        'rounded-full border px-2 py-0.5 text-xs uppercase tracking-wide',
-                                                        urgencyStyles[condition.urgency],
+                                                        'inline-flex items-center gap-2 rounded-md border px-3 py-1 text-xs font-semibold transition',
+                                                        isAcknowledged
+                                                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                                                            : 'border-zinc-700 text-zinc-300 hover:border-emerald-500/50 hover:text-emerald-200',
+                                                        isPending && 'opacity-70',
                                                     )}
                                                 >
-                                                    {condition.label}
-                                                </span>
+                                                    {isAcknowledged ? (
+                                                        <CheckCircle2 className="h-4 w-4" />
+                                                    ) : (
+                                                        <Circle className="h-4 w-4" />
+                                                    )}
+                                                    {isAcknowledged ? 'Reviewed' : isPending ? 'Marking…' : 'Mark reviewed'}
+                                                </button>
+                                                {viewerIsFacilitator && aggregateCount !== null && (
+                                                    <span className="inline-flex items-center gap-1 text-xs text-zinc-400">
+                                                        <Users2 className="h-3.5 w-3.5" />
+                                                        {aggregateCount === 1
+                                                            ? '1 acknowledgement'
+                                                            : `${aggregateCount} acknowledgements`}
+                                                    </span>
+                                                )}
                                             </div>
-                                            <span className="text-xs text-zinc-400">{roundsDisplay(condition)}</span>
-                                        </div>
-                                        <p className="mt-2 text-sm text-zinc-300">{condition.summary}</p>
-                                    </li>
-                                ))}
+                                            {condition.timeline && condition.timeline.length > 0 && (
+                                                <div className="mt-3 space-y-2">
+                                                    <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-zinc-500">
+                                                        <History className="h-3 w-3" aria-hidden />
+                                                        <span>Adjustment chronicle</span>
+                                                    </div>
+                                                    <ol className="space-y-2">
+                                                        {condition.timeline.map((event) => (
+                                                            <li key={event.id} className="flex items-start gap-2">
+                                                                <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-zinc-700" aria-hidden />
+                                                                <div className="space-y-1">
+                                                                    <p className="text-xs text-zinc-300">{event.summary}</p>
+                                                                    {event.detail?.summary && (
+                                                                        <p className="text-[11px] text-zinc-500">{event.detail.summary}</p>
+                                                                    )}
+                                                                    <p className="text-[11px] text-zinc-600">
+                                                                        {formatRelativeTimestamp(event.recorded_at)}
+                                                                    </p>
+                                                                </div>
+                                                            </li>
+                                                        ))}
+                                                    </ol>
+                                                </div>
+                                            )}
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         </article>
                     ))}

@@ -7,14 +7,17 @@ use App\Http\Requests\SessionStoreRequest;
 use App\Http\Requests\SessionUpdateRequest;
 use App\Models\Campaign;
 use App\Models\CampaignSession;
+use App\Models\GroupMembership;
+use App\Models\SessionAttendance;
 use App\Models\SessionNote;
 use App\Models\SessionRecap;
 use App\Models\SessionReward;
 use App\Models\Turn;
-use App\Models\SessionAttendance;
 use App\Models\User;
 use App\Policies\CampaignPolicy;
 use App\Policies\SessionPolicy;
+use App\Services\ConditionTimerAcknowledgementService;
+use App\Services\ConditionTimerChronicleService;
 use App\Services\ConditionTimerSummaryProjector;
 use App\Services\SessionExportService;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -33,7 +36,9 @@ class SessionController extends Controller
 {
     public function __construct(
         private readonly SessionExportService $sessionExportService,
-        private readonly ConditionTimerSummaryProjector $conditionTimerSummaryProjector
+        private readonly ConditionTimerSummaryProjector $conditionTimerSummaryProjector,
+        private readonly ConditionTimerAcknowledgementService $conditionTimerAcknowledgements,
+        private readonly ConditionTimerChronicleService $conditionTimerChronicle
     )
     {
     }
@@ -157,6 +162,26 @@ class SessionController extends Controller
         $isManager = $campaignPolicy->update($user, $campaign);
 
         $summary = $this->conditionTimerSummaryProjector->projectForGroup($campaign->group);
+
+        $canViewAggregate = in_array(
+            $viewerRole,
+            [GroupMembership::ROLE_OWNER, GroupMembership::ROLE_DUNGEON_MASTER],
+            true,
+        );
+
+        $summary = $this->conditionTimerAcknowledgements->hydrateSummaryForUser(
+            $summary,
+            $campaign->group,
+            $user,
+            $canViewAggregate,
+        );
+
+        $summary = $this->conditionTimerChronicle->hydrateSummaryForUser(
+            $summary,
+            $campaign->group,
+            $user,
+            $canViewAggregate,
+        );
 
         $session->load([
             'creator:id,name',

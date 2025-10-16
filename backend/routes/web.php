@@ -11,6 +11,7 @@ use App\Http\Controllers\CampaignTaskController;
 use App\Http\Controllers\CampaignEntityController;
 use App\Http\Controllers\CampaignQuestController;
 use App\Http\Controllers\CampaignQuestUpdateController;
+use App\Http\Controllers\ConditionTimerAcknowledgementController;
 use App\Http\Controllers\ConditionTimerSummaryController;
 use App\Http\Controllers\DiceRollController;
 use App\Http\Controllers\GroupController;
@@ -60,6 +61,10 @@ Route::middleware('auth')->group(function (): void {
         'groups/{group}/condition-timers/player-summary',
         [ConditionTimerSummaryController::class, 'show']
     )->name('groups.condition-timers.player-summary');
+    Route::post(
+        'groups/{group}/condition-timers/acknowledgements',
+        [ConditionTimerAcknowledgementController::class, 'store']
+    )->name('groups.condition-timers.acknowledgements.store');
     Route::resource('groups.memberships', GroupMembershipController::class)
         ->only(['store', 'update', 'destroy'])
         ->scoped();

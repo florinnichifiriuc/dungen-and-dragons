@@ -9,13 +9,17 @@ use App\Models\SessionAttendance;
 use App\Models\SessionReward;
 use App\Models\User;
 use App\Policies\CampaignPolicy;
+use App\Services\ConditionTimerChronicleService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class SessionExportService
 {
-    public function __construct(private readonly CampaignPolicy $campaignPolicy)
+    public function __construct(
+        private readonly CampaignPolicy $campaignPolicy,
+        private readonly ConditionTimerChronicleService $conditionTimerChronicle
+    )
     {
     }
 
@@ -158,6 +162,10 @@ class SessionExportService
             $storedRecordingName = basename($session->recording_path);
         }
 
+        $conditionChronicle = $session->campaign->group
+            ? $this->conditionTimerChronicle->exportChronicle($session->campaign->group, $canManage)
+            : [];
+
         return [
             'metadata' => [
                 'campaign' => [
@@ -203,6 +211,7 @@ class SessionExportService
             ],
             'recaps' => $recaps,
             'rewards' => $rewards,
+            'condition_timer_chronicle' => $conditionChronicle,
         ];
     }
 
@@ -256,6 +265,37 @@ class SessionExportService
         if ($session['summary']) {
             $lines[] = '## Summary';
             $lines[] = $session['summary'];
+            $lines[] = '';
+        }
+
+        if (count($data['condition_timer_chronicle']) > 0) {
+            $lines[] = '## Condition Timer Chronicle';
+
+            foreach ($data['condition_timer_chronicle'] as $entry) {
+                $timestamp = $entry['recorded_at'] instanceof Carbon
+                    ? $entry['recorded_at']->format('Y-m-d H:i \U\T\C')
+                    : 'Unknown time';
+
+                $tokenLabel = $entry['token']['label'] ?? 'Unknown presence';
+                $conditionLabel = Str::headline($entry['condition_key']);
+                $lines[] = sprintf('- %s — %s • %s', $timestamp, $tokenLabel, $conditionLabel);
+                $lines[] = '  - ' . $entry['summary'];
+
+                if (! empty($entry['actor'])) {
+                    $actor = $entry['actor'];
+                    $role = $actor['role'] ? ' ('.$actor['role'].')' : '';
+                    $lines[] = sprintf('  - Recorder: %s%s', $actor['name'], $role);
+                }
+
+                if ($entry['previous_rounds'] !== null || $entry['new_rounds'] !== null) {
+                    $lines[] = sprintf(
+                        '  - Rounds: %s → %s',
+                        $entry['previous_rounds'] ?? '—',
+                        $entry['new_rounds'] ?? '—',
+                    );
+                }
+            }
+
             $lines[] = '';
         }
 
