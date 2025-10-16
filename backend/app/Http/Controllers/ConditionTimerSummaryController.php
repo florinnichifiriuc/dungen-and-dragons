@@ -19,10 +19,15 @@ class ConditionTimerSummaryController extends Controller
 
         $summary = $this->projector->projectForGroup($group);
 
+        $viewerRole = $group->memberships()
+            ->where('user_id', auth()->id())
+            ->value('role');
+
         return Inertia::render('Groups/ConditionTimerSummary', [
             'group' => [
                 'id' => $group->id,
                 'name' => $group->name,
+                'viewer_role' => $viewerRole,
             ],
             'summary' => $summary,
         ]);

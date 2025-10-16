@@ -43,7 +43,8 @@ class SessionRewardController extends Controller
     {
         $this->ensureSessionBelongsToCampaign($campaign, $session);
 
-        if ($reward->campaign_session_id !== $session->id || $reward->campaign_id !== $campaign->id) {
+        if ((string) $reward->campaign_session_id !== (string) $session->id
+            || (string) $reward->campaign_id !== (string) $campaign->id) {
             abort(404);
         }
 

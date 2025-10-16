@@ -44,6 +44,12 @@ Build a collaborative, browser-based Dungeon & Dragons campaign platform for dis
 - **Narrative Copy Deck (Task 43):** Supply condition-themed snippets keyed by urgency tier, localization notes, and spoiler safeguards.
 - **Research & Telemetry (Task 44):** Measure trust and immersion via surveys, analytics, and beta feedback loops, ensuring future iterations remain player-first.
 
+### Documentation & Research Assets
+- [Condition Timer Summary Projection Guide](backend/docs/projections/condition-timer-summary-projection-guide.md) – architecture, caching, analytics, and QA expectations for the reusable projection service.
+- [Condition Timer Interaction Wireframes Notes](backend/docs/ux/condition-timer-interaction-wireframes.md) – annotated desktop/tablet/mobile flows with accessibility and component handoff details.
+- [Condition Timer Narrative Copy Deck](backend/docs/narrative/condition-timer-copy-deck.md) – urgency-tier snippets with localization notes and AI flavor hooks.
+- [Player Transparency Research & Telemetry Plan](backend/docs/research/player-transparency-research-and-telemetry.md) – research brief, survey outline, analytics events, success metrics, and beta rollout checklist.
+
 > All timer-related work must respect UTC turn cadence, privacy policies, and lore tone. Refer to the updated task briefs in `Tasks/Week 3` and `Tasks/Week 4` before starting implementation.
 
 ## Quest Log & Progress Tracking

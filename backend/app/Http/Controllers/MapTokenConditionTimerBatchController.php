@@ -7,6 +7,7 @@ use App\Http\Requests\MapTokenConditionTimerBatchRequest;
 use App\Models\Group;
 use App\Models\Map;
 use App\Models\MapToken;
+use App\Services\AnalyticsRecorder;
 use App\Services\ConditionTimerSummaryProjector;
 use App\Support\Broadcasting\MapTokenPayload;
 use Illuminate\Http\RedirectResponse;
@@ -15,6 +16,12 @@ use Illuminate\Support\Facades\Log;
 
 class MapTokenConditionTimerBatchController extends Controller
 {
+    public function __construct(
+        private readonly AnalyticsRecorder $analytics,
+        private readonly ConditionTimerSummaryProjector $conditionTimerSummaryProjector
+    ) {
+    }
+
     public function __invoke(
         MapTokenConditionTimerBatchRequest $request,
         Group $group,
@@ -23,6 +30,7 @@ class MapTokenConditionTimerBatchController extends Controller
         $this->assertMapForGroup($group, $map);
 
         $adjustments = collect($request->validated('adjustments'));
+        $selectionCount = max(1, $adjustments->count());
 
         if ($adjustments->isEmpty()) {
             return redirect()->route('groups.maps.show', [$group, $map]);
@@ -54,7 +62,8 @@ class MapTokenConditionTimerBatchController extends Controller
                     $group,
                     $map,
                     (int) $tokenId,
-                    $tokenAdjustments
+                    $tokenAdjustments,
+                    $selectionCount
                 );
 
                 continue;
@@ -80,7 +89,8 @@ class MapTokenConditionTimerBatchController extends Controller
                         $group,
                         $map,
                         (int) $tokenId,
-                        $condition
+                        $condition,
+                        $selectionCount
                     );
 
                     $conflicts++;
@@ -100,6 +110,7 @@ class MapTokenConditionTimerBatchController extends Controller
                             $map,
                             (int) $tokenId,
                             $condition,
+                            $selectionCount,
                             [
                                 'expected' => $expected,
                                 'actual' => null,
@@ -119,6 +130,7 @@ class MapTokenConditionTimerBatchController extends Controller
                             $map,
                             (int) $tokenId,
                             $condition,
+                            $selectionCount,
                             [
                                 'expected' => (int) $expected,
                                 'actual' => (int) $current,
@@ -160,6 +172,7 @@ class MapTokenConditionTimerBatchController extends Controller
                         $map,
                         (int) $tokenId,
                         $condition,
+                        $selectionCount,
                         [
                             'requested' => (int) round($target),
                             'applied' => $clamped,
@@ -200,7 +213,7 @@ class MapTokenConditionTimerBatchController extends Controller
         }
 
         if ($applied > 0) {
-            app(ConditionTimerSummaryProjector::class)->refreshForGroup($group);
+            $this->conditionTimerSummaryProjector->refreshForGroup($group, 'batch_adjustment');
         }
 
         $messageParts = [];
@@ -240,7 +253,8 @@ class MapTokenConditionTimerBatchController extends Controller
         Group $group,
         Map $map,
         int $tokenId,
-        Collection $adjustments
+        Collection $adjustments,
+        int $selectionCount
     ): int {
         $conflicts = 0;
 
@@ -257,7 +271,8 @@ class MapTokenConditionTimerBatchController extends Controller
                 $group,
                 $map,
                 $tokenId,
-                $condition
+                $condition,
+                $selectionCount
             );
 
             $conflicts++;
@@ -273,6 +288,7 @@ class MapTokenConditionTimerBatchController extends Controller
         Map $map,
         int $tokenId,
         ?string $condition,
+        int $selectionCount,
         array $context = []
     ): void {
         Log::warning('condition_timer_batch_adjustment_conflict', array_merge([
@@ -283,6 +299,18 @@ class MapTokenConditionTimerBatchController extends Controller
             'condition' => $condition,
             'user_id' => $request->user()?->getAuthIdentifier(),
         ], $context));
+
+        $this->analytics->record(
+            'timer_summary.conflict',
+            [
+                'group_id' => $group->id,
+                'conflict_type' => $reason,
+                'selection_count' => $selectionCount,
+                'resolved' => false,
+            ],
+            actor: $request->user(),
+            group: $group,
+        );
     }
 
     protected function assertMapForGroup(Group $group, Map $map): void

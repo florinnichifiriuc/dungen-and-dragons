@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Events\ConditionTimerSummaryBroadcasted;
 use App\Models\Group;
 use App\Models\MapToken;
+use App\Services\AnalyticsRecorder;
 use App\Support\ConditionSummaryCopy;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
@@ -14,40 +15,40 @@ use Illuminate\Support\Str;
 
 class ConditionTimerSummaryProjector
 {
-    public function __construct(private readonly CacheRepository $cache)
+    public function __construct(
+        private readonly CacheRepository $cache,
+        private readonly AnalyticsRecorder $analytics
+    )
     {
     }
 
     public function projectForGroup(Group $group): array
     {
         $key = $this->cacheKey($group->id);
-        $cached = $this->cache->get($key);
 
-        if ($cached !== null) {
-            return $cached;
-        }
+        return $this->cache->remember($key, 300, function () use ($group) {
+            Log::info('condition_timer_summary_cache_miss', [
+                'group_id' => $group->id,
+            ]);
 
-        Log::info('condition_timer_summary_cache_miss', [
-            'group_id' => $group->id,
-        ]);
+            $summary = $this->buildSummary($group);
 
-        $summary = $this->buildSummary($group);
+            Log::info('condition_timer_summary_cache_rebuilt', [
+                'group_id' => $group->id,
+                'entries' => count($summary['entries'] ?? []),
+            ]);
 
-        $this->cache->put($key, $summary, now()->addMinutes(5));
-
-        Log::info('condition_timer_summary_cache_rebuilt', [
-            'group_id' => $group->id,
-            'entries' => count($summary['entries'] ?? []),
-        ]);
-
-        return $summary;
+            return $summary;
+        });
     }
 
-    public function refreshForGroup(Group $group, bool $broadcast = true): array
+    public function refreshForGroup(Group $group, string $trigger = 'manual', bool $broadcast = true): array
     {
         $this->forgetForGroup($group);
 
+        $startedAt = microtime(true);
         $summary = $this->projectForGroup($group);
+        $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
 
         if ($broadcast) {
             event(new ConditionTimerSummaryBroadcasted($group->id, $summary));
@@ -57,6 +58,17 @@ class ConditionTimerSummaryProjector
             'group_id' => $group->id,
             'entries' => count($summary['entries'] ?? []),
         ]);
+
+        $this->analytics->record(
+            'timer_summary.refreshed',
+            [
+                'group_id' => $group->id,
+                'trigger' => $trigger,
+                'entries_count' => count($summary['entries'] ?? []),
+                'duration_ms' => $durationMs,
+            ],
+            group: $group,
+        );
 
         return $summary;
     }
@@ -111,6 +123,16 @@ class ConditionTimerSummaryProjector
                     [
                         ':target' => $this->resolveTokenLabel($token->name, (bool) $token->hidden),
                     ]
+                );
+
+                $this->analytics->record(
+                    'timer_summary.copy_variant',
+                    [
+                        'condition_key' => $condition,
+                        'urgency' => $urgency,
+                        'variant_id' => sprintf('%s:%s', $condition, $urgency),
+                    ],
+                    group: $group,
                 );
 
                 $activeConditions[] = [

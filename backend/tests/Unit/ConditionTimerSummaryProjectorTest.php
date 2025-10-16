@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\AnalyticsEventDispatched;
 use App\Events\ConditionTimerSummaryBroadcasted;
 use App\Models\Group;
 use App\Models\Map;
@@ -35,12 +36,15 @@ it('projects redacted summaries with caching telemetry', function () {
     Cache::flush();
     Log::spy();
 
+    Event::fake([AnalyticsEventDispatched::class]);
+
     $projector = app(ConditionTimerSummaryProjector::class);
 
     $summary = $projector->projectForGroup($group);
 
     expect($summary['group_id'])->toBe($group->id);
     expect($summary['entries'])->toHaveCount(2);
+    expect(Cache::get('condition_timer_summary:'.$group->id))->not->toBeNull();
 
     $allyEntry = collect($summary['entries'])->first(fn ($entry) => $entry['token']['id'] === $visible->id);
     expect($allyEntry['token']['visibility'])->toBe('visible');
@@ -67,7 +71,12 @@ it('projects redacted summaries with caching telemetry', function () {
 
     $projector->projectForGroup($group);
 
-    Log::shouldNotHaveReceived('info');
+    Log::shouldHaveReceived('info')->times(2);
+
+    Event::assertDispatchedTimes(AnalyticsEventDispatched::class, 2);
+    Event::assertDispatched(AnalyticsEventDispatched::class, function (AnalyticsEventDispatched $event): bool {
+        return $event->key === 'timer_summary.copy_variant';
+    });
 });
 
 it('refreshes group summaries and broadcasts payloads', function () {
@@ -83,7 +92,7 @@ it('refreshes group summaries and broadcasts payloads', function () {
     ]);
 
     Cache::flush();
-    Event::fake([ConditionTimerSummaryBroadcasted::class]);
+    Event::fake([ConditionTimerSummaryBroadcasted::class, AnalyticsEventDispatched::class]);
 
     $projector = app(ConditionTimerSummaryProjector::class);
 
@@ -93,5 +102,9 @@ it('refreshes group summaries and broadcasts payloads', function () {
 
     Event::assertDispatched(ConditionTimerSummaryBroadcasted::class, function (ConditionTimerSummaryBroadcasted $event) use ($group) {
         return $event->groupId === $group->id && $event->summary['group_id'] === $group->id;
+    });
+
+    Event::assertDispatched(AnalyticsEventDispatched::class, function (AnalyticsEventDispatched $event) use ($group): bool {
+        return $event->key === 'timer_summary.refreshed' && $event->groupId === $group->id;
     });
 });

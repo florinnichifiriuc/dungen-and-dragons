@@ -20,8 +20,21 @@ class Group extends Model
         'slug',
         'join_code',
         'description',
+        'telemetry_opt_out',
         'created_by',
     ];
+
+    /**
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'telemetry_opt_out' => 'boolean',
+    ];
+
+    public function allowsTelemetry(): bool
+    {
+        return ! $this->telemetry_opt_out;
+    }
 
     /**
      * Relationship to the user who created the group.

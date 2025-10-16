@@ -31,7 +31,7 @@ class MapTokenStoreRequest extends FormRequest
             'status_conditions' => ['nullable', 'array'],
             'status_conditions.*' => ['string', Rule::in(MapToken::CONDITIONS)],
             'status_condition_durations' => ['nullable', 'array'],
-            'status_condition_durations.*' => ['nullable', 'integer', 'between:1,'.MapToken::MAX_CONDITION_DURATION],
+            'status_condition_durations.*' => ['nullable', 'integer', 'between:0,'.MapToken::MAX_CONDITION_DURATION],
             'hit_points' => ['nullable', 'integer', 'between:-999,999'],
             'temporary_hit_points' => ['nullable', 'integer', 'between:0,999'],
             'max_hit_points' => ['nullable', 'integer', 'between:1,999'],

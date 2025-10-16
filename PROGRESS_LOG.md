@@ -48,5 +48,11 @@
 | 2025-10-28 16:30 | Condition Timer Batch Adjustments | Implemented multi-select dashboard controls, consolidated batch API with optimistic reconciliation, and conflict telemetry logging. |
 | 2025-10-30 14:10 | Condition Timer Player Summaries | Delivered redacted projection cache, realtime broadcasts, session/player panels, and narrative copy hooks so players stay informed without revealing GM secrets. |
 | 2025-10-30 18:45 | Condition Timer Mobile Recap Widgets | Added responsive mobile recap widget, shared summary cache hook, and share view enhancements so players have offline-friendly access to urgent conditions on the go. |
+| 2025-10-31 09:20 | Timer Projection Developer Guide | Documented condition timer projection architecture, cache strategy, failure telemetry, onboarding notes, and QA coverage. |
+| 2025-10-31 11:00 | Condition Timer Interaction Wireframes | Produced annotated wireframes across desktop/tablet/mobile with accessibility, motion, and QA checklists. |
+| 2025-10-31 13:30 | Condition Narrative Copy Deck | Authored 12-condition urgency-tier copy deck with localization guidance, spoiler safeguards, and AI flavor hooks. |
+| 2025-10-31 15:10 | Player Transparency Research & Telemetry | Established research brief, surveys, analytics events, success metrics, and beta rollout plan for transparency initiative. |
+| 2025-10-31 17:40 | Condition Timer Analytics Instrumentation | Implemented telemetry event pipeline, group opt-out controls, and UI hooks for summary views/dismissals plus refreshed projector analytics. |
+| 2025-11-01 10:45 | Condition Summary Copy Integration | Synced narrative templates with supported conditions, updated documentation, and added regression tests ensuring every timer summary renders immersive player-safe copy. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.

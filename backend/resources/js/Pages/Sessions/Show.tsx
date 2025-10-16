@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { getEcho } from '@/lib/realtime';
+import { recordAnalyticsEventSync } from '@/lib/analytics';
 import { useConditionTimerSummaryCache } from '@/hooks/useConditionTimerSummaryCache';
 
 function formatDateTime(value: string | null): string {
@@ -120,6 +121,22 @@ type SessionRewardResource = {
     can_delete: boolean;
 };
 
+function resolveAnalyticsRole(role?: string | null): string {
+    if (!role) {
+        return 'member';
+    }
+
+    if (role === 'owner' || role === 'dungeon-master') {
+        return 'gm';
+    }
+
+    if (role === 'player') {
+        return 'player';
+    }
+
+    return role;
+}
+
 type SessionShowProps = {
     campaign: CampaignContext;
     session: SessionDetail;
@@ -141,6 +158,7 @@ type SessionShowProps = {
     ai_dialogues: AiDialogueEntry[];
     condition_timer_summary: ConditionTimerSummaryResource;
     condition_timer_summary_share_url: string;
+    viewer_role?: string | null;
 };
 
 type SessionNoteEventPayload = {
@@ -251,6 +269,7 @@ export default function SessionShow({
     ai_dialogues: aiDialogues,
     condition_timer_summary: conditionTimerSummary,
     condition_timer_summary_share_url: conditionTimerSummaryShareUrl,
+    viewer_role: viewerRole,
 }: SessionShowProps) {
     const page = usePage();
     const currentUserId = (page.props.auth?.user?.id as number | undefined) ?? null;
@@ -266,6 +285,27 @@ export default function SessionShow({
         storageKey: summaryStorageKey,
         initialSummary: conditionTimerSummary,
     });
+
+    const analyticsRole = resolveAnalyticsRole(viewerRole);
+    const [isSummaryVisible, setIsSummaryVisible] = useState(true);
+
+    const handleDismissSummary = (source: 'session_panel' | 'mobile_widget') => {
+        setIsSummaryVisible(false);
+        recordAnalyticsEventSync({
+            key: 'timer_summary.dismissed',
+            groupId: campaign.group.id,
+            payload: {
+                group_id: campaign.group.id,
+                user_role: analyticsRole,
+                source,
+                reason: 'temporary',
+            },
+        });
+    };
+
+    const handleRestoreSummary = () => {
+        setIsSummaryVisible(true);
+    };
 
     const [noteFeed, setNoteFeed] = useState<SessionNoteResource[]>(() => orderNotes(notes));
     const [diceLog, setDiceLog] = useState<DiceRollResource[]>(() => orderDiceRolls(diceRolls));
@@ -928,16 +968,39 @@ export default function SessionShow({
                         </div>
                     </div>
 
-                    <MobileConditionTimerRecapWidget
-                        summary={conditionSummary}
-                        shareUrl={conditionTimerSummaryShareUrl}
-                        className="md:hidden"
-                    />
-                    <PlayerConditionTimerSummaryPanel
-                        summary={conditionSummary}
-                        shareUrl={conditionTimerSummaryShareUrl}
-                        className="hidden md:block"
-                    />
+                    {isSummaryVisible ? (
+                        <>
+                            <MobileConditionTimerRecapWidget
+                                summary={conditionSummary}
+                                shareUrl={conditionTimerSummaryShareUrl}
+                                className="md:hidden"
+                                source="mobile_widget"
+                                viewerRole={viewerRole}
+                                onDismiss={() => handleDismissSummary('mobile_widget')}
+                            />
+                            <PlayerConditionTimerSummaryPanel
+                                summary={conditionSummary}
+                                shareUrl={conditionTimerSummaryShareUrl}
+                                className="hidden md:block"
+                                source="session_panel"
+                                viewerRole={viewerRole}
+                                onDismiss={() => handleDismissSummary('session_panel')}
+                            />
+                        </>
+                    ) : (
+                        <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-4 text-sm text-zinc-300 shadow-inner shadow-black/30">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                <p>Condition summary hidden for now. Reopen it when you need a tactical refresher.</p>
+                                <button
+                                    type="button"
+                                    onClick={handleRestoreSummary}
+                                    className="inline-flex items-center justify-center rounded-md border border-amber-500/60 px-3 py-1 text-xs font-semibold text-amber-300 transition hover:border-amber-400 hover:text-amber-200"
+                                >
+                                    Show summary
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="grid gap-6 md:grid-cols-2">
                         <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">

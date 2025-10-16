@@ -145,6 +145,10 @@ class SessionController extends Controller
         /** @var Authenticatable&User $user */
         $user = auth()->user();
 
+        $viewerRole = $campaign->group->memberships()
+            ->where('user_id', $user->getAuthIdentifier())
+            ->value('role');
+
         /** @var CampaignPolicy $campaignPolicy */
         $campaignPolicy = app(CampaignPolicy::class);
         /** @var SessionPolicy $sessionPolicy */
@@ -351,6 +355,7 @@ class SessionController extends Controller
             ],
             'condition_timer_summary' => $summary,
             'condition_timer_summary_share_url' => route('groups.condition-timers.player-summary', $campaign->group),
+            'viewer_role' => $viewerRole,
         ]);
     }
 

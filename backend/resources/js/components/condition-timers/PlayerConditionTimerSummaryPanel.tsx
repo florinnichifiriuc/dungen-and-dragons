@@ -1,7 +1,8 @@
 import { Link } from '@inertiajs/react';
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { cn } from '@/lib/utils';
+import { recordAnalyticsEventSync } from '@/lib/analytics';
 
 export type ConditionTimerSummaryCondition = {
     key: string;
@@ -33,6 +34,9 @@ type PlayerConditionTimerSummaryPanelProps = {
     summary: ConditionTimerSummaryResource;
     shareUrl?: string;
     className?: string;
+    source: string;
+    viewerRole?: string | null;
+    onDismiss?: () => void;
 };
 
 const urgencyStyles: Record<ConditionTimerSummaryCondition['urgency'], string> = {
@@ -73,12 +77,43 @@ function roundsDisplay(condition: ConditionTimerSummaryCondition): string {
     return 'Lingering effect';
 }
 
+function stalenessMs(timestamp: string): number | null {
+    const parsed = Date.parse(timestamp);
+
+    if (Number.isNaN(parsed)) {
+        return null;
+    }
+
+    const diff = Date.now() - parsed;
+
+    return diff < 0 ? 0 : diff;
+}
+
 export function PlayerConditionTimerSummaryPanel({
     summary,
     shareUrl,
     className,
+    source,
+    viewerRole,
+    onDismiss,
 }: PlayerConditionTimerSummaryPanelProps) {
     const entries = useMemo(() => summary.entries ?? [], [summary.entries]);
+
+    useEffect(() => {
+        const stale = stalenessMs(summary.generated_at);
+
+        recordAnalyticsEventSync({
+            key: 'timer_summary.viewed',
+            groupId: summary.group_id,
+            payload: {
+                group_id: summary.group_id,
+                user_role: viewerRole ?? 'member',
+                source,
+                entries_count: entries.length,
+                staleness_ms: stale ?? null,
+            },
+        });
+    }, [entries.length, source, summary.generated_at, summary.group_id, viewerRole]);
 
     return (
         <section
@@ -87,11 +122,22 @@ export function PlayerConditionTimerSummaryPanel({
                 className,
             )}
         >
-            <header className="mb-4 flex flex-col gap-1">
-                <h2 className="text-lg font-semibold text-zinc-100">Active condition outlook</h2>
-                <p className="text-xs text-zinc-500">
-                    A player-safe glimpse at lingering effects and their urgency. Updates arrive in real time.
-                </p>
+            <header className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div className="space-y-1">
+                    <h2 className="text-lg font-semibold text-zinc-100">Active condition outlook</h2>
+                    <p className="text-xs text-zinc-500">
+                        A player-safe glimpse at lingering effects and their urgency. Updates arrive in real time.
+                    </p>
+                </div>
+                {onDismiss && (
+                    <button
+                        type="button"
+                        onClick={onDismiss}
+                        className="self-start rounded-md border border-zinc-700 px-3 py-1 text-xs font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
+                    >
+                        Hide summary
+                    </button>
+                )}
             </header>
 
             {entries.length === 0 ? (

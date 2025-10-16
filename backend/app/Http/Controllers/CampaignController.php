@@ -234,7 +234,7 @@ class CampaignController extends Controller
 
         $invitations = $campaign->invitations
             ->filter(fn ($invitation) => $invitation->accepted_at === null)
-            ->map(fn ($invitation) use ($canManage) => [
+            ->map(fn ($invitation) => [
                 'id' => $invitation->id,
                 'role' => $invitation->role,
                 'email' => $invitation->email,

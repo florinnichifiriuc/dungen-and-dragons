@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\AnalyticsEventController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CampaignInvitationAcceptController;
@@ -49,6 +50,7 @@ Route::middleware('guest')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
+    Route::post('analytics/events', [AnalyticsEventController::class, 'store'])->name('analytics.events.store');
     Route::get('/settings/preferences', [UserPreferenceController::class, 'edit'])->name('settings.preferences.edit');
     Route::put('/settings/preferences', [UserPreferenceController::class, 'update'])->name('settings.preferences.update');
     Route::get('groups/join', [GroupJoinController::class, 'create'])->name('groups.join');

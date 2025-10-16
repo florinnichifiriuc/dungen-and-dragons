@@ -48,7 +48,7 @@ class MapTokenController extends Controller
         event(new MapTokenBroadcasted($map, 'created', MapTokenPayload::from($token)));
 
         if (! empty($token->status_conditions)) {
-            app(ConditionTimerSummaryProjector::class)->refreshForGroup($group);
+            app(ConditionTimerSummaryProjector::class)->refreshForGroup($group, 'token_mutation');
         }
 
         return redirect()->route('groups.maps.show', [$group, $map])->with('success', 'Token placed.');
@@ -146,7 +146,7 @@ class MapTokenController extends Controller
         event(new MapTokenBroadcasted($map, 'updated', MapTokenPayload::from($token->fresh())));
 
         if ($this->shouldRefreshSummary($data)) {
-            app(ConditionTimerSummaryProjector::class)->refreshForGroup($group);
+            app(ConditionTimerSummaryProjector::class)->refreshForGroup($group, 'token_mutation');
         }
 
         return redirect()->route('groups.maps.show', [$group, $map])->with('success', 'Token updated.');
@@ -168,7 +168,7 @@ class MapTokenController extends Controller
         ]));
 
         if ($hadTimers) {
-            app(ConditionTimerSummaryProjector::class)->refreshForGroup($group);
+            app(ConditionTimerSummaryProjector::class)->refreshForGroup($group, 'token_mutation');
         }
 
         return redirect()->route('groups.maps.show', [$group, $map])->with('success', 'Token removed.');

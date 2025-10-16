@@ -3,6 +3,7 @@ import { AlertTriangle, ListChecks, WifiOff } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { cn } from '@/lib/utils';
+import { recordAnalyticsEventSync } from '@/lib/analytics';
 
 import type { ConditionTimerSummaryResource } from './PlayerConditionTimerSummaryPanel';
 
@@ -10,6 +11,9 @@ type MobileConditionTimerRecapWidgetProps = {
     summary: ConditionTimerSummaryResource;
     shareUrl?: string;
     className?: string;
+    source: string;
+    viewerRole?: string | null;
+    onDismiss?: () => void;
 };
 
 type RecapEntry = {
@@ -86,6 +90,9 @@ export function MobileConditionTimerRecapWidget({
     summary,
     shareUrl,
     className,
+    source,
+    viewerRole,
+    onDismiss,
 }: MobileConditionTimerRecapWidgetProps) {
     const [isOffline, setIsOffline] = useState<boolean>(() => {
         if (typeof navigator === 'undefined') {
@@ -141,6 +148,23 @@ export function MobileConditionTimerRecapWidget({
 
     const hasEntries = highlightedEntries.length > 0;
 
+    useEffect(() => {
+        const parsed = summary.generated_at ? Date.parse(summary.generated_at) : NaN;
+        const stale = Number.isNaN(parsed) ? null : Math.max(0, Date.now() - parsed);
+
+        recordAnalyticsEventSync({
+            key: 'timer_summary.viewed',
+            groupId: summary.group_id,
+            payload: {
+                group_id: summary.group_id,
+                user_role: viewerRole ?? 'member',
+                source,
+                entries_count: summary.entries?.length ?? 0,
+                staleness_ms: stale ?? null,
+            },
+        });
+    }, [source, summary.entries, summary.generated_at, summary.group_id, viewerRole]);
+
     return (
         <section
             className={cn(
@@ -155,11 +179,22 @@ export function MobileConditionTimerRecapWidget({
                     <ListChecks className="h-5 w-5 text-amber-300" aria-hidden />
                     <span className="text-base font-semibold">Condition recap</span>
                 </div>
-                {isOffline && (
-                    <span className="flex items-center gap-1 text-xs text-amber-300" title="Offline mode">
-                        <WifiOff className="h-4 w-4" aria-hidden /> Offline
-                    </span>
-                )}
+                <div className="flex items-center gap-2">
+                    {isOffline && (
+                        <span className="flex items-center gap-1 text-xs text-amber-300" title="Offline mode">
+                            <WifiOff className="h-4 w-4" aria-hidden /> Offline
+                        </span>
+                    )}
+                    {onDismiss && (
+                        <button
+                            type="button"
+                            onClick={onDismiss}
+                            className="rounded-md border border-zinc-700 px-2 py-0.5 text-[11px] font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
+                        >
+                            Hide
+                        </button>
+                    )}
+                </div>
             </header>
 
             {hasEntries ? (
