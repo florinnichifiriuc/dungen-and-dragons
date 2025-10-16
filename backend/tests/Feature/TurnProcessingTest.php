@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\ConditionTimerSummaryBroadcasted;
 use App\Events\MapTokenBroadcasted;
 use App\Events\MapTokenConditionsExpired;
 use App\Models\AiRequest;
@@ -142,7 +143,11 @@ it('decrements token condition timers and clears expired conditions when a turn 
         'status_condition_durations' => [],
     ]);
 
-    Event::fake([MapTokenBroadcasted::class, MapTokenConditionsExpired::class]);
+    Event::fake([
+        MapTokenBroadcasted::class,
+        MapTokenConditionsExpired::class,
+        ConditionTimerSummaryBroadcasted::class,
+    ]);
 
     app(TurnScheduler::class)->configure($region, 24, CarbonImmutable::now('UTC'));
 
@@ -182,4 +187,6 @@ it('decrements token condition timers and clears expired conditions when a turn 
             return true;
         }
     );
+
+    Event::assertDispatched(ConditionTimerSummaryBroadcasted::class);
 });

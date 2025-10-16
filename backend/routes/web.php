@@ -10,6 +10,7 @@ use App\Http\Controllers\CampaignTaskController;
 use App\Http\Controllers\CampaignEntityController;
 use App\Http\Controllers\CampaignQuestController;
 use App\Http\Controllers\CampaignQuestUpdateController;
+use App\Http\Controllers\ConditionTimerSummaryController;
 use App\Http\Controllers\DiceRollController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupJoinController;
@@ -53,6 +54,10 @@ Route::middleware('auth')->group(function (): void {
     Route::get('groups/join', [GroupJoinController::class, 'create'])->name('groups.join');
     Route::post('groups/join', [GroupJoinController::class, 'store'])->name('groups.join.store');
     Route::resource('groups', GroupController::class);
+    Route::get(
+        'groups/{group}/condition-timers/player-summary',
+        [ConditionTimerSummaryController::class, 'show']
+    )->name('groups.condition-timers.player-summary');
     Route::resource('groups.memberships', GroupMembershipController::class)
         ->only(['store', 'update', 'destroy'])
         ->scoped();

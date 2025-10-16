@@ -7,6 +7,7 @@ use App\Http\Requests\MapTokenConditionTimerBatchRequest;
 use App\Models\Group;
 use App\Models\Map;
 use App\Models\MapToken;
+use App\Services\ConditionTimerSummaryProjector;
 use App\Support\Broadcasting\MapTokenPayload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
@@ -196,6 +197,10 @@ class MapTokenConditionTimerBatchController extends Controller
 
         foreach ($broadcastTokens as $token) {
             event(new MapTokenBroadcasted($map, 'updated', MapTokenPayload::from($token)));
+        }
+
+        if ($applied > 0) {
+            app(ConditionTimerSummaryProjector::class)->refreshForGroup($group);
         }
 
         $messageParts = [];

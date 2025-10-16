@@ -8,6 +8,7 @@ use App\Http\Requests\MapTokenUpdateRequest;
 use App\Models\Group;
 use App\Models\Map;
 use App\Models\MapToken;
+use App\Services\ConditionTimerSummaryProjector;
 use App\Support\Broadcasting\MapTokenPayload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
@@ -45,6 +46,10 @@ class MapTokenController extends Controller
         ]);
 
         event(new MapTokenBroadcasted($map, 'created', MapTokenPayload::from($token)));
+
+        if (! empty($token->status_conditions)) {
+            app(ConditionTimerSummaryProjector::class)->refreshForGroup($group);
+        }
 
         return redirect()->route('groups.maps.show', [$group, $map])->with('success', 'Token placed.');
     }
@@ -140,6 +145,10 @@ class MapTokenController extends Controller
 
         event(new MapTokenBroadcasted($map, 'updated', MapTokenPayload::from($token->fresh())));
 
+        if ($this->shouldRefreshSummary($data)) {
+            app(ConditionTimerSummaryProjector::class)->refreshForGroup($group);
+        }
+
         return redirect()->route('groups.maps.show', [$group, $map])->with('success', 'Token updated.');
     }
 
@@ -150,12 +159,17 @@ class MapTokenController extends Controller
         $this->authorize('delete', $token);
 
         $tokenId = (int) $token->id;
+        $hadTimers = ! empty($token->status_conditions);
 
         $token->delete();
 
         event(new MapTokenBroadcasted($map, 'deleted', [
             'id' => $tokenId,
         ]));
+
+        if ($hadTimers) {
+            app(ConditionTimerSummaryProjector::class)->refreshForGroup($group);
+        }
 
         return redirect()->route('groups.maps.show', [$group, $map])->with('success', 'Token removed.');
     }
@@ -258,6 +272,26 @@ class MapTokenController extends Controller
         }
 
         return $ordered;
+    }
+
+    /**
+     * @param  array<string, mixed>  $changes
+     */
+    protected function shouldRefreshSummary(array $changes): bool
+    {
+        if ($changes === []) {
+            return false;
+        }
+
+        $relevant = [
+            'name',
+            'status_conditions',
+            'status_condition_durations',
+            'hidden',
+            'faction',
+        ];
+
+        return array_intersect(array_keys($changes), $relevant) !== [];
     }
 
     protected function normalizeOptionalInteger(mixed $value): ?int

@@ -46,5 +46,7 @@
 | 2025-10-28 09:30 | Strategic Sync | Captured cross-discipline meeting notes for condition timer transparency initiative, aligned on batch adjustment priorities, and expanded backlog with player transparency phases. |
 | 2025-10-28 10:15 | Roadmap Refresh | Updated README roadmap, AGENTS guidance, and task briefs (38–44) to clarify projection requirements, UX assets, narrative copy needs, and telemetry expectations. |
 | 2025-10-28 16:30 | Condition Timer Batch Adjustments | Implemented multi-select dashboard controls, consolidated batch API with optimistic reconciliation, and conflict telemetry logging. |
+| 2025-10-30 14:10 | Condition Timer Player Summaries | Delivered redacted projection cache, realtime broadcasts, session/player panels, and narrative copy hooks so players stay informed without revealing GM secrets. |
+| 2025-10-30 18:45 | Condition Timer Mobile Recap Widgets | Added responsive mobile recap widget, shared summary cache hook, and share view enhancements so players have offline-friendly access to urgent conditions on the go. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.

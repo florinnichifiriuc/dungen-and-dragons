@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\ConditionTimerSummaryBroadcasted;
 use App\Events\MapTokenBroadcasted;
 use App\Models\Group;
 use App\Models\GroupMembership;
@@ -41,7 +42,7 @@ it('allows dungeon masters to place tokens and broadcasts the payload', function
     $region = \App\Models\Region::factory()->for($world)->create();
     $map = Map::factory()->for($group)->for($region)->create();
 
-    Event::fake([MapTokenBroadcasted::class]);
+    Event::fake([MapTokenBroadcasted::class, ConditionTimerSummaryBroadcasted::class]);
 
     $response = $this->actingAs($dm)->post(route('groups.maps.tokens.store', [$group, $map]), [
         'name' => 'Red Dragon',
@@ -100,6 +101,8 @@ it('allows dungeon masters to place tokens and broadcasts the payload', function
 
         return true;
     });
+
+    Event::assertDispatched(ConditionTimerSummaryBroadcasted::class);
 });
 
 it('prevents players from updating tokens', function () {
@@ -146,7 +149,7 @@ it('allows owners to adjust token coordinates and notes', function () {
         'gm_note' => null,
     ]);
 
-    Event::fake([MapTokenBroadcasted::class]);
+    Event::fake([MapTokenBroadcasted::class, ConditionTimerSummaryBroadcasted::class]);
 
     $response = $this->actingAs($owner)->patch(route('groups.maps.tokens.update', [$group, $map, $token]), [
         'x' => 7,
@@ -211,7 +214,7 @@ it('allows owners to clear individual condition timers from tokens', function ()
         'status_condition_durations' => ['blinded' => 1, 'restrained' => 4],
     ]);
 
-    Event::fake([MapTokenBroadcasted::class]);
+    Event::fake([MapTokenBroadcasted::class, ConditionTimerSummaryBroadcasted::class]);
 
     $response = $this->actingAs($owner)->patch(
         route('groups.maps.tokens.update', [$group, $map, $token]),
@@ -257,7 +260,7 @@ it('allows owners to batch adjust multiple condition timers with optimistic guar
         'status_condition_durations' => ['poisoned' => 2],
     ]);
 
-    Event::fake([MapTokenBroadcasted::class]);
+    Event::fake([MapTokenBroadcasted::class, ConditionTimerSummaryBroadcasted::class]);
 
     $response = $this->actingAs($owner)->post(
         route('groups.maps.tokens.condition-timers.batch', [$group, $map]),
@@ -321,7 +324,7 @@ it('logs conflicts when optimistic checks fail for batch condition adjustments',
         'status_condition_durations' => ['restrained' => 3],
     ]);
 
-    Event::fake([MapTokenBroadcasted::class]);
+    Event::fake([MapTokenBroadcasted::class, ConditionTimerSummaryBroadcasted::class]);
     Log::spy();
 
     $response = $this->actingAs($owner)->post(
@@ -361,6 +364,8 @@ it('logs conflicts when optimistic checks fail for batch condition adjustments',
                 && $context['actual'] === 3;
         }
     );
+
+    Event::assertNotDispatched(ConditionTimerSummaryBroadcasted::class);
 });
 
 it('normalizes condition duration payloads to active presets within bounds', function () {
@@ -374,7 +379,7 @@ it('normalizes condition duration payloads to active presets within bounds', fun
         'status_condition_durations' => ['frightened' => 4],
     ]);
 
-    Event::fake([MapTokenBroadcasted::class]);
+    Event::fake([MapTokenBroadcasted::class, ConditionTimerSummaryBroadcasted::class]);
 
     $response = $this->actingAs($owner)->patch(route('groups.maps.tokens.update', [$group, $map, $token]), [
         'status_conditions' => ['charmed'],
@@ -414,7 +419,7 @@ it('allows facilitators to clear timers while keeping presets active', function 
         'status_condition_durations' => ['poisoned' => 3],
     ]);
 
-    Event::fake([MapTokenBroadcasted::class]);
+    Event::fake([MapTokenBroadcasted::class, ConditionTimerSummaryBroadcasted::class]);
 
     $response = $this->actingAs($owner)->patch(route('groups.maps.tokens.update', [$group, $map, $token]), [
         'status_conditions' => ['poisoned'],
@@ -460,7 +465,7 @@ it('allows dungeon masters to remove tokens with a broadcast payload', function 
 
     $token = MapToken::factory()->for($map)->create();
 
-    Event::fake([MapTokenBroadcasted::class]);
+    Event::fake([MapTokenBroadcasted::class, ConditionTimerSummaryBroadcasted::class]);
 
     $response = $this->actingAs($dm)->delete(route('groups.maps.tokens.destroy', [$group, $map, $token]));
 
@@ -528,7 +533,7 @@ it('normalizes blank faction submissions back to neutral', function () {
         'faction' => MapToken::FACTION_HOSTILE,
     ]);
 
-    Event::fake([MapTokenBroadcasted::class]);
+    Event::fake([MapTokenBroadcasted::class, ConditionTimerSummaryBroadcasted::class]);
 
     $response = $this->actingAs($owner)->patch(route('groups.maps.tokens.update', [$group, $map, $token]), [
         'faction' => '',
@@ -555,7 +560,7 @@ it('defaults new tokens to layer zero when not supplied', function () {
     $region = \App\Models\Region::factory()->for($world)->create();
     $map = Map::factory()->for($group)->for($region)->create();
 
-    Event::fake([MapTokenBroadcasted::class]);
+    Event::fake([MapTokenBroadcasted::class, ConditionTimerSummaryBroadcasted::class]);
 
     $response = $this->actingAs($owner)->post(route('groups.maps.tokens.store', [$group, $map]), [
         'name' => 'Scout',

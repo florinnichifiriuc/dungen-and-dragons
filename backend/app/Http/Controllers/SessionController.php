@@ -15,6 +15,7 @@ use App\Models\SessionAttendance;
 use App\Models\User;
 use App\Policies\CampaignPolicy;
 use App\Policies\SessionPolicy;
+use App\Services\ConditionTimerSummaryProjector;
 use App\Services\SessionExportService;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\RedirectResponse;
@@ -30,7 +31,10 @@ use Dompdf\Options;
 
 class SessionController extends Controller
 {
-    public function __construct(private readonly SessionExportService $sessionExportService)
+    public function __construct(
+        private readonly SessionExportService $sessionExportService,
+        private readonly ConditionTimerSummaryProjector $conditionTimerSummaryProjector
+    )
     {
     }
 
@@ -132,6 +136,12 @@ class SessionController extends Controller
         $this->ensureSessionBelongsToCampaign($campaign, $session);
         $this->authorize('view', $session);
 
+        $campaign->loadMissing('group');
+
+        if ($campaign->group === null) {
+            abort(404);
+        }
+
         /** @var Authenticatable&User $user */
         $user = auth()->user();
 
@@ -141,6 +151,8 @@ class SessionController extends Controller
         $sessionPolicy = app(SessionPolicy::class);
 
         $isManager = $campaignPolicy->update($user, $campaign);
+
+        $summary = $this->conditionTimerSummaryProjector->projectForGroup($campaign->group);
 
         $session->load([
             'creator:id,name',
@@ -289,6 +301,10 @@ class SessionController extends Controller
             'campaign' => [
                 'id' => $campaign->id,
                 'title' => $campaign->title,
+                'group' => [
+                    'id' => $campaign->group->id,
+                    'name' => $campaign->group->name,
+                ],
             ],
             'session' => [
                 'id' => $session->id,
@@ -333,6 +349,8 @@ class SessionController extends Controller
                 'can_share_recap' => $sessionPolicy->recap($user, $session),
                 'can_log_reward' => $sessionPolicy->reward($user, $session),
             ],
+            'condition_timer_summary' => $summary,
+            'condition_timer_summary_share_url' => route('groups.condition-timers.player-summary', $campaign->group),
         ]);
     }
 

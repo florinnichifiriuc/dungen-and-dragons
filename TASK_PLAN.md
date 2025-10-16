@@ -2,8 +2,8 @@
 
 ## Backlog
 - [x] Task 38 – Token Condition Timer Batch Adjustments (finalize API contract, multi-select UX, bulk delta tooling, conflict telemetry, optimistic syncing safeguards, and expanded Form Request validation).
-- [ ] Task 39 – Condition Timer Player Summaries (projection cache layer, redacted payloads, narrative-friendly copy seeded from curated condition templates, automated visibility regression suite).
-- [ ] Task 40 – Condition Timer Mobile Recap Widgets (responsive Inertia panels, offline-friendly state caching, and integration with player summaries, plus performance/lighthouse budget).
+- [x] Task 39 – Condition Timer Player Summaries (projection cache layer, redacted payloads, narrative-friendly copy seeded from curated condition templates, automated visibility regression suite).
+- [x] Task 40 – Condition Timer Mobile Recap Widgets (responsive Inertia panels, offline-friendly state caching, and integration with player summaries, plus performance/lighthouse budget).
 - [ ] Task 41 – Timer Projection Developer Guide (document reusable projection/service pattern, invalidation hooks, ops logging, and QA checklist in developer docs).
 - [ ] Task 42 – Condition Timer Interaction Wireframes (Figma wireframes for desktop/tablet/mobile, component specs, and handoff notes for shadcn/Tailwind implementation).
 - [ ] Task 43 – Condition Narrative Copy Deck (author 12–15 lore-friendly snippets by urgency tier, localization notes, and QA sign-off checklist).
