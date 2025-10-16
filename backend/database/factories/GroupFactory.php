@@ -24,6 +24,7 @@ class GroupFactory extends Factory
             'slug' => $slugBase.'-'.$this->faker->unique()->lexify('???'),
             'join_code' => Str::upper($this->faker->unique()->lexify('??????')),
             'description' => $this->faker->optional()->sentence(),
+            'telemetry_opt_out' => false,
             'created_by' => User::factory(),
         ];
     }

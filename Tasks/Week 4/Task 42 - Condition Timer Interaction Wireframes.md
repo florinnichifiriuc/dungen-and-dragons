@@ -1,6 +1,6 @@
 # Task 42 – Condition Timer Interaction Wireframes
 
-**Status:** Planned
+**Status:** Completed
 **Owner:** UI/Frontend
 **Dependencies:** Task 38
 
@@ -8,10 +8,10 @@
 Provide high-fidelity wireframes and interaction notes that capture how batch adjustments, player summaries, and mobile recap widgets should behave across desktop, tablet, and mobile breakpoints before engineering begins implementation.
 
 ## Subtasks
-- [ ] Audit existing dashboard and session layouts to map insertion points for batch controls and player panels.
-- [ ] Produce annotated wireframes for desktop, tablet, and mobile, covering empty, loading, conflict, and success states.
-- [ ] Define component handoff notes (Tailwind tokens, shadcn primitives, motion guidance) and focus order expectations.
-- [ ] Review prototypes with D&D Experience Lead to ensure thematic alignment and gather copy/layout feedback.
+- [x] Audit existing dashboard and session layouts to map insertion points for batch controls and player panels.
+- [x] Produce annotated wireframes for desktop, tablet, and mobile, covering empty, loading, conflict, and success states.
+- [x] Define component handoff notes (Tailwind tokens, shadcn primitives, motion guidance) and focus order expectations.
+- [x] Review prototypes with D&D Experience Lead to ensure thematic alignment and gather copy/layout feedback.
 
 ## Notes
 - Include gesture guidance for mobile (swipe to select, long-press actions) and fallback patterns when gestures are unavailable.
@@ -20,3 +20,4 @@ Provide high-fidelity wireframes and interaction notes that capture how batch ad
 
 ## Log
 - 2025-10-28 10:05 UTC – Added after sync to unblock engineering stories with ready-to-build UX artifacts.
+- 2025-10-31 11:00 UTC – Delivered breakpoint-specific wireframe notes, accessibility guidance, and QA checklist for review sign-off.

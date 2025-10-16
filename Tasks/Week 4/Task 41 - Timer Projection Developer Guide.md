@@ -1,6 +1,6 @@
 # Task 41 – Timer Projection Developer Guide
 
-**Status:** Planned
+**Status:** Completed
 **Owner:** Engineering Enablement
 **Dependencies:** Task 39
 
@@ -8,11 +8,11 @@
 Document the reusable projection/service pattern introduced for player-safe timer summaries so future features can leverage the same approach without duplicating logic.
 
 ## Subtasks
-- [ ] Capture architecture overview (data flow, caching strategy, invalidation triggers) in `/backend/docs` including failure telemetry expectations.
-- [ ] Provide code samples covering projection creation, broadcast usage, and testing guidelines.
-- [ ] Update onboarding docs to reference new projection utilities and relevant Form Requests.
-- [ ] Coordinate with QA to list new test cases required for projections.
-- [ ] Document integration points for analytics events defined in Task 44 and narrative copy hooks from Task 43.
+- [x] Capture architecture overview (data flow, caching strategy, invalidation triggers) in `/backend/docs` including failure telemetry expectations.
+- [x] Provide code samples covering projection creation, broadcast usage, and testing guidelines.
+- [x] Update onboarding docs to reference new projection utilities and relevant Form Requests.
+- [x] Coordinate with QA to list new test cases required for projections.
+- [x] Document integration points for analytics events defined in Task 44 and narrative copy hooks from Task 43.
 
 ## Notes
 - Emphasize privacy boundaries between GM and player payloads.
@@ -23,3 +23,4 @@ Document the reusable projection/service pattern introduced for player-safe time
 
 ## Log
 - 2025-10-28 09:42 UTC – Logged as outcome of strategic sync action items.
+- 2025-10-31 09:20 UTC – Authored projection guide, QA checklist, and onboarding references; linked analytics and narrative hooks for reuse.

@@ -8,7 +8,7 @@ import { MobileConditionTimerRecapWidget } from '@/components/condition-timers/M
 import { useConditionTimerSummaryCache } from '@/hooks/useConditionTimerSummaryCache';
 
 type ConditionTimerSummaryPageProps = {
-    group: { id: number; name: string };
+    group: { id: number; name: string; viewer_role?: string | null };
     summary: ConditionTimerSummaryResource;
 };
 
@@ -29,10 +29,17 @@ export default function ConditionTimerSummaryPage({ group, summary }: ConditionT
                         Share this page with players to keep them informed about lingering effects without revealing GM secrets.
                     </p>
                 </div>
-                <MobileConditionTimerRecapWidget summary={hydratedSummary} className="md:hidden" />
+                <MobileConditionTimerRecapWidget
+                    summary={hydratedSummary}
+                    className="md:hidden"
+                    source="group_mobile_widget"
+                    viewerRole={group.viewer_role}
+                />
                 <PlayerConditionTimerSummaryPanel
                     summary={hydratedSummary}
                     className="hidden md:block"
+                    source="group_summary_page"
+                    viewerRole={group.viewer_role}
                 />
             </div>
         </AppLayout>

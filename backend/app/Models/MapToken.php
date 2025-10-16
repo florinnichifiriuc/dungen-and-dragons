@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\AsNullableArray;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -42,6 +43,13 @@ class MapToken extends Model
         'stunned',
         'unconscious',
         'exhaustion',
+        'burning',
+        'frozen',
+        'cursed',
+        'hexed',
+        'bleeding',
+        'petrifying',
+        'time_warped',
     ];
 
     public const MAX_CONDITION_DURATION = 20;
@@ -81,8 +89,8 @@ class MapToken extends Model
         'hit_points' => 'integer',
         'temporary_hit_points' => 'integer',
         'max_hit_points' => 'integer',
-        'status_conditions' => 'array',
-        'status_condition_durations' => 'array',
+        'status_conditions' => AsNullableArray::class,
+        'status_condition_durations' => AsNullableArray::class,
     ];
 
     /**

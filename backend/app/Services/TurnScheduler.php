@@ -122,7 +122,7 @@ class TurnScheduler
                 ->unique(fn ($group) => $group->id ?? null);
 
             foreach ($groups as $group) {
-                $this->conditionTimerSummaryProjector->refreshForGroup($group);
+                $this->conditionTimerSummaryProjector->refreshForGroup($group, 'turn_process');
             }
         }
 
