@@ -14,8 +14,20 @@
 - [ ] Task 61 – Condition Timer Share Expiry Stewardship (configurable expiry presets, lifecycle warnings, and lightweight extension controls in the manager UI).
 - [ ] Task 62 – Condition Timer Share Access Insights (trend dashboards for share usage, facilitator highlight panels, and export-ready datasets).
 - [ ] Task 63 – Condition Timer Share Guest Experience Polish (guest-facing narrative framing, responsive recap layouts, and regression coverage for refreshed copy).
+- [ ] Task 64 – Transparency Initiative Completion Dossier (stakeholder dossier compiling architecture, QA artifacts, telemetry dashboards, and narrative assets).
+- [ ] Task 65 – Shared Transparency Dashboard Components (extract reusable Inertia/shadcn UI components plus telemetry docs for future initiatives).
+- [ ] Task 66 – AI Mentor Prompt Localization Manifest (centralized manifest, workflow, and localization pilot for mentor briefing prompts).
+- [ ] Task 67 – Knowledge Transfer Series (two-session onboarding program with recordings, slides, and follow-up tracking).
+- [ ] Task 68 – Consent Audit KPI Dashboard (recurring Looker dashboard with consent/expiry KPIs and runbook integration).
 ## In Progress
-- _None_
+- Task 57 – Share Link & Consent Controls (finalizing review of consent-aware share UI and policies).
+- Task 58 – AI Mentor Briefings (moderation playback digest and guardrail review in flight).
+- Task 59 – End-to-End Transparency QA Suite (regression tagging, load scripts, and beta readiness reporting).
+- Task 60 – Condition Timer Share Access Trails (immutable access logging with telemetry feeds for insights).
+- Task 61 – Condition Timer Share Expiry Stewardship (preset bundles, extension workflows, and redaction guardrails).
+- Task 62 – Condition Timer Share Access Insights (trend dashboards correlating preset adoption and extension actors).
+- Task 63 – Condition Timer Share Guest Experience Polish (guest copy refresh, recap catch-up prompts, and responsive layout tuning).
+- Task 64 – Transparency Initiative Completion Dossier (asset inventory and stakeholder sign-off circulation).
 
 ## Completed
 - Initial architectural plan updated for multi-group, turn-based world.
