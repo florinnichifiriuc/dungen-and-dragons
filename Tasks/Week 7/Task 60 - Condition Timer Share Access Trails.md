@@ -12,13 +12,16 @@ Give facilitators visibility into how condition outlook links are opened so they
 - [ ] Instrument the share controller/service so every view records an immutable access entry, capturing optional signed-in user context and quiet-hour suppression state.
 - [ ] Emit structured logs/metrics for share views that integrate with current telemetry channels and feed Tasks 62 and 56.
 - [ ] Update facilitator exports to include access trails, respecting consent toggles and masking rules from Tasks 57 and 55.
+- [ ] Capture extension/revocation actor metadata in access events so Task 62 can correlate insights with preset bundle usage.
 
 ## Notes
 - Reuse the existing projection cache—only store share metadata required for auditing to avoid leaking timer payloads.
 - Access trails should exclude full IP storage; rely on salted hashes and region inference aligned with privacy commitments.
 - Coordinate with security to ensure masked data retention aligns with broader governance policies.
+- Surface actor metadata in a dedicated audit projection to keep facilitator dashboards fast while enabling deep dives in Task 62.
 
 ## Log
 - 2025-11-05 09:10 UTC – Scoped access trail modeling alongside Task 49 rollout to answer focus group concerns about stale link rotation.
 - 2025-11-05 16:30 UTC – Captured requirement to surface access trails in exports after facilitator council review.
 - 2025-11-07 10:50 UTC – Implemented hashed access log table, trend aggregation, and export payloads with masked identifiers.
+- 2025-11-12 16:05 UTC – Added actor metadata requirement post focus group sync so extension telemetry can flow into the insights dashboard workstream.
