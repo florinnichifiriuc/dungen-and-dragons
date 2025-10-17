@@ -65,5 +65,10 @@
 | 2025-11-06 14:55 | Player Digest & Nudge Summaries | Implemented digest preferences, per-channel opt-outs, queue delivery job, facilitator preview UI, markdown exports, and regression coverage. |
 | 2025-11-07 12:10 | Facilitator Insights Dashboard | Delivered facilitator insights service, filtered analytics UI, markdown export hooks, telemetry instrumentation, and authorization coverage. |
 | 2025-11-08 09:45 | Condition Timer API Hardening | Added per-map/token throttles with narrative backoff, optimistic reconciliation messaging, circuit breaker telemetry, chaos testing runbook, and regression coverage. |
+| 2025-11-09 15:30 | Transparency QA & Mentor Briefings | Added consent-aware share tests, end-to-end export job coverage with webhooks/notifications, mentor briefing service unit specs, and patched export dispatch wiring. |
+| 2025-11-10 11:05 | Transparency Access Stewardship | Delivered share access trail storage, seven-night insight widgets, expiry extension controls, guest staleness copy, synthetic monitoring command, and export redaction hooks. |
+| 2025-11-10 15:20 | Offline Sync Reliability | Hardened queued acknowledgement metadata, offline analytics instrumentation, conflict UI polish, and Pest coverage for reconnect flows. |
+| 2025-11-10 18:40 | Localization & Accessibility Audit | Localized condition transparency surfaces, added jsx-a11y linting with `npm run lint`, refreshed QA checklist, and documented multilingual accessibility verification. |
+| 2025-11-11 14:20 | Condition Transparency Data Exports Docs | Documented export pipeline integration patterns, webhook payloads, governance guardrails, and synced meeting outcomes with PO/architect expectations. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.

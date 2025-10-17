@@ -39,6 +39,11 @@
 - Turn scheduler demo still buries condition deltas deep in narration; PO asked for highlight callouts in the automation script refresh (future backlog note outside Tasks 50–59).
 - QA regression suite missed a bug where guest users on share links see stale acknowledgement counts; flagged as a test gap to be closed in Task 59.
 
+### Architect & PO Alignment – Export Readiness
+- Devon Ortiz (architect) requested that the export guide enumerate default retention expectations, webhook signing behavior, and download guardrails so integration partners cannot bypass consent gates when automating pulls.
+- Mira Patel (PO) emphasized providing end-to-end examples—including facilitator UI states and webhook payloads—to help storytellers explain why certain timers are redacted when consent is missing.
+- Both agreed to circulate the finalized export documentation and sample datasets to the compliance distribution list before wider beta invites go out.
+
 ## Decisions & Next Steps
 - Ratified Task 50–59 scope with cross-discipline buy-in; sequencing to emphasize notification infrastructure before AI enhancements.
 - Tomasz to draft autoscaling adjustments ahead of push messaging rollout (pre-work logged under Task 50).

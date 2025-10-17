@@ -2,6 +2,7 @@
 
 use App\Events\ConditionTimerAcknowledgementRecorded;
 use App\Models\AnalyticsEvent;
+use App\Models\ConditionTimerAcknowledgement;
 use App\Models\Group;
 use App\Models\GroupMembership;
 use App\Models\Map;
@@ -50,13 +51,21 @@ it('records acknowledgements and broadcasts updates', function () {
     $response->assertOk();
     $response->assertJsonPath('acknowledgement.acknowledged_by_viewer', true);
     $response->assertJsonPath('acknowledgement.acknowledged_count', 1);
+    $response->assertJsonPath('acknowledgement.source', 'online');
+    $response->assertJsonPath('acknowledgement.queued_at', null);
 
     $this->assertDatabaseHas('condition_timer_acknowledgements', [
         'group_id' => $group->id,
         'map_token_id' => $token->id,
         'user_id' => $user->id,
         'condition_key' => 'blinded',
+        'source' => 'online',
     ]);
+
+    $acknowledgement = ConditionTimerAcknowledgement::query()->where('group_id', $group->id)->firstOrFail();
+
+    expect($acknowledgement->queued_at)->toBeNull();
+    expect($acknowledgement->acknowledged_at?->toIso8601String())->toBe($response->json('acknowledgement.acknowledged_at'));
 
     Event::assertDispatched(ConditionTimerAcknowledgementRecorded::class, function (ConditionTimerAcknowledgementRecorded $event) use ($group, $token) {
         return $event->groupId === $group->id
@@ -66,6 +75,62 @@ it('records acknowledgements and broadcasts updates', function () {
     });
 
     expect(AnalyticsEvent::query()->where('key', 'timer_summary.acknowledged')->count())->toBeGreaterThanOrEqual(1);
+
+    Carbon::setTestNow();
+});
+
+it('stores queued timestamp when acknowledgement is synced after reconnecting', function () {
+    Event::fake([ConditionTimerAcknowledgementRecorded::class]);
+
+    $user = User::factory()->create();
+    $group = Group::factory()->create();
+    GroupMembership::query()->create([
+        'group_id' => $group->id,
+        'user_id' => $user->id,
+        'role' => GroupMembership::ROLE_PLAYER,
+    ]);
+
+    $map = Map::factory()->for($group)->create();
+    $token = MapToken::factory()->for($map)->create([
+        'status_conditions' => ['frightened'],
+        'status_condition_durations' => ['frightened' => 2],
+    ]);
+
+    $summaryGeneratedAt = CarbonImmutable::parse('2025-11-10T09:45:00+00:00');
+    $queuedAt = CarbonImmutable::parse('2025-11-10T10:00:00+00:00');
+
+    Carbon::setTestNow(Carbon::parse('2025-11-10T10:05:00+00:00'));
+
+    AnalyticsEvent::query()->delete();
+
+    $response = $this
+        ->actingAs($user)
+        ->postJson(route('groups.condition-timers.acknowledgements.store', $group), [
+            'map_token_id' => $token->id,
+            'condition_key' => 'frightened',
+            'summary_generated_at' => $summaryGeneratedAt->toIso8601String(),
+            'source' => 'offline',
+            'queued_at' => $queuedAt->toIso8601String(),
+        ]);
+
+    $response->assertOk();
+    $response->assertJsonPath('acknowledgement.source', 'offline');
+    $response->assertJsonPath('acknowledgement.queued_at', $queuedAt->toIso8601String());
+    $response->assertJsonPath('acknowledgement.acknowledged_at', $queuedAt->toIso8601String());
+
+    $acknowledgement = ConditionTimerAcknowledgement::query()->where('group_id', $group->id)->where('map_token_id', $token->id)->firstOrFail();
+
+    expect($acknowledgement->source)->toBe('offline');
+    expect($acknowledgement->queued_at?->toIso8601String())->toBe($queuedAt->toIso8601String());
+    expect($acknowledgement->acknowledged_at?->toIso8601String())->toBe($queuedAt->toIso8601String());
+
+    $event = AnalyticsEvent::query()->where('key', 'timer_summary.acknowledged')->first();
+
+    expect($event)->not->toBeNull();
+    expect($event?->payload['source'] ?? null)->toBe('offline');
+    expect($event?->payload['queued_at'] ?? null)->toBe($queuedAt->toIso8601String());
+    expect($event?->payload['acknowledged_at'] ?? null)->toBe($queuedAt->toIso8601String());
+    expect($event?->payload['sync_lag_ms'] ?? null)->toBe(300000);
 
     Carbon::setTestNow();
 });

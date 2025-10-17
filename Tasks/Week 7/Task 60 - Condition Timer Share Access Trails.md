@@ -1,6 +1,6 @@
 # Task 60 – Condition Timer Share Access Trails
 
-**Status:** Planned
+**Status:** In Progress
 **Owner:** Engineering & Data
 **Dependencies:** Tasks 47, 49, 57
 
@@ -21,3 +21,4 @@ Give facilitators visibility into how condition outlook links are opened so they
 ## Log
 - 2025-11-05 09:10 UTC – Scoped access trail modeling alongside Task 49 rollout to answer focus group concerns about stale link rotation.
 - 2025-11-05 16:30 UTC – Captured requirement to surface access trails in exports after facilitator council review.
+- 2025-11-07 10:50 UTC – Implemented hashed access log table, trend aggregation, and export payloads with masked identifiers.

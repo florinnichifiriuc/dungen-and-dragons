@@ -1,13 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Circle, History, Users2 } from 'lucide-react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import { AlertTriangle, CheckCircle2, Circle, History, Users2, WifiOff } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { recordAnalyticsEventSync } from '@/lib/analytics';
-import {
-    applyAcknowledgementToSummary,
-    type ConditionAcknowledgementPayload,
-} from '@/lib/conditionAcknowledgements';
+import useOfflineAcknowledgementQueue from '@/hooks/useOfflineAcknowledgementQueue';
+import { useTranslations } from '@/hooks/useTranslations';
 
 export type ConditionTimerSummaryCondition = {
     key: string;
@@ -72,88 +70,6 @@ const urgencyStyles: Record<ConditionTimerSummaryCondition['urgency'], string> =
     critical: 'border-rose-500/30 bg-rose-500/10 text-rose-200',
 };
 
-const dispositionCopy: Record<ConditionTimerSummaryEntry['token']['disposition'], string> = {
-    ally: 'Ally',
-    neutral: 'Neutral force',
-    hazard: 'Environmental hazard',
-    adversary: 'Adversary',
-    unknown: 'Veiled presence',
-};
-
-function formatTimestamp(timestamp: string): string {
-    try {
-        return new Intl.DateTimeFormat('en-US', {
-            dateStyle: 'medium',
-            timeStyle: 'short',
-        }).format(new Date(timestamp));
-    } catch (error) {
-        return timestamp;
-    }
-}
-
-function roundsDisplay(condition: ConditionTimerSummaryCondition): string {
-    if (condition.rounds !== null) {
-        const value = condition.rounds;
-        return `${value} round${value === 1 ? '' : 's'} remaining`;
-    }
-
-    if (condition.rounds_hint) {
-        return condition.rounds_hint;
-    }
-
-    return 'Lingering effect';
-}
-
-function stalenessMs(timestamp: string): number | null {
-    const parsed = Date.parse(timestamp);
-
-    if (Number.isNaN(parsed)) {
-        return null;
-    }
-
-    const diff = Date.now() - parsed;
-
-    return diff < 0 ? 0 : diff;
-}
-
-function formatRelativeTimestamp(timestamp: string): string {
-    const parsed = Date.parse(timestamp);
-
-    if (Number.isNaN(parsed)) {
-        return timestamp;
-    }
-
-    const diffMilliseconds = Date.now() - parsed;
-    const diffSeconds = Math.round(diffMilliseconds / 1000);
-    const formatter = new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' });
-
-    if (Math.abs(diffSeconds) < 60) {
-        return formatter.format(-diffSeconds, 'second');
-    }
-
-    const diffMinutes = Math.round(diffSeconds / 60);
-
-    if (Math.abs(diffMinutes) < 60) {
-        return formatter.format(-diffMinutes, 'minute');
-    }
-
-    const diffHours = Math.round(diffMinutes / 60);
-
-    if (Math.abs(diffHours) < 24) {
-        return formatter.format(-diffHours, 'hour');
-    }
-
-    const diffDays = Math.round(diffHours / 24);
-
-    if (Math.abs(diffDays) < 30) {
-        return formatter.format(-diffDays, 'day');
-    }
-
-    const diffMonths = Math.round(diffDays / 30);
-
-    return formatter.format(-diffMonths, 'month');
-}
-
 export function PlayerConditionTimerSummaryPanel({
     summary,
     shareUrl,
@@ -164,10 +80,131 @@ export function PlayerConditionTimerSummaryPanel({
     onSummaryUpdate,
     allowAcknowledgements,
 }: PlayerConditionTimerSummaryPanelProps) {
+    const { t, locale } = useTranslations('condition_timers');
     const entries = useMemo(() => summary.entries ?? [], [summary.entries]);
     const [pendingAcknowledgements, setPendingAcknowledgements] = useState<Record<string, boolean>>({});
+    const [queuedNotice, setQueuedNotice] = useState<string | null>(null);
     const viewerIsFacilitator = viewerRole === 'owner' || viewerRole === 'dungeon-master';
     const acknowledgementsEnabled = allowAcknowledgements ?? true;
+
+    const formatTimestamp = useCallback(
+        (timestamp: string): string => {
+        try {
+            return new Intl.DateTimeFormat(locale, {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+            }).format(new Date(timestamp));
+        } catch {
+            return timestamp;
+        }
+        },
+        [locale]
+    );
+
+    const formatRelativeTimestamp = useCallback(
+        (timestamp: string): string => {
+            const parsed = Date.parse(timestamp);
+
+            if (Number.isNaN(parsed)) {
+                return timestamp;
+            }
+
+            const diffMilliseconds = Date.now() - parsed;
+            const diffSeconds = Math.round(diffMilliseconds / 1000);
+            const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+
+            if (Math.abs(diffSeconds) < 60) {
+                return formatter.format(-diffSeconds, 'second');
+            }
+
+            const diffMinutes = Math.round(diffSeconds / 60);
+
+            if (Math.abs(diffMinutes) < 60) {
+                return formatter.format(-diffMinutes, 'minute');
+            }
+
+            const diffHours = Math.round(diffMinutes / 60);
+
+            if (Math.abs(diffHours) < 24) {
+                return formatter.format(-diffHours, 'hour');
+            }
+
+            const diffDays = Math.round(diffHours / 24);
+
+            if (Math.abs(diffDays) < 30) {
+                return formatter.format(-diffDays, 'day');
+            }
+
+            const diffMonths = Math.round(diffDays / 30);
+
+            return formatter.format(-diffMonths, 'month');
+        },
+        [locale]
+    );
+
+    const roundsDisplay = useCallback(
+        (condition: ConditionTimerSummaryCondition): string => {
+            if (condition.rounds !== null) {
+                return t('player_panel.rounds.exact', undefined, { count: condition.rounds });
+            }
+
+            if (condition.rounds_hint) {
+                return condition.rounds_hint;
+            }
+
+            return t('player_panel.rounds.fallback');
+        },
+        [t]
+    );
+
+    const dispositionLabel = useCallback(
+        (disposition: ConditionTimerSummaryEntry['token']['disposition']) =>
+            t(`player_panel.disposition.${disposition}`, disposition),
+        [t]
+    );
+
+    const effectsLabel = useCallback(
+        (count: number) => t('player_panel.token.effects', undefined, { count }),
+        [t]
+    );
+
+    const stalenessMs = useCallback((timestamp: string): number | null => {
+        const parsed = Date.parse(timestamp);
+
+        if (Number.isNaN(parsed)) {
+            return null;
+        }
+
+        const diff = Date.now() - parsed;
+
+        return diff < 0 ? 0 : diff;
+    }, []);
+
+    const {
+        isOffline,
+        pendingCount,
+        syncing,
+        acknowledge: queueAcknowledge,
+        conflicts,
+        resolveConflict,
+        pendingItems,
+    } = useOfflineAcknowledgementQueue(summary.group_id, summary, onSummaryUpdate);
+
+    const conflictDetails = useMemo(() => {
+        if (conflicts.length === 0) {
+            return [];
+        }
+
+        const lookup = new Map<string, string>();
+
+        for (const entry of entries) {
+            for (const condition of entry.conditions) {
+                lookup.set(`${entry.token.id}:${condition.key}`, `${entry.token.label} — ${condition.label}`);
+            }
+        }
+
+        return conflicts.map((id) => ({ id, label: lookup.get(id) ?? id }));
+    }, [conflicts, entries]);
 
     const acknowledgeCondition = async (tokenId: number, conditionKey: string) => {
         if (!summary.generated_at || !acknowledgementsEnabled) {
@@ -179,34 +216,12 @@ export function PlayerConditionTimerSummaryPanel({
         setPendingAcknowledgements((current) => ({ ...current, [composite]: true }));
 
         try {
-            const csrf =
-                (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content ?? undefined;
+            const result = await queueAcknowledge(tokenId, conditionKey, summary.generated_at);
 
-            const response = await fetch(
-                route('groups.condition-timers.acknowledgements.store', summary.group_id),
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
-                    },
-                    body: JSON.stringify({
-                        map_token_id: tokenId,
-                        condition_key: conditionKey,
-                        summary_generated_at: summary.generated_at,
-                    }),
-                },
-            );
-
-            if (!response.ok) {
-                throw new Error(`Failed with status ${response.status}`);
-            }
-
-            const payload = (await response.json()) as { acknowledgement?: ConditionAcknowledgementPayload };
-
-            if (payload.acknowledgement && onSummaryUpdate) {
-                onSummaryUpdate(applyAcknowledgementToSummary(summary, payload.acknowledgement));
+            if (result.queued) {
+                setQueuedNotice(t('player_panel.queued_notice'));
+            } else {
+                setQueuedNotice(null);
             }
         } catch (error) {
             console.error('Unable to record acknowledgement', error);
@@ -233,7 +248,9 @@ export function PlayerConditionTimerSummaryPanel({
                 staleness_ms: stale ?? null,
             },
         });
-    }, [entries.length, source, summary.generated_at, summary.group_id, viewerRole]);
+    }, [entries.length, source, stalenessMs, summary.generated_at, summary.group_id, viewerRole]);
+
+    const pendingCopy = pendingCount > 0 ? t('player_panel.offline.pending', undefined, { count: pendingCount }) : null;
 
     return (
         <section
@@ -244,10 +261,8 @@ export function PlayerConditionTimerSummaryPanel({
         >
             <header className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-1">
-                    <h2 className="text-lg font-semibold text-zinc-100">Active condition outlook</h2>
-                    <p className="text-xs text-zinc-500">
-                        A player-safe glimpse at lingering effects and their urgency. Updates arrive in real time.
-                    </p>
+                    <h2 className="text-lg font-semibold text-zinc-100">{t('player_panel.title')}</h2>
+                    <p className="text-xs text-zinc-500">{t('player_panel.description')}</p>
                 </div>
                 {onDismiss && (
                     <button
@@ -255,15 +270,67 @@ export function PlayerConditionTimerSummaryPanel({
                         onClick={onDismiss}
                         className="self-start rounded-md border border-zinc-700 px-3 py-1 text-xs font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
                     >
-                        Hide summary
+                        {t('player_panel.hide')}
                     </button>
                 )}
             </header>
 
+            {(isOffline || pendingCount > 0 || syncing || queuedNotice) && (
+                <div
+                    className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <div className="flex items-start gap-2">
+                        <WifiOff className="mt-0.5 h-4 w-4" aria-hidden />
+                        <div className="space-y-1">
+                            <p className="font-medium">{t('player_panel.offline.title')}</p>
+                            <p>
+                                {isOffline
+                                    ? t('player_panel.offline.offline')
+                                    : syncing
+                                      ? t('player_panel.offline.syncing')
+                                      : t('player_panel.offline.queued')}
+                            </p>
+                            {(pendingCopy || queuedNotice) && (
+                                <p className="text-[11px] uppercase tracking-wide text-amber-300">
+                                    {pendingCopy}
+                                    {queuedNotice ? ` • ${queuedNotice}` : ''}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {conflicts.length > 0 && (
+                <div className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-200">
+                    <div className="flex items-start gap-2">
+                        <AlertTriangle className="mt-0.5 h-4 w-4" aria-hidden />
+                        <div className="space-y-1">
+                            <p className="font-semibold">{t('player_panel.conflict.title')}</p>
+                            <p>{t('player_panel.conflict.description')}</p>
+                            <ul className="space-y-1">
+                                {conflictDetails.map(({ id, label }) => (
+                                    <li key={id} className="flex items-center justify-between gap-3">
+                                        <span>{label}</span>
+                                        <button
+                                            type="button"
+                                            className="rounded border border-rose-400/40 px-2 py-0.5 text-[11px] uppercase tracking-wide text-rose-100 hover:border-rose-300"
+                                            onClick={() => resolveConflict(id)}
+                                        >
+                                            {t('player_panel.conflict.dismiss')}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {entries.length === 0 ? (
-                <p className="text-sm text-zinc-500">
-                    All clear for now—no active timers are visible to the party.
-                </p>
+                <p className="text-sm text-zinc-500">{t('player_panel.empty')}</p>
             ) : (
                 <div className="space-y-4">
                     {entries.map((entry) => (
@@ -275,13 +342,12 @@ export function PlayerConditionTimerSummaryPanel({
                                 <div>
                                     <p className="text-base font-semibold text-zinc-100">{entry.token.label}</p>
                                     <p className="text-xs text-zinc-500">
-                                        {entry.map.title ?? 'Unmapped battleground'} • {dispositionCopy[entry.token.disposition]}
-                                        {entry.token.visibility === 'obscured' && ' (obscured)'}
+                                        {entry.map.title ?? t('player_panel.token.unmapped')} • {dispositionLabel(entry.token.disposition)}
+                                        {entry.token.visibility === 'obscured' && t('player_panel.token.obscured_suffix')}
                                     </p>
                                 </div>
                                 <span className="text-xs uppercase tracking-wide text-zinc-500">
-                                    {entry.conditions.length}{' '}
-                                    {entry.conditions.length === 1 ? 'effect' : 'effects'}
+                                    {effectsLabel(entry.conditions.length)}
                                 </span>
                             </div>
 
@@ -289,7 +355,12 @@ export function PlayerConditionTimerSummaryPanel({
                                 {entry.conditions.map((condition) => {
                                     const compositeKey = `${entry.token.id}:${condition.key}`;
                                     const isAcknowledged = Boolean(condition.acknowledged_by_viewer);
-                                    const isPending = Boolean(pendingAcknowledgements[compositeKey]);
+                                    const isPendingImmediate = Boolean(pendingAcknowledgements[compositeKey]);
+                                    const isQueued = pendingItems.some(
+                                        (item) =>
+                                            item.tokenId === entry.token.id && item.conditionKey === condition.key,
+                                    );
+                                    const isPending = isPendingImmediate || isQueued;
                                     const canAcknowledge = acknowledgementsEnabled && !isAcknowledged && !isPending;
 
                                     const aggregateCount =
@@ -334,14 +405,20 @@ export function PlayerConditionTimerSummaryPanel({
                                                     ) : (
                                                         <Circle className="h-4 w-4" />
                                                     )}
-                                                    {isAcknowledged ? 'Reviewed' : isPending ? 'Marking…' : 'Mark reviewed'}
+                                                    {isAcknowledged
+                                                        ? t('player_panel.acknowledge_button.reviewed')
+                                                        : isQueued
+                                                          ? t('player_panel.acknowledge_button.sync_when_online')
+                                                          : isPending
+                                                            ? t('player_panel.acknowledge_button.marking')
+                                                            : t('player_panel.acknowledge_button.mark')}
                                                 </button>
                                                 {viewerIsFacilitator && aggregateCount !== null && (
                                                     <span className="inline-flex items-center gap-1 text-xs text-zinc-400">
                                                         <Users2 className="h-3.5 w-3.5" />
-                                                        {aggregateCount === 1
-                                                            ? '1 acknowledgement'
-                                                            : `${aggregateCount} acknowledgements`}
+                                                        {t('player_panel.acknowledgements', undefined, {
+                                                            count: aggregateCount,
+                                                        })}
                                                     </span>
                                                 )}
                                             </div>
@@ -349,7 +426,7 @@ export function PlayerConditionTimerSummaryPanel({
                                                 <div className="mt-3 space-y-2">
                                                     <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-zinc-500">
                                                         <History className="h-3 w-3" aria-hidden />
-                                                        <span>Adjustment chronicle</span>
+                                                        <span>{t('player_panel.timeline.title')}</span>
                                                     </div>
                                                     <ol className="space-y-2">
                                                         {condition.timeline.map((event) => (
@@ -379,7 +456,7 @@ export function PlayerConditionTimerSummaryPanel({
             )}
 
             <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-500">
-                <span>Last updated {formatTimestamp(summary.generated_at)}</span>
+                <span>{t('player_panel.footer.updated', undefined, { timestamp: formatTimestamp(summary.generated_at) })}</span>
                 {shareUrl && (
                     <Link
                         href={shareUrl}
@@ -387,7 +464,7 @@ export function PlayerConditionTimerSummaryPanel({
                         rel="noreferrer"
                         className="text-amber-300 underline decoration-dotted underline-offset-4 hover:text-amber-200"
                     >
-                        Open shareable view
+                        {t('player_panel.footer.open_share')}
                     </Link>
                 )}
             </footer>

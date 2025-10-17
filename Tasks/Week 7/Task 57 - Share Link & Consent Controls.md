@@ -1,6 +1,6 @@
 # Task 57 – Share Link & Consent Controls
 
-**Status:** Planned
+**Status:** In Review
 **Owner:** Product & Engineering
 **Dependencies:** Tasks 49, 50, 56
 
@@ -8,12 +8,12 @@
 Enhance shareable condition outlooks with configurable expiry policies, consent tracking, and guest visibility controls so facilitators can tailor transparency while honoring player privacy.
 
 ## Subtasks
-- [ ] Add configurable expiry presets (24h, 72h, custom) with default recommendations and admin overrides.
-- [ ] Provide guest acknowledgement visibility toggles, including anonymized counts or full detail modes.
-- [ ] Track explicit consent logs for players opting into shareable summaries and expose audit trails.
-- [ ] Extend settings UI for facilitators to manage active links, revoke access, and view activity history.
-- [ ] Update policies and middleware to enforce consent checks on every share link request.
-- [ ] Cover new flows with tests, including stale cache scenarios flagged in Task 59.
+- [x] Add configurable expiry presets (24h, 72h, custom) with default recommendations and admin overrides.
+- [x] Provide guest acknowledgement visibility toggles, including anonymized counts or full detail modes.
+- [x] Track explicit consent logs for players opting into shareable summaries and expose audit trails.
+- [x] Extend settings UI for facilitators to manage active links, revoke access, and view activity history.
+- [x] Update policies and middleware to enforce consent checks on every share link request.
+- [x] Cover new flows with tests, including stale cache scenarios flagged in Task 59.
 
 ## Notes
 - Align with notification/digest preferences to prevent conflicting privacy states.
@@ -22,3 +22,4 @@ Enhance shareable condition outlooks with configurable expiry policies, consent 
 
 ## Log
 - 2025-11-05 17:05 UTC – Captured after facilitators reported aggressive expiry defaults during focus group review.
+- 2025-11-09 15:45 UTC – Completed consent-aware share UI refactor and added Pest coverage ensuring facilitators cannot issue detailed links without granted player consent.

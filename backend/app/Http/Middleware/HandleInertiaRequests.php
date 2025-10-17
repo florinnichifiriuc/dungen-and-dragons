@@ -70,6 +70,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'translations' => [
                 'app' => fn () => Lang::get('app'),
+                'condition_timers' => fn () => Lang::get('condition_timers'),
             ],
         ]);
     }

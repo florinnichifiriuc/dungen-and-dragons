@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+use App\Models\ConditionTransparencyExport;
+use App\Models\ConditionTransparencyWebhook;
+use App\Models\ConditionTimerShareConsentLog;
+
 class Group extends Model
 {
     use HasFactory;
@@ -21,6 +25,8 @@ class Group extends Model
         'join_code',
         'description',
         'telemetry_opt_out',
+        'mentor_briefings_enabled',
+        'mentor_briefings_last_generated_at',
         'created_by',
     ];
 
@@ -29,6 +35,8 @@ class Group extends Model
      */
     protected $casts = [
         'telemetry_opt_out' => 'boolean',
+        'mentor_briefings_enabled' => 'boolean',
+        'mentor_briefings_last_generated_at' => 'immutable_datetime',
     ];
 
     public function allowsTelemetry(): bool
@@ -105,5 +113,20 @@ class Group extends Model
     public function conditionTimerSummaryShares(): HasMany
     {
         return $this->hasMany(ConditionTimerSummaryShare::class);
+    }
+
+    public function conditionTransparencyExports(): HasMany
+    {
+        return $this->hasMany(ConditionTransparencyExport::class);
+    }
+
+    public function conditionTransparencyWebhooks(): HasMany
+    {
+        return $this->hasMany(ConditionTransparencyWebhook::class);
+    }
+
+    public function conditionTimerShareConsentLogs(): HasMany
+    {
+        return $this->hasMany(ConditionTimerShareConsentLog::class);
     }
 }

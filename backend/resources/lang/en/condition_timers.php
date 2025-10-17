@@ -1,0 +1,161 @@
+<?php
+
+return [
+    'generic' => [
+        'unknown' => 'Unknown',
+    ],
+    'summary_page' => [
+        'head_title' => ':group • Condition Timers',
+        'title' => ':group condition outlook',
+        'description' => 'Share this page with players to keep them informed about lingering effects without revealing GM secrets.',
+    ],
+    'share_controls' => [
+        'title' => 'Share condition outlook',
+        'description' => 'Generate a secure link so party members can review the latest condition summaries without logging in. Links respect consent preferences and can limit guest visibility.',
+        'no_share' => 'No active share link yet.',
+        'link' => [
+            'generated' => 'Generated :timestamp',
+            'expires' => 'Expires :timestamp',
+            'visibility' => 'Visibility: :mode',
+            'visibility_modes' => [
+                'details' => 'Full details',
+                'counts' => 'Anonymized counts',
+            ],
+            'access' => 'one: :timestamp • :count visit|other: :timestamp • :count visits',
+            'redacted' => 'Payload redacted until a fresh link is issued to protect expired lore.',
+        ],
+        'form' => [
+            'expiry_preset' => 'Expiry preset',
+            'custom_hours' => 'Custom hours',
+            'guest_visibility' => 'Guest visibility',
+            'extension_preset' => 'Extension preset',
+            'extension_hours' => 'Additional hours',
+            'generate' => 'Generate share link',
+            'regenerate' => 'Regenerate link',
+            'disable' => 'Disable current link',
+            'extend' => 'Extend link',
+            'make_evergreen' => 'Make evergreen',
+        ],
+        'extend' => [
+            'title' => 'Extend this link',
+            'description' => 'Add more sand to the hourglass without minting a fresh token. Extensions are logged in the access trail for auditing.',
+        ],
+        'insights' => [
+            'title' => 'Access insights',
+            'summary' => 'zero: No visits recorded over the last seven nights.|one: :count visit recorded across the last seven nights.|other: :count visits recorded across the last seven nights.',
+            'footnote' => 'These counts blend guest traffic regardless of device. Rotate links if the cadence feels off compared to your adventuring party’s habits.',
+        ],
+        'consent' => [
+            'title' => 'Player consent ledger',
+            'empty' => 'No players available for consent tracking.',
+            'role_status' => 'Role: :role • Status: :status',
+            'visibility_suffix' => ' (:visibility)',
+            'recorded_at' => 'Recorded :timestamp',
+            'actions' => [
+                'allow_counts' => 'Allow counts',
+                'allow_details' => 'Allow details',
+                'revoke' => 'Revoke',
+            ],
+        ],
+        'audit' => [
+            'title' => 'Consent audit trail',
+            'empty' => 'No consent changes recorded yet.',
+            'entry' => ':action :subject (:visibility)',
+            'timestamp' => ':timestamp • handled by :actor',
+            'unknown_subject' => 'Unknown player',
+            'unknown_time' => 'Unknown time',
+            'system_actor' => 'System',
+        ],
+        'states' => [
+            'evergreen' => 'Evergreen',
+            'active' => 'Active',
+            'expiring_soon' => 'Expiring soon',
+            'expired' => 'Expired',
+        ],
+        'access_trend' => [
+            'weekday_format' => ':weekday, :month :day',
+        ],
+    ],
+    'player_panel' => [
+        'title' => 'Active condition outlook',
+        'description' => 'A player-safe glimpse at lingering effects and their urgency. Updates arrive in real time.',
+        'hide' => 'Hide summary',
+        'offline' => [
+            'title' => 'Your sending stone searches for a signal…',
+            'offline' => 'We will remember every acknowledgement you make and sync once you reconnect.',
+            'syncing' => 'Reconnecting—queued acknowledgements are syncing now.',
+            'queued' => 'Acknowledgements are queued and will sync shortly.',
+            'pending' => ':count awaiting sync',
+        ],
+        'queued_notice' => 'Offline acknowledgement queued. We will sync it as soon as you reconnect.',
+        'conflict' => [
+            'title' => 'Sync conflict detected',
+            'description' => 'A condition changed while you were offline. Refresh the summary to review the latest state.',
+            'dismiss' => 'Dismiss',
+        ],
+        'empty' => 'All clear for now—no active timers are visible to the party.',
+        'disposition' => [
+            'ally' => 'Ally',
+            'neutral' => 'Neutral force',
+            'hazard' => 'Environmental hazard',
+            'adversary' => 'Adversary',
+            'unknown' => 'Veiled presence',
+        ],
+        'token' => [
+            'unmapped' => 'Unmapped battleground',
+            'obscured_suffix' => ' (obscured)',
+            'effects' => 'one: :count effect|other: :count effects',
+        ],
+        'rounds' => [
+            'exact' => 'one: :count round remaining|other: :count rounds remaining',
+            'fallback' => 'Lingering effect',
+        ],
+        'acknowledge_button' => [
+            'reviewed' => 'Reviewed',
+            'sync_when_online' => 'Sync when online',
+            'marking' => 'Marking…',
+            'mark' => 'Mark reviewed',
+        ],
+        'acknowledgements' => 'one: :count acknowledgement|other: :count acknowledgements',
+        'timeline' => [
+            'title' => 'Adjustment chronicle',
+        ],
+        'footer' => [
+            'updated' => 'Last updated :timestamp',
+            'open_share' => 'Open shareable view',
+        ],
+    ],
+    'mobile' => [
+        'aria_label' => 'Mobile condition timer recap',
+        'title' => 'Condition recap',
+        'offline' => [
+            'label' => 'Offline mode',
+            'status' => 'Offline',
+        ],
+        'hide' => 'Hide',
+        'urgency' => [
+            'critical' => 'Critical',
+            'warning' => 'Warning',
+            'calm' => 'Calm',
+        ],
+        'rounds' => [
+            'exact' => 'one: :count round left|other: :count rounds left',
+            'fallback' => 'Lingering effect',
+        ],
+        'empty' => 'No visible conditions right now. Enjoy the calm!',
+        'updated_recently' => 'Updated moments ago',
+        'updated' => 'Updated :relative',
+        'footer_link' => 'Open full summary',
+    ],
+    'share_view' => [
+        'head_title' => ':group • Shared Condition Outlook',
+        'title' => ':group • Shared Condition Outlook',
+        'description' => 'This sending stone carries the party’s lingering conditions. Check the staleness cue below before acting—facilitators refresh the ledger after every major beat.',
+        'summoned' => 'Summoned :timestamp',
+        'refreshed' => 'Last refreshed :timestamp',
+        'retires' => 'Share retires :timestamp',
+        'redacted_banner' => 'This outlook has gone silent. The storyteller cloaked the details to keep expired lore from leaking. Ask your facilitator for a renewed link if you still need guidance.',
+        'redacted_empty' => 'The pages of this chronicle have faded. Request a fresh briefing to reveal the latest maladies.',
+        'footer' => 'Powered by the Dungen & Dragons campaign workspace.',
+    ],
+];

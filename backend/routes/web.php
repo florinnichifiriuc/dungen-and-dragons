@@ -16,6 +16,10 @@ use App\Http\Controllers\CampaignQuestUpdateController;
 use App\Http\Controllers\ConditionTimerAcknowledgementController;
 use App\Http\Controllers\ConditionTimerSummaryController;
 use App\Http\Controllers\ConditionTimerSummaryShareController;
+use App\Http\Controllers\ConditionTimerShareConsentController;
+use App\Http\Controllers\ConditionTransparencyExportController;
+use App\Http\Controllers\ConditionTransparencyWebhookController;
+use App\Http\Controllers\GroupMentorBriefingPreferenceController;
 use App\Http\Controllers\DiceRollController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupJoinController;
@@ -80,6 +84,38 @@ Route::middleware('auth')->group(function (): void {
         'groups/{group}/condition-timers/player-summary/share-links/{share}',
         [ConditionTimerSummaryShareController::class, 'destroy']
     )->name('groups.condition-timers.player-summary.share-links.destroy');
+    Route::patch(
+        'groups/{group}/condition-timers/player-summary/share-links/{share}/extend',
+        [ConditionTimerSummaryShareController::class, 'extend']
+    )->name('groups.condition-timers.player-summary.share-links.extend');
+    Route::post(
+        'groups/{group}/condition-timers/share-consents',
+        [ConditionTimerShareConsentController::class, 'store']
+    )->name('groups.condition-timers.share-consents.store');
+    Route::post(
+        'groups/{group}/condition-transparency/exports',
+        [ConditionTransparencyExportController::class, 'store']
+    )->name('groups.condition-transparency.exports.store');
+    Route::get(
+        'groups/{group}/condition-transparency/exports/{export}/download',
+        [ConditionTransparencyExportController::class, 'download']
+    )->name('groups.condition-transparency.exports.download');
+    Route::post(
+        'groups/{group}/condition-transparency/webhooks',
+        [ConditionTransparencyWebhookController::class, 'store']
+    )->name('groups.condition-transparency.webhooks.store');
+    Route::post(
+        'groups/{group}/condition-transparency/webhooks/{webhook}/rotate',
+        [ConditionTransparencyWebhookController::class, 'rotate']
+    )->name('groups.condition-transparency.webhooks.rotate');
+    Route::delete(
+        'groups/{group}/condition-transparency/webhooks/{webhook}',
+        [ConditionTransparencyWebhookController::class, 'destroy']
+    )->name('groups.condition-transparency.webhooks.destroy');
+    Route::patch(
+        'groups/{group}/condition-transparency/mentor-briefings',
+        [GroupMentorBriefingPreferenceController::class, 'update']
+    )->name('groups.condition-transparency.mentor-briefings.update');
     Route::resource('groups.memberships', GroupMembershipController::class)
         ->only(['store', 'update', 'destroy'])
         ->scoped();
