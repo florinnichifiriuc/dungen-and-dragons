@@ -26,6 +26,8 @@ class ConditionTimerAcknowledgementFactory extends Factory
             'condition_key' => $this->faker->randomElement(MapToken::CONDITIONS),
             'summary_generated_at' => $timestamp,
             'acknowledged_at' => $timestamp,
+            'queued_at' => $timestamp,
+            'source' => 'online',
         ];
     }
 }

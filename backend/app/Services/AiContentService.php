@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AiRequest;
 use App\Models\CampaignSession;
+use App\Models\Group;
 use App\Models\Region;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -82,6 +83,29 @@ class AiContentService
         return [
             'request' => $request->fresh(),
             'reply' => $reply,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $focus
+     */
+    public function mentorBriefing(Group $group, array $focus, ?User $requestedBy = null): array
+    {
+        $prompt = $this->buildMentorBriefingPrompt($group, $focus);
+
+        $request = $this->storeRequest(
+            requestType: 'mentor_briefing',
+            context: $group,
+            prompt: $prompt,
+            meta: ['focus' => $focus],
+            requestedBy: $requestedBy,
+        );
+
+        $response = $this->dispatch($request, $prompt, config('ai.prompts.mentor_briefing.system'));
+
+        return [
+            'request' => $request->fresh(),
+            'briefing' => $response,
         ];
     }
 
@@ -233,11 +257,52 @@ class AiContentService
         return implode("\n", $lines);
     }
 
+    /**
+     * @param  array<string, mixed>  $focus
+     */
+    protected function buildMentorBriefingPrompt(Group $group, array $focus): string
+    {
+        $lines = [];
+        $lines[] = sprintf('Group: %s (ID %d)', $group->name, $group->id);
+
+        $critical = Arr::get($focus, 'critical_conditions', []);
+        $unacknowledged = Arr::get($focus, 'unacknowledged_tokens', []);
+        $recurring = Arr::get($focus, 'recurring_conditions', []);
+
+        if ($critical !== []) {
+            $lines[] = 'Critical conditions:';
+            foreach ($critical as $entry) {
+                $lines[] = '- '.$entry;
+            }
+        }
+
+        if ($unacknowledged !== []) {
+            $lines[] = 'Unacknowledged effects:';
+            foreach ($unacknowledged as $entry) {
+                $lines[] = '- '.$entry;
+            }
+        }
+
+        if ($recurring !== []) {
+            $lines[] = 'Recurring concerns:';
+            foreach ($recurring as $entry) {
+                $lines[] = '- '.$entry;
+            }
+        }
+
+        if (count($lines) === 1) {
+            $lines[] = 'No urgent conditions detected; offer congratulations and light scouting advice.';
+        }
+
+        return implode("\n", $lines);
+    }
+
     protected function fallbackText(string $requestType, string $prompt): string
     {
         return match ($requestType) {
             'dm_takeover' => 'The AI delegate is reviewing the latest lore and will return shortly. Continue with collaborative planning until the summary is ready.',
             'npc_dialogue' => 'The NPC considers the request but remains silent for now. Try again after a brief pause.',
+            'mentor_briefing' => 'The mentor is quietly gathering intel—expect a tactful briefing soon.',
             default => 'AI chronicler advanced the storyline but needs a mortal to embellish the tale.',
         };
     }

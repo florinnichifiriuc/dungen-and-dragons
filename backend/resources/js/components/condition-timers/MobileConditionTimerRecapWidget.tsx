@@ -1,9 +1,10 @@
 import { Link } from '@inertiajs/react';
 import { AlertTriangle, ListChecks, WifiOff } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 
 import { cn } from '@/lib/utils';
 import { recordAnalyticsEventSync } from '@/lib/analytics';
+import { useTranslations } from '@/hooks/useTranslations';
 
 import type { ConditionTimerSummaryResource } from './PlayerConditionTimerSummaryPanel';
 
@@ -37,55 +38,6 @@ const urgencyBadgeStyles: Record<RecapEntry['urgency'], string> = {
     calm: 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/40',
 };
 
-const roundsLabel = (rounds: number | null, hint: string | null): string => {
-    if (rounds !== null) {
-        return `${rounds} round${rounds === 1 ? '' : 's'} left`;
-    }
-
-    if (hint) {
-        return hint;
-    }
-
-    return 'Lingering effect';
-};
-
-const relativeUpdatedCopy = (timestamp: string | null | undefined): string => {
-    if (!timestamp) {
-        return 'Updated moments ago';
-    }
-
-    const parsed = Date.parse(timestamp);
-
-    if (Number.isNaN(parsed)) {
-        return 'Updated moments ago';
-    }
-
-    const diffMilliseconds = Date.now() - parsed;
-    const diffSeconds = Math.round(diffMilliseconds / 1000);
-    const absoluteSeconds = Math.abs(diffSeconds);
-    const formatter = new Intl.RelativeTimeFormat('en-US', { numeric: 'auto' });
-
-    if (absoluteSeconds < 60) {
-        return `Updated ${formatter.format(-diffSeconds, 'second')}`;
-    }
-
-    const diffMinutes = Math.round(diffSeconds / 60);
-
-    if (Math.abs(diffMinutes) < 60) {
-        return `Updated ${formatter.format(-diffMinutes, 'minute')}`;
-    }
-
-    const diffHours = Math.round(diffMinutes / 60);
-
-    if (Math.abs(diffHours) < 24) {
-        return `Updated ${formatter.format(-diffHours, 'hour')}`;
-    }
-
-    const diffDays = Math.round(diffHours / 24);
-
-    return `Updated ${formatter.format(-diffDays, 'day')}`;
-};
-
 export function MobileConditionTimerRecapWidget({
     summary,
     shareUrl,
@@ -94,6 +46,7 @@ export function MobileConditionTimerRecapWidget({
     viewerRole,
     onDismiss,
 }: MobileConditionTimerRecapWidgetProps) {
+    const { t, locale } = useTranslations('condition_timers');
     const [isOffline, setIsOffline] = useState<boolean>(() => {
         if (typeof navigator === 'undefined') {
             return false;
@@ -119,6 +72,60 @@ export function MobileConditionTimerRecapWidget({
         };
     }, []);
 
+    const formatRoundsLabel = useCallback(
+        (rounds: number | null, hint: string | null): string => {
+            if (rounds !== null) {
+                return t('mobile.rounds.exact', undefined, { count: rounds });
+            }
+
+            if (hint) {
+                return hint;
+            }
+
+            return t('mobile.rounds.fallback');
+        },
+        [t]
+    );
+
+    const relativeUpdatedCopy = useCallback(
+        (timestamp: string | null | undefined): string => {
+            if (!timestamp) {
+                return t('mobile.updated_recently');
+            }
+
+            const parsed = Date.parse(timestamp);
+
+            if (Number.isNaN(parsed)) {
+                return t('mobile.updated_recently');
+            }
+
+            const diffMilliseconds = Date.now() - parsed;
+            const diffSeconds = Math.round(diffMilliseconds / 1000);
+            const formatter = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+
+            if (Math.abs(diffSeconds) < 60) {
+                return t('mobile.updated', undefined, { relative: formatter.format(-diffSeconds, 'second') });
+            }
+
+            const diffMinutes = Math.round(diffSeconds / 60);
+
+            if (Math.abs(diffMinutes) < 60) {
+                return t('mobile.updated', undefined, { relative: formatter.format(-diffMinutes, 'minute') });
+            }
+
+            const diffHours = Math.round(diffMinutes / 60);
+
+            if (Math.abs(diffHours) < 24) {
+                return t('mobile.updated', undefined, { relative: formatter.format(-diffHours, 'hour') });
+            }
+
+            const diffDays = Math.round(diffHours / 24);
+
+            return t('mobile.updated', undefined, { relative: formatter.format(-diffDays, 'day') });
+        },
+        [locale, t]
+    );
+
     const highlightedEntries = useMemo<RecapEntry[]>(() => {
         const entries = summary?.entries ?? [];
 
@@ -126,10 +133,10 @@ export function MobileConditionTimerRecapWidget({
             entry.conditions.map((condition) => ({
                 id: `${entry.token.id}:${condition.key}`,
                 tokenLabel: entry.token.label,
-                mapTitle: entry.map.title ?? 'Unmapped battleground',
+                mapTitle: entry.map.title ?? t('player_panel.token.unmapped'),
                 urgency: condition.urgency,
                 summary: condition.summary,
-                roundsLabel: roundsLabel(condition.rounds, condition.rounds_hint),
+                roundsLabel: formatRoundsLabel(condition.rounds, condition.rounds_hint),
             })),
         );
 
@@ -140,11 +147,11 @@ export function MobileConditionTimerRecapWidget({
                 return urgencyComparison;
             }
 
-            return a.tokenLabel.localeCompare(b.tokenLabel);
+            return a.tokenLabel.localeCompare(b.tokenLabel, locale);
         });
 
         return flattened.slice(0, 3);
-    }, [summary]);
+    }, [formatRoundsLabel, locale, summary, t]);
 
     const hasEntries = highlightedEntries.length > 0;
 
@@ -172,17 +179,20 @@ export function MobileConditionTimerRecapWidget({
                 'flex flex-col gap-3 text-sm text-zinc-200',
                 className,
             )}
-            aria-label="Mobile condition timer recap"
+            aria-label={t('mobile.aria_label')}
         >
             <header className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-zinc-100">
                     <ListChecks className="h-5 w-5 text-amber-300" aria-hidden />
-                    <span className="text-base font-semibold">Condition recap</span>
+                    <span className="text-base font-semibold">{t('mobile.title')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                     {isOffline && (
-                        <span className="flex items-center gap-1 text-xs text-amber-300" title="Offline mode">
-                            <WifiOff className="h-4 w-4" aria-hidden /> Offline
+                        <span
+                            className="flex items-center gap-1 text-xs text-amber-300"
+                            title={t('mobile.offline.label')}
+                        >
+                            <WifiOff className="h-4 w-4" aria-hidden /> {t('mobile.offline.status')}
                         </span>
                     )}
                     {onDismiss && (
@@ -191,7 +201,7 @@ export function MobileConditionTimerRecapWidget({
                             onClick={onDismiss}
                             className="rounded-md border border-zinc-700 px-2 py-0.5 text-[11px] font-medium text-zinc-300 transition hover:border-zinc-500 hover:text-zinc-100"
                         >
-                            Hide
+                            {t('mobile.hide')}
                         </button>
                     )}
                 </div>
@@ -211,11 +221,7 @@ export function MobileConditionTimerRecapWidget({
                                         urgencyBadgeStyles[entry.urgency],
                                     )}
                                 >
-                                    {entry.urgency === 'critical'
-                                        ? 'Critical'
-                                        : entry.urgency === 'warning'
-                                        ? 'Warning'
-                                        : 'Calm'}
+                                    {t(`mobile.urgency.${entry.urgency}`)}
                                 </span>
                                 <span className="text-[11px] text-zinc-400">{entry.roundsLabel}</span>
                             </div>
@@ -229,7 +235,7 @@ export function MobileConditionTimerRecapWidget({
             ) : (
                 <div className="flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-emerald-100">
                     <AlertTriangle className="h-4 w-4" aria-hidden />
-                    <span>No visible conditions right now. Enjoy the calm!</span>
+                    <span>{t('mobile.empty')}</span>
                 </div>
             )}
 
@@ -240,7 +246,7 @@ export function MobileConditionTimerRecapWidget({
                         href={shareUrl}
                         className="text-amber-300 underline decoration-dotted underline-offset-4 hover:text-amber-200"
                     >
-                        Open full summary
+                        {t('mobile.footer_link')}
                     </Link>
                 )}
             </footer>

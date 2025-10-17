@@ -69,12 +69,34 @@ class ConditionTimerAcknowledgementController extends Controller
             ]);
         }
 
+        $queuedAt = null;
+        $queuedAtInput = $request->input('queued_at');
+
+        if ($queuedAtInput !== null) {
+            try {
+                $queuedAt = CarbonImmutable::parse($queuedAtInput)->setTimezone('UTC');
+            } catch (\Throwable $exception) {
+                throw ValidationException::withMessages([
+                    'queued_at' => 'Provide a valid ISO 8601 timestamp.',
+                ]);
+            }
+        }
+
+        $receivedAt = CarbonImmutable::now('UTC');
+        $acknowledgedAt = $queuedAt ?? $receivedAt;
+        $sourceInput = $request->input('source');
+        $source = is_string($sourceInput) ? $sourceInput : null;
+        $normalizedSource = $source !== null ? $source : ($queuedAt !== null ? 'offline' : 'online');
+
         $acknowledgement = $this->acknowledgements->recordAcknowledgement(
             $group,
             $token,
             $conditionKey,
             $summaryGeneratedAt,
             $user,
+            $acknowledgedAt,
+            $queuedAt,
+            $normalizedSource,
         );
 
         $acknowledgedCount = $this->acknowledgements->countForSummary(
@@ -86,6 +108,8 @@ class ConditionTimerAcknowledgementController extends Controller
 
         $urgency = ConditionTimerInsights::urgency($rounds !== null ? (int) $rounds : null);
 
+        $syncLagMs = $queuedAt !== null ? $queuedAt->diffInMilliseconds($receivedAt) : null;
+
         $this->analytics->record(
             'timer_summary.acknowledged',
             [
@@ -94,6 +118,10 @@ class ConditionTimerAcknowledgementController extends Controller
                 'condition_key' => $conditionKey,
                 'urgency' => $urgency,
                 'summary_generated_at' => $summaryGeneratedAt->toIso8601String(),
+                'acknowledged_at' => $acknowledgedAt->toIso8601String(),
+                'queued_at' => $queuedAt?->toIso8601String(),
+                'source' => $normalizedSource,
+                'sync_lag_ms' => $syncLagMs,
             ],
             $user,
             $group,
@@ -113,6 +141,9 @@ class ConditionTimerAcknowledgementController extends Controller
                 'token_id' => $acknowledgement->map_token_id,
                 'condition_key' => $acknowledgement->condition_key,
                 'summary_generated_at' => $acknowledgement->summary_generated_at->toIso8601String(),
+                'acknowledged_at' => $acknowledgement->acknowledged_at?->toIso8601String(),
+                'queued_at' => $acknowledgement->queued_at?->toIso8601String(),
+                'source' => $acknowledgement->source,
                 'acknowledged_by_viewer' => true,
                 'acknowledged_count' => $acknowledgedCount,
             ],

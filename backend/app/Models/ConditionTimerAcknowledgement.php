@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,8 @@ class ConditionTimerAcknowledgement extends Model
         'condition_key',
         'summary_generated_at',
         'acknowledged_at',
+        'queued_at',
+        'source',
     ];
 
     /**
@@ -27,6 +30,7 @@ class ConditionTimerAcknowledgement extends Model
     protected $casts = [
         'summary_generated_at' => 'immutable_datetime',
         'acknowledged_at' => 'immutable_datetime',
+        'queued_at' => 'immutable_datetime',
     ];
 
     public function group(): BelongsTo

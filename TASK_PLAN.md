@@ -4,9 +4,9 @@
 - [x] Task 51 – Player Digest & Nudge Summaries (cross-feature digest aggregation, narrative tone review, delivery scheduling, and opt-out flows).
 - [x] Task 52 – Facilitator Insights Dashboard (timer health analytics, acknowledgement funnels, and risk flags with drill-down filters).
 - [x] Task 53 – Condition Timer API Hardening (rate limiting, conflict resolution improvements, circuit breaker alarms, and chaos testing playbook).
-- [ ] Task 54 – Offline Sync Reliability (queued acknowledgement reconciliation, background sync workers, and degraded-mode UI messaging).
-- [ ] Task 55 – Localization & Accessibility Audit (timer surfaces internationalization review, screen reader scripts, and QA regression harness updates).
-- [ ] Task 56 – Condition Transparency Data Exports (CSV/JSON exports, webhook triggers, and admin governance controls).
+- [x] Task 54 – Offline Sync Reliability (queued acknowledgement reconciliation, background sync workers, and degraded-mode UI messaging).
+- [x] Task 55 – Localization & Accessibility Audit (timer surfaces internationalization review, screen reader scripts, and QA regression harness updates).
+- [x] Task 56 – Condition Transparency Data Exports (CSV/JSON exports, webhook triggers, and admin governance controls).
 - [ ] Task 57 – Share Link & Consent Controls (configurable expiry policies, guest acknowledgement visibility toggles, and audit consent logs).
 - [ ] Task 58 – AI Mentor Briefings (condition trend prompts, spoiler-safe recommendations, and facilitator override tools leveraging existing AI services).
 - [ ] Task 59 – End-to-End Transparency QA Suite (guest regression coverage, load/perf scripts, and beta launch acceptance checklist).

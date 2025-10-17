@@ -1,6 +1,6 @@
 # Task 61 – Condition Timer Share Expiry Stewardship
 
-**Status:** Planned
+**Status:** In Progress
 **Owner:** Product & Engineering
 **Dependencies:** Tasks 49, 57
 
@@ -21,3 +21,4 @@ Give facilitators finer control over share link lifetimes so risky outlooks expi
 ## Log
 - 2025-11-05 09:10 UTC – Scoped expiry stewardship objectives while addressing focus group requests for longer-lived expedition briefings.
 - 2025-11-05 13:45 UTC – Logged need for extension affordances after QA flagged manual DB edits during Task 49 testing.
+- 2025-11-07 10:55 UTC – Delivered share extension controls, evergreen preset, and 48-hour redaction guardrails on expired links.

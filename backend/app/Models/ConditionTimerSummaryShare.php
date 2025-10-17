@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Models\ConditionTimerSummaryShareAccess;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ConditionTimerSummaryShare extends Model
@@ -20,6 +22,10 @@ class ConditionTimerSummaryShare extends Model
         'created_by',
         'token',
         'expires_at',
+        'visibility_mode',
+        'consent_snapshot',
+        'access_count',
+        'last_accessed_at',
     ];
 
     /**
@@ -30,6 +36,8 @@ class ConditionTimerSummaryShare extends Model
         'created_at' => 'immutable_datetime',
         'updated_at' => 'immutable_datetime',
         'deleted_at' => 'immutable_datetime',
+        'consent_snapshot' => 'array',
+        'last_accessed_at' => 'immutable_datetime',
     ];
 
     public function group(): BelongsTo
@@ -40,5 +48,10 @@ class ConditionTimerSummaryShare extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function accesses(): HasMany
+    {
+        return $this->hasMany(ConditionTimerSummaryShareAccess::class);
     }
 }

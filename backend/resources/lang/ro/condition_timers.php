@@ -1,0 +1,161 @@
+<?php
+
+return [
+    'generic' => [
+        'unknown' => 'Necunoscut',
+    ],
+    'summary_page' => [
+        'head_title' => ':group • Cronometre de condiție',
+        'title' => 'Panorama condițiilor pentru :group',
+        'description' => 'Distribuie această pagină cu jucătorii pentru a-i ține la curent cu efectele persistente fără a dezvălui secretele Povestitorului.',
+    ],
+    'share_controls' => [
+        'title' => 'Distribuie panorama condițiilor',
+        'description' => 'Generează un link securizat pentru ca membrii grupului să poată consulta cele mai recente rezumate fără autentificare. Linkurile respectă preferințele de consimțământ și pot limita vizibilitatea invitaților.',
+        'no_share' => 'Nu există încă un link de partajare activ.',
+        'link' => [
+            'generated' => 'Generat la :timestamp',
+            'expires' => 'Expiră la :timestamp',
+            'visibility' => 'Vizibilitate: :mode',
+            'visibility_modes' => [
+                'details' => 'Detalii complete',
+                'counts' => 'Numărări anonimizate',
+            ],
+            'access' => 'one: :timestamp • :count vizită|few: :timestamp • :count vizite|other: :timestamp • :count de vizite',
+            'redacted' => 'Conținutul este redat doar după emiterea unui link nou pentru a proteja povestea expirată.',
+        ],
+        'form' => [
+            'expiry_preset' => 'Presetare expirare',
+            'custom_hours' => 'Ore personalizate',
+            'guest_visibility' => 'Vizibilitate pentru invitați',
+            'extension_preset' => 'Presetare extensie',
+            'extension_hours' => 'Ore suplimentare',
+            'generate' => 'Generează link de partajare',
+            'regenerate' => 'Regenerează linkul',
+            'disable' => 'Dezactivează linkul curent',
+            'extend' => 'Extinde linkul',
+            'make_evergreen' => 'Transformă în permanent',
+        ],
+        'extend' => [
+            'title' => 'Extinde acest link',
+            'description' => 'Adaugă timp suplimentar fără a crea un token nou. Extensiile sunt notate în jurnalul de acces pentru audit.',
+        ],
+        'insights' => [
+            'title' => 'Informații despre accesări',
+            'summary' => 'zero: Nu s-au înregistrat vizite în ultimele șapte nopți.|one: :count vizită înregistrată în ultimele șapte nopți.|few: :count vizite înregistrate în ultimele șapte nopți.|other: :count de vizite înregistrate în ultimele șapte nopți.',
+            'footnote' => 'Valorile cumulează traficul invitaților indiferent de dispozitiv. Rotește linkurile dacă ritmul nu se potrivește obiceiurilor grupului.',
+        ],
+        'consent' => [
+            'title' => 'Registrul consimțământelor jucătorilor',
+            'empty' => 'Nu există jucători pentru urmărirea consimțământului.',
+            'role_status' => 'Rol: :role • Stare: :status',
+            'visibility_suffix' => ' (:visibility)',
+            'recorded_at' => 'Înregistrat la :timestamp',
+            'actions' => [
+                'allow_counts' => 'Permite numărări',
+                'allow_details' => 'Permite detalii',
+                'revoke' => 'Revocă',
+            ],
+        ],
+        'audit' => [
+            'title' => 'Jurnal audit consimțământ',
+            'empty' => 'Nu există încă modificări de consimțământ.',
+            'entry' => ':action :subject (:visibility)',
+            'timestamp' => ':timestamp • gestionat de :actor',
+            'unknown_subject' => 'Jucător necunoscut',
+            'unknown_time' => 'Moment necunoscut',
+            'system_actor' => 'Sistem',
+        ],
+        'states' => [
+            'evergreen' => 'Permanent',
+            'active' => 'Activ',
+            'expiring_soon' => 'Pe cale să expire',
+            'expired' => 'Expirat',
+        ],
+        'access_trend' => [
+            'weekday_format' => ':weekday, :day :month',
+        ],
+    ],
+    'player_panel' => [
+        'title' => 'Panorama condițiilor active',
+        'description' => 'Un rezumat sigur pentru jucători al efectelor persistente și al urgenței lor. Actualizările sosesc în timp real.',
+        'hide' => 'Ascunde rezumatul',
+        'offline' => [
+            'title' => 'Piatra de legătură caută un semnal…',
+            'offline' => 'Îți reținem fiecare confirmare și o sincronizăm imediat ce revii online.',
+            'syncing' => 'Reconectare în curs—confirmările în așteptare se sincronizează acum.',
+            'queued' => 'Confirmările sunt în coadă și vor fi sincronizate în scurt timp.',
+            'pending' => 'one: :count în așteptarea sincronizării|few: :count în așteptarea sincronizării|other: :count în așteptarea sincronizării',
+        ],
+        'queued_notice' => 'Confirmarea a fost salvată offline. O vom trimite de îndată ce revii online.',
+        'conflict' => [
+            'title' => 'Conflict de sincronizare',
+            'description' => 'O condiție s-a schimbat cât timp ai fost offline. Reîmprospătează rezumatul pentru a vedea starea actuală.',
+            'dismiss' => 'Ignoră',
+        ],
+        'empty' => 'Totul este calm—niciun cronometru vizibil pentru jucători.',
+        'disposition' => [
+            'ally' => 'Aliat',
+            'neutral' => 'Forță neutră',
+            'hazard' => 'Pericol ambiental',
+            'adversary' => 'Adversar',
+            'unknown' => 'Prezență voalată',
+        ],
+        'token' => [
+            'unmapped' => 'Teren fără hartă',
+            'obscured_suffix' => ' (mascat)',
+            'effects' => 'one: :count efect|few: :count efecte|other: :count de efecte',
+        ],
+        'rounds' => [
+            'exact' => 'one: :count rundă rămasă|few: :count runde rămase|other: :count de runde rămase',
+            'fallback' => 'Efect persistent',
+        ],
+        'acknowledge_button' => [
+            'reviewed' => 'Revizuit',
+            'sync_when_online' => 'Sincronizează când revii',
+            'marking' => 'Se marchează…',
+            'mark' => 'Marchează revizuit',
+        ],
+        'acknowledgements' => 'one: :count confirmare|few: :count confirmări|other: :count de confirmări',
+        'timeline' => [
+            'title' => 'Cronica ajustărilor',
+        ],
+        'footer' => [
+            'updated' => 'Ultima actualizare :timestamp',
+            'open_share' => 'Deschide vizualizarea partajată',
+        ],
+    ],
+    'mobile' => [
+        'aria_label' => 'Rezumat mobil al cronometrului de condiție',
+        'title' => 'Rezumat condiții',
+        'offline' => [
+            'label' => 'Mod offline',
+            'status' => 'Offline',
+        ],
+        'hide' => 'Ascunde',
+        'urgency' => [
+            'critical' => 'Critic',
+            'warning' => 'Avertizare',
+            'calm' => 'Calm',
+        ],
+        'rounds' => [
+            'exact' => 'one: :count rundă rămasă|few: :count runde rămase|other: :count de runde rămase',
+            'fallback' => 'Efect persistent',
+        ],
+        'empty' => 'Nu există condiții vizibile acum. Bucură-te de liniște!',
+        'updated_recently' => 'Actualizat acum câteva clipe',
+        'updated' => 'Actualizat :relative',
+        'footer_link' => 'Deschide rezumatul complet',
+    ],
+    'share_view' => [
+        'head_title' => ':group • Panorama condițiilor partajată',
+        'title' => ':group • Panorama condițiilor partajată',
+        'description' => 'Această piatră de legătură poartă condițiile persistente ale grupului. Verifică indicatorul de prospețime înainte de acțiune—facilitatorii actualizează registrul după fiecare moment important.',
+        'summoned' => 'Invocat la :timestamp',
+        'refreshed' => 'Ultima actualizare :timestamp',
+        'retires' => 'Linkul expiră la :timestamp',
+        'redacted_banner' => 'Această panoramă a fost învăluită. Povestitorul a ascuns detaliile pentru a proteja firul narativ. Cere un link nou dacă mai ai nevoie de îndrumare.',
+        'redacted_empty' => 'Paginile acestui jurnal s-au estompat. Solicită un nou briefing pentru a afla ultimele afecțiuni.',
+        'footer' => 'Alimentat de platforma de campanie Dungen & Dragons.',
+    ],
+];

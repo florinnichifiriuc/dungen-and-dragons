@@ -22,6 +22,8 @@ class ConditionTimerAcknowledgementStoreRequest extends FormRequest
             'map_token_id' => ['required', 'integer', 'exists:map_tokens,id'],
             'condition_key' => ['required', 'string', 'max:64', Rule::in(MapToken::CONDITIONS)],
             'summary_generated_at' => ['required', 'date'],
+            'queued_at' => ['nullable', 'date'],
+            'source' => ['nullable', 'string', 'max:32', Rule::in(['online', 'offline'])],
         ];
     }
 }

@@ -4,6 +4,8 @@ export type ConditionAcknowledgementPayload = {
     token_id: number;
     condition_key: string;
     summary_generated_at: string;
+    acknowledged_at?: string;
+    queued_at?: string | null;
     acknowledged_count?: number;
     acknowledged_by_viewer?: boolean;
     actor_id?: number;

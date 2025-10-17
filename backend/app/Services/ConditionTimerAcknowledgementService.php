@@ -122,8 +122,14 @@ class ConditionTimerAcknowledgementService
         MapToken $token,
         string $conditionKey,
         CarbonImmutable $summaryGeneratedAt,
-        User $user
+        User $user,
+        ?CarbonImmutable $acknowledgedAt = null,
+        ?CarbonImmutable $queuedAt = null,
+        string $source = 'online'
     ): ConditionTimerAcknowledgement {
+        $acknowledgedAt = $acknowledgedAt ?? CarbonImmutable::now('UTC');
+        $source = in_array($source, ['online', 'offline'], true) ? $source : 'online';
+
         return ConditionTimerAcknowledgement::query()->updateOrCreate(
             [
                 'group_id' => $group->id,
@@ -133,7 +139,9 @@ class ConditionTimerAcknowledgementService
             ],
             [
                 'summary_generated_at' => $summaryGeneratedAt,
-                'acknowledged_at' => CarbonImmutable::now('UTC'),
+                'acknowledged_at' => $acknowledgedAt,
+                'queued_at' => $queuedAt,
+                'source' => $source,
             ],
         );
     }
@@ -150,6 +158,76 @@ class ConditionTimerAcknowledgementService
             ->where('condition_key', $conditionKey)
             ->where('summary_generated_at', $summaryGeneratedAt)
             ->count();
+    }
+
+    /**
+     * @param  array<string, mixed>  $options
+     * @return array<string, mixed>
+     */
+    public function exportForGroup(Group $group, array $options = []): array
+    {
+        $since = Arr::get($options, 'since');
+        $allowedUserIds = Arr::get($options, 'allowed_user_ids');
+        $visibility = Arr::get($options, 'visibility', 'counts');
+
+        $query = ConditionTimerAcknowledgement::query()
+            ->where('group_id', $group->id)
+            ->with(['user:id,name', 'token:id,name']);
+
+        if ($since instanceof CarbonImmutable) {
+            $query->where('acknowledged_at', '>=', $since);
+        }
+
+        if (is_array($allowedUserIds) && $allowedUserIds !== []) {
+            $query->whereIn('user_id', $allowedUserIds);
+        }
+
+        $acknowledgements = $query
+            ->orderBy('acknowledged_at')
+            ->orderBy('id')
+            ->get();
+
+        if ($visibility === 'details') {
+            return [
+                'mode' => 'details',
+                'entries' => $acknowledgements->map(function (ConditionTimerAcknowledgement $acknowledgement) {
+                    return [
+                        'token_id' => $acknowledgement->map_token_id,
+                        'token_label' => $acknowledgement->token?->name,
+                        'condition_key' => $acknowledgement->condition_key,
+                        'user' => $acknowledgement->user?->only(['id', 'name']),
+                        'acknowledged_at' => $acknowledgement->acknowledged_at?->toIso8601String(),
+                        'queued_at' => $acknowledgement->queued_at?->toIso8601String(),
+                        'source' => $acknowledgement->source,
+                        'summary_generated_at' => $acknowledgement->summary_generated_at?->toIso8601String(),
+                    ];
+                })->all(),
+            ];
+        }
+
+        $aggregate = $acknowledgements
+            ->groupBy(function (ConditionTimerAcknowledgement $acknowledgement): string {
+                return sprintf('%d|%s', $acknowledgement->map_token_id, $acknowledgement->condition_key);
+            })
+            ->map(fn ($items) => $items->count())
+            ->all();
+
+        return [
+            'mode' => 'counts',
+            'entries' => array_map(function (int $count, string $key) use ($acknowledgements) {
+                [$tokenId, $conditionKey] = explode('|', $key, 2);
+                $first = $acknowledgements->first(function (ConditionTimerAcknowledgement $acknowledgement) use ($tokenId, $conditionKey) {
+                    return (string) $acknowledgement->map_token_id === $tokenId && $acknowledgement->condition_key === $conditionKey;
+                });
+
+                return [
+                    'token_id' => (int) $tokenId,
+                    'token_label' => $first?->token?->name,
+                    'condition_key' => $conditionKey,
+                    'acknowledgement_count' => $count,
+                ];
+            }, $aggregate, array_keys($aggregate)),
+        ];
     }
 
     protected function composeKey(int $tokenId, string $conditionKey): string

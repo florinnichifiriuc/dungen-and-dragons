@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { ConditionTimerSummaryResource } from '@/components/condition-timers/PlayerConditionTimerSummaryPanel';
+import { getEncryptedItem, setEncryptedItem } from '@/lib/secureStorage';
 
 type UpdateOptions = {
     allowStale?: boolean;
@@ -52,12 +53,8 @@ export function useConditionTimerSummaryCache({
                     return current;
                 }
 
-                if (persist && typeof window !== 'undefined') {
-                    try {
-                        window.localStorage.setItem(storageKey, JSON.stringify(next));
-                    } catch (error) {
-                        // Swallow storage exceptions (quota, privacy mode, etc.).
-                    }
+                if (persist) {
+                    void setEncryptedItem(storageKey, next);
                 }
 
                 return next;
@@ -67,30 +64,27 @@ export function useConditionTimerSummaryCache({
     );
 
     useEffect(() => {
-        if (typeof window === 'undefined') {
-            setHydratedFromCache(true);
-            return;
-        }
+        let cancelled = false;
 
-        try {
-            const stored = window.localStorage.getItem(storageKey);
+        const hydrate = async () => {
+            const stored = await getEncryptedItem<ConditionTimerSummaryResource>(storageKey);
 
-            if (!stored) {
+            if (!stored || !stored.generated_at || cancelled) {
+                setHydratedFromCache(true);
                 return;
             }
 
-            const parsed = JSON.parse(stored) as ConditionTimerSummaryResource | null;
-
-            if (!parsed?.generated_at) {
-                return;
-            }
-
-            updateSummary(parsed, { allowStale: false, persist: false });
-        } catch (error) {
-            // Ignore hydration failures and fall back to server payload.
-        } finally {
+            updateSummary(stored, { allowStale: false, persist: false });
             setHydratedFromCache(true);
-        }
+        };
+
+        hydrate().catch(() => {
+            setHydratedFromCache(true);
+        });
+
+        return () => {
+            cancelled = true;
+        };
     }, [storageKey, updateSummary]);
 
     useEffect(() => {
