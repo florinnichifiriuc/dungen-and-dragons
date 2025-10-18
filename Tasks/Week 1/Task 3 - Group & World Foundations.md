@@ -1,6 +1,6 @@
 # Task 3 – Group & World Foundations
 
-**Status:** In Progress
+**Status:** Completed
 **Owner:** Engineering  
 **Dependencies:** Task 1, Task 2  
 **Related Backlog Items:** Create group management (create/join/roles) and policies; Build world + region CRUD with configurable turn durations and DM assignments
@@ -24,3 +24,4 @@ Implement baseline backend structures for groups, regions, and configurable turn
 
 ## Log
 - 2025-10-14 16:20 UTC – Added group/region migrations, policies, Inertia pages, and documented turn cadence workflow for scheduler stub.
+- 2025-11-24 12:30 UTC – Verified deliverables in production branch, updated status to completed, and confirmed documentation is current.
