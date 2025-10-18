@@ -19,6 +19,8 @@
 | 2025-10-17 12:20 | Milestone Demo Automation | Implemented human-paced `demo:milestones` narration command with pacing controls, documentation, and automated tests. |
 | 2025-10-18 09:45 | Realtime Collaboration | Integrated Laravel Reverb websockets, broadcasting session workspace updates and live map tile edits with Echo-powered UI syncing. |
 | 2025-10-18 13:10 | Task Board Workflow | Delivered campaign Kanban board with turn-based due dates, assignment controls, and priority reordering backed by authorization and tests. |
+| 2025-10-18 14:35 | Reverb Echo Bootstrap Fix | Updated frontend Echo configuration to target the Reverb broadcaster with a default cluster option, resolving the "Options object must provide a cluster" runtime error. |
+| 2025-10-18 15:05 | Welcome CTA Route Guard | Added a safe Ziggy route resolver so the welcome page gracefully falls back to static auth URLs when route manifests omit `register`, preventing runtime crashes for new visitors. |
 | 2025-10-19 10:20 | AI Services | Connected Ollama Gemma3 for turn summaries, AI DM delegation, and the session NPC guide with logged requests and coverage. |
 | 2025-10-20 09:15 | Search Infrastructure | Implemented scoped global search across campaigns, sessions, notes, and tasks with authorization-aware filtering and coverage. |
 | 2025-10-20 17:40 | Session Exports & Vault | Added Markdown/PDF session exports, Inertia UI download controls, and managed recording uploads with authorization-aware storage. |

@@ -25,3 +25,4 @@ Wire up Laravel Reverb so session workspaces and shared maps broadcast changes i
 ## Log
 - 2025-10-18 07:30 UTC – Planned Reverb channels, payload formatters, and Echo integration strategy for session workspace and map editors.
 - 2025-10-18 09:45 UTC – Delivered Reverb broadcasting with Echo subscribers, realtime UI updates, tests, and documentation updates.
+- 2025-10-18 14:35 UTC – Patched Echo bootstrap to use the Reverb broadcaster with a default cluster option so runtime initialization no longer fails when loading realtime features.

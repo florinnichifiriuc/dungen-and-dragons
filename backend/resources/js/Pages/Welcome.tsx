@@ -37,8 +37,23 @@ const features: FeatureCard[] = [
     },
 ];
 
+const safeRoute = (name: Parameters<typeof route>[0], fallback: string) => {
+    try {
+        return route(name);
+    } catch (error) {
+        if (import.meta.env.DEV) {
+            // eslint-disable-next-line no-console
+            console.warn(`Missing Ziggy route '${String(name)}', falling back to '${fallback}'.`, error);
+        }
+
+        return fallback;
+    }
+};
+
 export default function Welcome() {
     const heroCtaLabel = 'Create Account';
+    const registerHref = safeRoute('register', '/register');
+    const loginHref = safeRoute('login', '/login');
 
     return (
         <>
@@ -58,12 +73,12 @@ export default function Welcome() {
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-3">
                             <Button asChild size="lg" className="shadow-ambient">
-                                <Link href={route('register')}>
+                                <Link href={registerHref}>
                                     {heroCtaLabel}
                                 </Link>
                             </Button>
                             <Button asChild size="lg" variant="outline">
-                                <Link href={route('login')}>
+                                <Link href={loginHref}>
                                     Sign In
                                 </Link>
                             </Button>

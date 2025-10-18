@@ -27,3 +27,4 @@ Provide secure authentication for the platform by configuring Laravel Sanctum fo
 - **2025-10-14 13:45 UTC** – Added Sanctum stateful middleware, Axios credentials, and `/api/v1/auth/me` endpoint.
 - **2025-10-14 14:10 UTC** – Built Inertia login/register pages, dashboard shell, and shadcn form primitives; seeded demo GM/Player accounts.
 - **2025-10-14 14:25 UTC** – Documented auth workflow in README, verified Vite build and Pest suite after generating app key.
+- **2025-10-18 15:05 UTC** – Hardened welcome CTA routing with a Ziggy fallback so registration links stay functional even if client route manifests omit auth endpoints.

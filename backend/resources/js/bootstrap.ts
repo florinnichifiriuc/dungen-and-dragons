@@ -5,7 +5,7 @@ import Pusher from 'pusher-js';
 declare global {
     interface Window {
         axios: typeof axios;
-        Echo?: Echo;
+        Echo?: Echo<any>;
         Pusher?: typeof Pusher;
     }
 }
@@ -21,12 +21,14 @@ if (reverbKey) {
     const scheme = (import.meta.env.VITE_REVERB_SCHEME as string | undefined) ?? 'https';
     const portEnv = import.meta.env.VITE_REVERB_PORT as string | undefined;
     const port = portEnv ? Number(portEnv) : scheme === 'https' ? 443 : 8080;
+    const cluster = (import.meta.env.VITE_REVERB_CLUSTER as string | undefined) ?? '';
 
     window.Pusher = Pusher;
 
     window.Echo = new Echo({
-        broadcaster: 'pusher',
+        broadcaster: 'reverb',
         key: reverbKey,
+        cluster,
         wsHost: host,
         wsPort: port,
         wssPort: port,
