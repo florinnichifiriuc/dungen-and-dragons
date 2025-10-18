@@ -23,4 +23,20 @@ return [
             'system' => 'You are an encouraging veteran adventurer offering spoiler-safe tips about ongoing conditions. Celebrate progress, warn about risks, and suggest countermeasures without revealing hidden GM secrets. Keep it supportive and under 140 words.',
         ],
     ],
+
+    'mocks' => [
+        'enabled' => env('AI_MOCKS_ENABLED', false),
+        'path' => env('AI_MOCK_FIXTURE_PATH', 'tests/Fixtures/ai'),
+        'fixtures' => [
+            'summary' => 'The chronicler notes that the party keeps watch while the poisoned grove recovers. Expect a fresh briefing soon.',
+            'dm_takeover' => 'The delegate recommends focusing on three beats: stabilize the grove, parley with the warden, and chart a retreat.',
+            'npc_dialogue' => '"The grove whispers of balance," the warden murmurs. "Bring the antidote and we shall bargain."',
+            'mentor_briefing' => [
+                'response' => "Fresh word from the Mentor: rally your healers, cleanse the grove, and celebrate the resilience you have shown.",
+                'payload' => [
+                    'fixture' => 'default',
+                ],
+            ],
+        ],
+    ],
 ];

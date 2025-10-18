@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\BugReport;
 use App\Models\Campaign;
 use App\Models\CampaignInvitation;
 use App\Models\CampaignQuest;
@@ -21,6 +22,7 @@ use App\Models\Map;
 use App\Models\MapTile;
 use App\Models\MapToken;
 use App\Models\TileTemplate;
+use App\Policies\BugReportPolicy;
 use App\Policies\CampaignPolicy;
 use App\Policies\CampaignInvitationPolicy;
 use App\Policies\CampaignQuestPolicy;
@@ -42,6 +44,10 @@ use App\Policies\TileTemplatePolicy;
 use App\Policies\CampaignEntityPolicy;
 use App\Events\AnalyticsEventDispatched;
 use App\Listeners\PersistAnalyticsEvent;
+use App\Services\AiContentFake;
+use App\Services\AiContentService;
+use App\Services\ConditionMentorPromptManifest;
+use App\Support\Ai\AiResponseFixtureRepository;
 use Faker\Factory as FakerFactory;
 use Faker\Generator as FakerGenerator;
 use Faker\Provider\Base as BaseProvider;
@@ -49,6 +55,7 @@ use Faker\Provider\Lorem as LoremProvider;
 use Faker\Provider\en_US\Person as EnUsPersonProvider;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -70,6 +77,25 @@ class AppServiceProvider extends ServiceProvider
 
             return $faker;
         });
+
+        if ($this->shouldRegisterAiMocks()) {
+            $this->app->singleton(AiResponseFixtureRepository::class, function ($app): AiResponseFixtureRepository {
+                $path = $app->basePath($app['config']->get('ai.mocks.path', 'tests/Fixtures/ai'));
+
+                return new AiResponseFixtureRepository(
+                    $app->make(Filesystem::class),
+                    $path,
+                    $app['config']->get('ai.mocks.fixtures', []),
+                );
+            });
+
+            $this->app->singleton(AiContentService::class, function ($app): AiContentService {
+                return new AiContentFake(
+                    $app->make(ConditionMentorPromptManifest::class),
+                    $app->make(AiResponseFixtureRepository::class),
+                );
+            });
+        }
     }
 
     /**
@@ -96,6 +122,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(CampaignInvitation::class, CampaignInvitationPolicy::class);
         Gate::policy(CampaignQuest::class, CampaignQuestPolicy::class);
         Gate::policy(CampaignQuestUpdate::class, CampaignQuestUpdatePolicy::class);
+        Gate::policy(BugReport::class, BugReportPolicy::class);
 
         Event::listen(AnalyticsEventDispatched::class, PersistAnalyticsEvent::class);
 
@@ -104,5 +131,16 @@ class AppServiceProvider extends ServiceProvider
             $faker->addProvider(new LoremProvider($faker));
             $faker->addProvider(new EnUsPersonProvider($faker));
         });
+    }
+
+    protected function shouldRegisterAiMocks(): bool
+    {
+        $config = $this->app['config'];
+
+        if ($this->app->runningUnitTests()) {
+            return true;
+        }
+
+        return (bool) $config->get('ai.mocks.enabled', false);
     }
 }

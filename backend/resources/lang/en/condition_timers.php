@@ -207,4 +207,18 @@ return [
         ],
         'footer' => 'Powered by the Dungen & Dragons campaign workspace.',
     ],
+    'bug_report_share' => [
+        'head_title' => ':group • Report an Issue',
+        'title' => 'Report an issue for :group',
+        'description' => 'Describe what felt off so we can keep the condition outlook accurate for every table.',
+        'contact_hint' => 'Include steps, browser details, and your email if you want a follow-up.',
+        'back_to_summary' => 'Return to condition outlook',
+        'group_fallback' => 'your table',
+    ],
+    'bug_report_entry' => [
+        'facilitator_cta' => 'Report a launch bug',
+        'facilitator_hint' => 'Opens the facilitator intake form with this summary’s context.',
+        'share_cta' => 'Spot an issue? Report it',
+        'share_hint' => 'Help the team debug faster by sharing what went wrong.',
+    ],
 ];

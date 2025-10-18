@@ -1,0 +1,11 @@
+{
+    "response": "Mentor fixture: Triage the poisoned grove, rally the scouts, and prepare restorative rituals.",
+    "payload": {
+        "fixture": "mentor_briefing",
+        "focus": {
+            "critical_conditions": ["Sir Reginald • Poisoned"],
+            "unacknowledged_tokens": [],
+            "recurring_conditions": []
+        }
+    }
+}

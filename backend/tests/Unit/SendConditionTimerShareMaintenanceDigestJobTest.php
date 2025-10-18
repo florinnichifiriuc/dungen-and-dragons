@@ -20,7 +20,7 @@ class SendConditionTimerShareMaintenanceDigestJobTest extends TestCase
 
     public function test_job_logs_attention_when_snapshot_requires_action(): void
     {
-        $this->freezeTime(CarbonImmutable::parse('2025-11-21 16:00:00', 'UTC'));
+        $this->travelTo(CarbonImmutable::parse('2025-11-21 16:00:00', 'UTC'));
 
         config()->set('condition-transparency.maintenance.quiet_hour_attention_ratio', 0.25);
 
@@ -66,6 +66,8 @@ class SendConditionTimerShareMaintenanceDigestJobTest extends TestCase
                     && $context['group_id'] === $group->id
                     && in_array('consent_missing', $context['reasons'], true);
             });
+
+        $this->travelBack();
     }
 
     public function test_job_skips_when_no_attention_needed(): void

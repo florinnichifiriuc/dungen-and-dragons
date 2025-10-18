@@ -32,18 +32,18 @@
 - [x] Task 79 – Maintenance Interface Tests (feature tests for the maintenance API and artisan command output).
 - [x] Task 80 – Maintenance Digest Test Suite (job log assertions for attention versus healthy scenarios).
 - [x] Task 81 – Maintenance Rollout Tracking (progress log updates and follow-up alignment notes).
-- [ ] Task 82 – Release Candidate Scope and Timeline (final two-week schedule, risk register, and cross-team checkpoints).
-- [ ] Task 83 – AI Service Mocking and Test Harness (fixture-backed AI replacements powering all automated tests).
-- [ ] Task 84 – Unit Test Hardening Sprint (coverage review, edge-case specs, and CI gates).
-- [ ] Task 85 – End-to-End Regression Scenarios (Playwright suite for facilitator, player, and admin journeys).
-- [ ] Task 86 – Bug Reporting Intake Experience (player/facilitator submission flows with telemetry capture).
-- [ ] Task 87 – Admin Bug Triage Platform (role-gated dashboards for intake review and assignment).
-- [ ] Task 88 – Bug Workflow Automation and Reporting (alerts, analytics widgets, and escalation playbooks).
-- [ ] Task 89 – Release Monitoring and Rollback Readiness (observability, synthetic checks, and rollback drills).
-- [ ] Task 90 – Launch Communications and Support Playbook (announcements, support scripts, and knowledge base updates).
-- [ ] Task 91 – Launch Go/No-Go and Post-Launch Review (decision checkpoints, documentation, and retro scheduling).
+- [x] Task 82 – Release Candidate Scope and Timeline (final two-week schedule, risk register, and cross-team checkpoints).
+- [x] Task 83 – AI Service Mocking and Test Harness (fixture-backed AI replacements powering all automated tests).
+- [x] Task 84 – Unit Test Hardening Sprint (coverage review, edge-case specs, and CI gates).
+- [x] Task 85 – End-to-End Regression Scenarios (Playwright suite for facilitator, player, and admin journeys).
+- [x] Task 86 – Bug Reporting Intake Experience (player/facilitator submission flows with telemetry capture).
+- [x] Task 87 – Admin Bug Triage Platform (role-gated dashboards for intake review and assignment).
+- [x] Task 88 – Bug Workflow Automation and Reporting (alerts, analytics widgets, and escalation playbooks).
+- [x] Task 89 – Release Monitoring and Rollback Readiness (observability, synthetic checks, and rollback drills).
+- [x] Task 90 – Launch Communications and Support Playbook (announcements, support scripts, and knowledge base updates).
+- [x] Task 91 – Launch Go/No-Go and Post-Launch Review (decision checkpoints, documentation, and retro scheduling).
 ## In Progress
-
+- _None_
 ## Completed
 - Initial architectural plan updated for multi-group, turn-based world.
 - Task 1 – Project Bootstrap (Laravel + Inertia React scaffolding, tooling)

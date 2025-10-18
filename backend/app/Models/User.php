@@ -27,6 +27,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_support_admin',
         'locale',
         'timezone',
         'theme',
@@ -56,6 +57,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'high_contrast' => 'boolean',
             'font_scale' => 'integer',
+            'is_support_admin' => 'boolean',
         ];
     }
 

@@ -5,9 +5,11 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "lint": "eslint --ext .ts,.tsx resources/js/components/condition-timers/ConditionTimerShareLinkControls.tsx resources/js/components/condition-timers/MobileConditionTimerRecapWidget.tsx resources/js/components/condition-timers/PlayerConditionTimerSummaryPanel.tsx resources/js/Pages/Groups/ConditionTimerSummary.tsx resources/js/Pages/Shares/ConditionTimerSummary.tsx"
+        "lint": "eslint --ext .ts,.tsx resources/js/components/condition-timers/ConditionTimerShareLinkControls.tsx resources/js/components/condition-timers/MobileConditionTimerRecapWidget.tsx resources/js/components/condition-timers/PlayerConditionTimerSummaryPanel.tsx resources/js/Pages/Groups/ConditionTimerSummary.tsx resources/js/Pages/Shares/ConditionTimerSummary.tsx",
+        "test:e2e": "playwright test"
     },
     "devDependencies": {
+        "@playwright/test": "^1.48.2",
         "@types/node": "^22.7.5",
         "@types/react": "^18.3.11",
         "@types/react-dom": "^18.3.1",

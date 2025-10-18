@@ -1,0 +1,7 @@
+{
+    "response": "[The warden leans on his staff] \"The spores answer only to harmony. Show me your cure.\"",
+    "payload": {
+        "fixture": "npc_dialogue",
+        "tone": "urgent"
+    }
+}
