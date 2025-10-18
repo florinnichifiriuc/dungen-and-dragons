@@ -1,6 +1,7 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 
 import AppLayout from '@/Layouts/AppLayout';
+import { AiIdeaPanel } from '@/components/AiIdeaPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,6 +31,7 @@ type TileTemplateForm = {
     defense_bonus: number | string;
     world_id: number | '';
     image_path: string;
+    image_upload: File | null;
     edge_profile: string;
 };
 
@@ -42,19 +44,45 @@ export default function TileTemplateEdit({ group, worlds, template }: TileTempla
         defense_bonus: template.defense_bonus,
         world_id: template.world_id ?? '',
         image_path: template.image_path ?? '',
+        image_upload: null,
         edge_profile: template.edge_profile ? JSON.stringify(template.edge_profile, null, 2) : '',
     });
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        form.put(route('groups.tile-templates.update', [group.id, template.id]));
+        form.post(route('groups.tile-templates.update', [group.id, template.id]), {
+            forceFormData: true,
+            method: 'put',
+        });
+    };
+
+    const applyAiFields = (fields: Record<string, unknown>) => {
+        if (typeof fields.name === 'string') {
+            form.setData('name', fields.name);
+        }
+
+        if (typeof fields.terrain_type === 'string') {
+            form.setData('terrain_type', fields.terrain_type);
+        }
+
+        if (typeof fields.movement_cost === 'number') {
+            form.setData('movement_cost', fields.movement_cost);
+        }
+
+        if (typeof fields.defense_bonus === 'number') {
+            form.setData('defense_bonus', fields.defense_bonus);
+        }
+
+        if (typeof fields.edge_profile === 'string') {
+            form.setData('edge_profile', fields.edge_profile);
+        }
     };
 
     return (
         <AppLayout>
             <Head title={`Edit ${template.name} · ${group.name}`} />
 
-            <div className="mx-auto max-w-3xl">
+            <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[2fr,1fr]">
                 <div className="mb-6 flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-semibold text-zinc-100">Edit tile template</h1>
@@ -65,7 +93,7 @@ export default function TileTemplateEdit({ group, worlds, template }: TileTempla
                     </Button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6 rounded-xl border border-zinc-800 bg-zinc-950/60 p-6">
                     <div className="space-y-2">
                         <Label htmlFor="name">Name</Label>
                         <Input
@@ -92,10 +120,21 @@ export default function TileTemplateEdit({ group, worlds, template }: TileTempla
                                 id="terrain_type"
                                 value={form.data.terrain_type}
                                 onChange={(event) => form.setData('terrain_type', event.target.value)}
+                                list="terrain-options"
                             />
                             {form.errors.terrain_type && <p className="text-sm text-rose-400">{form.errors.terrain_type}</p>}
                         </div>
                     </div>
+
+                    <datalist id="terrain-options">
+                        <option value="forest" />
+                        <option value="mountain" />
+                        <option value="river" />
+                        <option value="swamp" />
+                        <option value="ruins" />
+                        <option value="road" />
+                        <option value="village" />
+                    </datalist>
 
                     <div className="grid gap-4 sm:grid-cols-3">
                         <div className="space-y-2">
@@ -154,12 +193,27 @@ export default function TileTemplateEdit({ group, worlds, template }: TileTempla
                     </div>
 
                     <div className="space-y-2">
+                        <Label htmlFor="image_upload">Replace preview (optional)</Label>
+                        <Input
+                            id="image_upload"
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            onChange={(event) => form.setData('image_upload', event.target.files?.[0] ?? null)}
+                        />
+                        {form.errors.image_upload && <p className="text-sm text-rose-400">{form.errors.image_upload}</p>}
+                    </div>
+
+                    <div className="space-y-2">
                         <Label htmlFor="edge_profile">Edge profile JSON (optional)</Label>
                         <Textarea
                             id="edge_profile"
                             value={form.data.edge_profile}
                             onChange={(event) => form.setData('edge_profile', event.target.value)}
+                            rows={4}
                         />
+                        <p className="text-xs text-zinc-500">
+                            Update how this tile connects to neighbors. Use JSON keys like <code>north</code>, <code>south</code>, <code>east</code>, and <code>west</code>.
+                        </p>
                         {form.errors.edge_profile && <p className="text-sm text-rose-400">{form.errors.edge_profile}</p>}
                     </div>
 
@@ -177,6 +231,15 @@ export default function TileTemplateEdit({ group, worlds, template }: TileTempla
                         </Button>
                     </div>
                 </form>
+
+                <AiIdeaPanel
+                    endpoint={route('groups.ai.tile-templates', group.id)}
+                    title="Refresh with AI guidance"
+                    description="Need to reposition this tile for a new region? Ask the mentor for fresh stats, edge notes, or art ideas and apply what fits."
+                    submitLabel="Suggest refinements"
+                    applyLabel="Apply to template"
+                    onApply={applyAiFields}
+                />
             </div>
         </AppLayout>
     );

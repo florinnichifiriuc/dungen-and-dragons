@@ -3,12 +3,15 @@ import { FormEvent, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 
 import AppLayout from '@/Layouts/AppLayout';
+import { AiIdeaPanel, type AiIdeaResult } from '@/components/AiIdeaPanel';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { InputError } from '@/components/InputError';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+
+import { lorePresets } from './lorePresets';
 
 type CampaignSummary = {
     id: number;
@@ -141,6 +144,61 @@ export default function CampaignEntityEdit({
         setTagDraft('');
     };
 
+    const applyLoreFields = (fields: Record<string, unknown>, result?: AiIdeaResult) => {
+        if (typeof fields.name === 'string' && fields.name.trim() !== '') {
+            setData('name', fields.name.trim());
+        }
+
+        if (typeof fields.alias === 'string') {
+            setData('alias', fields.alias.trim());
+        }
+
+        if (typeof fields.pronunciation === 'string') {
+            setData('pronunciation', fields.pronunciation.trim());
+        }
+
+        if (typeof fields.entity_type === 'string') {
+            const type = fields.entity_type.trim();
+            if (available_types.includes(type)) {
+                setData('entity_type', type);
+            }
+        }
+
+        if (typeof fields.visibility === 'string') {
+            const visibility = fields.visibility.trim();
+            if (visibility_options.includes(visibility)) {
+                setData('visibility', visibility);
+            }
+        }
+
+        if (typeof fields.ai_controlled === 'boolean') {
+            setData('ai_controlled', fields.ai_controlled);
+        }
+
+        const tags: string[] = Array.isArray(fields.tags)
+            ? fields.tags
+                  .map((tag) => (typeof tag === 'string' ? tag.trim() : ''))
+                  .filter((tag) => tag !== '')
+            : typeof fields.tags === 'string'
+              ? fields.tags
+                    .split(/[,#\n]+/)
+                    .map((tag) => tag.trim())
+                    .filter((tag) => tag !== '')
+              : [];
+
+        if (tags.length > 0) {
+            setData('tags', Array.from(new Set(tags)));
+        }
+
+        if (typeof fields.description === 'string' && fields.description.trim() !== '') {
+            setData('description', fields.description.trim());
+        } else if (typeof fields.summary === 'string' && fields.summary.trim() !== '') {
+            setData('description', fields.summary.trim());
+        } else if (result?.summary && result.summary.trim() !== '') {
+            setData('description', result.summary.trim());
+        }
+    };
+
     const updateStat = (index: number, field: keyof StatEntry, value: string) => {
         const stats = data.stats.slice();
         stats[index] = { ...stats[index], [field]: value };
@@ -167,29 +225,31 @@ export default function CampaignEntityEdit({
         <AppLayout>
             <Head title={`Edit lore · ${entity.name}`} />
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 className="text-3xl font-semibold text-zinc-100">Edit lore entry</h1>
-                    <p className="mt-1 text-sm text-zinc-400">
-                        Update details as the story evolves. Keep tags and stats aligned with the latest chronicles.
-                    </p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <Button asChild variant="outline" className="border-zinc-700 text-sm text-zinc-300">
-                        <Link href={route('campaigns.entities.show', [campaign.id, entity.id])}>View entry</Link>
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={destroy}
-                        className="border-rose-700/60 text-sm text-rose-200 hover:bg-rose-900/40"
-                    >
-                        Archive
-                    </Button>
-                </div>
-            </div>
+            <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,2.5fr),minmax(0,1fr)]">
+                <div className="space-y-6">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h1 className="text-3xl font-semibold text-zinc-100">Edit lore entry</h1>
+                            <p className="mt-1 text-sm text-zinc-400">
+                                Update details as the story evolves. Keep tags and stats aligned with the latest chronicles.
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Button asChild variant="outline" className="border-zinc-700 text-sm text-zinc-300">
+                                <Link href={route('campaigns.entities.show', [campaign.id, entity.id])}>View entry</Link>
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={destroy}
+                                className="border-rose-700/60 text-sm text-rose-200 hover:bg-rose-900/40"
+                            >
+                                Archive
+                            </Button>
+                        </div>
+                    </div>
 
-            <form onSubmit={submit} className="mt-6 space-y-8">
+                    <form onSubmit={submit} className="space-y-8">
                 <section className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/30">
                     <h2 className="text-lg font-semibold text-zinc-100">Essentials</h2>
                     <p className="text-sm text-zinc-500">
@@ -473,15 +533,49 @@ export default function CampaignEntityEdit({
                     <InputError message={errors.tags} className="mt-2" />
                 </section>
 
-                <div className="flex items-center justify-end gap-3">
-                    <Button asChild variant="outline" className="border-zinc-700 text-sm text-zinc-300">
-                        <Link href={route('campaigns.entities.show', [campaign.id, entity.id])}>Cancel</Link>
-                    </Button>
-                    <Button type="submit" disabled={processing} className="bg-amber-500/30 text-amber-100">
-                        Update lore entry
-                    </Button>
+                    <div className="flex items-center justify-end gap-3">
+                        <Button asChild variant="outline" className="border-zinc-700 text-sm text-zinc-300">
+                            <Link href={route('campaigns.entities.show', [campaign.id, entity.id])}>Cancel</Link>
+                        </Button>
+                        <Button type="submit" disabled={processing} className="bg-amber-500/30 text-amber-100">
+                            Update lore entry
+                        </Button>
+                    </div>
+                </form>
                 </div>
-            </form>
+
+                <aside className="space-y-4">
+                    <AiIdeaPanel
+                        endpoint={route('campaigns.ai.lore', campaign.id)}
+                        title="Consult the lore steward"
+                        description="Describe new plot beats, relationships, or mysteries. The steward proposes refreshed names, aliases, tags, and summaries to weave into this entry."
+                        submitLabel="Suggest revisions"
+                        applyLabel="Apply suggestion"
+                        onApply={applyLoreFields}
+                    />
+
+                    <section className="rounded-xl border border-amber-500/30 bg-amber-900/20 p-4 shadow-inner shadow-amber-900/30">
+                        <h3 className="text-sm font-semibold text-amber-100">Quick lore seeds</h3>
+                        <p className="mt-1 text-xs text-amber-200/80">Swap in a preset concept to overhaul this entry in one click.</p>
+                        <ul className="mt-3 space-y-3">
+                            {lorePresets.map((preset) => (
+                                <li key={preset.id} className="rounded-lg border border-amber-500/20 bg-amber-950/20 p-3">
+                                    <p className="text-sm font-semibold text-amber-100">{preset.title}</p>
+                                    <p className="mt-1 text-xs text-amber-200/80">{preset.summary}</p>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        className="mt-3 bg-amber-500/30 text-amber-100 hover:bg-amber-500/40"
+                                        onClick={() => applyLoreFields(preset.fields)}
+                                    >
+                                        Use this seed
+                                    </Button>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                </aside>
+            </div>
         </AppLayout>
     );
 }

@@ -14,6 +14,7 @@ use App\Models\Region;
 use App\Models\DiceRoll;
 use App\Models\InitiativeEntry;
 use App\Models\CampaignSession;
+use App\Models\User;
 use App\Models\CampaignEntity;
 use App\Models\SessionNote;
 use App\Models\TurnConfiguration;
@@ -123,6 +124,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(CampaignQuest::class, CampaignQuestPolicy::class);
         Gate::policy(CampaignQuestUpdate::class, CampaignQuestUpdatePolicy::class);
         Gate::policy(BugReport::class, BugReportPolicy::class);
+
+        Gate::define('manageUserRoles', fn (User $user): bool => $user->isAdmin());
 
         Event::listen(AnalyticsEventDispatched::class, PersistAnalyticsEvent::class);
 

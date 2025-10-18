@@ -37,6 +37,7 @@ class HandleInertiaRequests extends Middleware
                     'id',
                     'name',
                     'email',
+                    'account_role',
                     'locale',
                     'timezone',
                     'theme',

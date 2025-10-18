@@ -3,8 +3,12 @@
 namespace App\Services;
 
 use App\Models\AiRequest;
+use App\Models\Campaign;
+use App\Models\CampaignEntity;
+use App\Models\CampaignQuest;
 use App\Models\CampaignSession;
 use App\Models\Group;
+use App\Models\Map;
 use App\Models\Region;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -110,6 +114,257 @@ class AiContentService
         return [
             'request' => $request->fresh(),
             'briefing' => $response,
+        ];
+    }
+
+    public function draftWorld(Group $group, string $prompt, ?User $requestedBy = null): array
+    {
+        $fullPrompt = $this->buildWorldIdeaPrompt($group, $prompt);
+
+        $request = $this->storeRequest(
+            requestType: 'world_brief',
+            context: $group,
+            prompt: $fullPrompt,
+            meta: array_filter(['prompt' => $prompt]),
+            requestedBy: $requestedBy,
+        );
+
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.world_brief.system'));
+
+        $fallback = $this->fallbackWorldIdea($group, $prompt);
+        $decoded = $this->decodeIdeaPayload($response);
+
+        if (! $decoded) {
+            return $fallback;
+        }
+
+        $fields = $fallback['fields'];
+        $fields['name'] = $this->coalesceString($decoded, ['name', 'title'], (string) $fields['name']);
+        $fields['summary'] = $this->coalesceString($decoded, ['summary', 'tagline'], (string) $fields['summary']);
+        $fields['description'] = $this->coalesceString($decoded, ['description', 'lore'], (string) $fields['description']);
+        $fields['default_turn_duration_hours'] = (int) ($decoded['default_turn_duration_hours'] ?? $decoded['turn_cadence'] ?? $fields['default_turn_duration_hours']);
+
+        return [
+            'summary' => $this->coalesceString($decoded, ['summary', 'overview', 'description'], $fallback['summary']),
+            'fields' => $fields,
+            'tips' => $this->stringList($decoded['beats'] ?? $decoded['tips'] ?? $fallback['tips']),
+            'image_prompt' => $this->coalesceOptionalString($decoded, ['image_prompt', 'art_prompt'], $fallback['image_prompt']),
+        ];
+    }
+
+    public function draftRegion(Group $group, string $prompt, ?User $requestedBy = null): array
+    {
+        $fullPrompt = $this->buildRegionIdeaPrompt($group, $prompt);
+
+        $request = $this->storeRequest(
+            requestType: 'region_brief',
+            context: $group,
+            prompt: $fullPrompt,
+            meta: array_filter(['prompt' => $prompt]),
+            requestedBy: $requestedBy,
+        );
+
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.region_brief.system'));
+
+        $fallback = $this->fallbackRegionIdea($group, $prompt);
+        $decoded = $this->decodeIdeaPayload($response);
+
+        if (! $decoded) {
+            return $fallback;
+        }
+
+        $fields = $fallback['fields'];
+        $fields['name'] = $this->coalesceString($decoded, ['name', 'title'], (string) $fields['name']);
+        $fields['summary'] = $this->coalesceString($decoded, ['summary', 'hook'], (string) $fields['summary']);
+        $fields['description'] = $this->coalesceString($decoded, ['description', 'details'], (string) $fields['description']);
+        $fields['turn_duration_hours'] = (int) ($decoded['turn_duration_hours'] ?? $decoded['cadence'] ?? $fields['turn_duration_hours']);
+
+        return [
+            'summary' => $this->coalesceString($decoded, ['summary', 'overview', 'description'], $fallback['summary']),
+            'fields' => $fields,
+            'tips' => $this->stringList($decoded['beats'] ?? $decoded['encounters'] ?? $fallback['tips']),
+            'image_prompt' => $this->coalesceOptionalString($decoded, ['image_prompt', 'map_prompt'], $fallback['image_prompt']),
+        ];
+    }
+
+    public function draftTileTemplate(Group $group, string $prompt, ?User $requestedBy = null): array
+    {
+        $fullPrompt = $this->buildTileTemplatePrompt($group, $prompt);
+
+        $request = $this->storeRequest(
+            requestType: 'tile_template_brief',
+            context: $group,
+            prompt: $fullPrompt,
+            meta: array_filter(['prompt' => $prompt]),
+            requestedBy: $requestedBy,
+        );
+
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.tile_template_brief.system'));
+
+        $fallback = $this->fallbackTileTemplateIdea($group, $prompt);
+        $decoded = $this->decodeIdeaPayload($response);
+
+        if (! $decoded) {
+            return $fallback;
+        }
+
+        $fields = $fallback['fields'];
+        $fields['name'] = $this->coalesceString($decoded, ['name', 'title'], (string) $fields['name']);
+        $fields['terrain_type'] = $this->coalesceString($decoded, ['terrain_type', 'terrain'], (string) $fields['terrain_type']);
+        $fields['movement_cost'] = (int) ($decoded['movement_cost'] ?? $decoded['travel_cost'] ?? $fields['movement_cost']);
+        $fields['defense_bonus'] = (int) ($decoded['defense_bonus'] ?? $decoded['defence_bonus'] ?? $fields['defense_bonus']);
+        $fields['edge_profile'] = $this->coalesceString($decoded, ['edge_profile', 'edges'], (string) $fields['edge_profile']);
+
+        return [
+            'summary' => $this->coalesceString($decoded, ['summary', 'description', 'notes'], $fallback['summary']),
+            'fields' => $fields,
+            'tips' => $this->stringList($decoded['tactics'] ?? $decoded['tips'] ?? $fallback['tips']),
+            'image_prompt' => $this->coalesceOptionalString($decoded, ['image_prompt', 'texture_prompt'], $fallback['image_prompt']),
+        ];
+    }
+
+    public function draftMapPlan(Map $map, string $prompt, ?User $requestedBy = null): array
+    {
+        $fullPrompt = $this->buildMapPlanPrompt($map, $prompt);
+
+        $request = $this->storeRequest(
+            requestType: 'map_plan',
+            context: $map,
+            prompt: $fullPrompt,
+            meta: array_filter(['prompt' => $prompt]),
+            requestedBy: $requestedBy,
+        );
+
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.map_plan.system'));
+
+        $fallback = $this->fallbackMapPlan($map, $prompt);
+        $decoded = $this->decodeIdeaPayload($response);
+
+        if (! $decoded) {
+            return $fallback;
+        }
+
+        $fields = $fallback['fields'];
+        $fields['width'] = (int) ($decoded['width'] ?? $fields['width']);
+        $fields['height'] = (int) ($decoded['height'] ?? $fields['height']);
+        $fields['orientation'] = $this->coalesceString($decoded, ['orientation', 'grid_orientation'], (string) $fields['orientation']);
+        $fields['fog_data'] = $this->coalesceString($decoded, ['fog_data', 'fog'], (string) $fields['fog_data']);
+
+        return [
+            'summary' => $this->coalesceString($decoded, ['summary', 'description'], $fallback['summary']),
+            'fields' => $fields,
+            'tips' => $this->stringList($decoded['points_of_interest'] ?? $decoded['tips'] ?? $fallback['tips']),
+            'image_prompt' => $this->coalesceOptionalString($decoded, ['image_prompt', 'render_prompt'], $fallback['image_prompt']),
+        ];
+    }
+
+    public function draftCampaignTasks(Campaign $campaign, string $prompt, ?User $requestedBy = null): array
+    {
+        $fullPrompt = $this->buildTaskIdeaPrompt($campaign, $prompt);
+
+        $request = $this->storeRequest(
+            requestType: 'campaign_task_brief',
+            context: $campaign,
+            prompt: $fullPrompt,
+            meta: array_filter(['prompt' => $prompt]),
+            requestedBy: $requestedBy,
+        );
+
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.campaign_task_brief.system'));
+
+        $fallback = $this->fallbackCampaignTasks($campaign, $prompt);
+        $decoded = $this->decodeIdeaPayload($response);
+
+        if (! $decoded) {
+            return $fallback;
+        }
+
+        $tasks = $decoded['tasks'] ?? [];
+        if (is_array($tasks) && count($tasks) > 0) {
+            $first = $tasks[0];
+            if (is_array($first)) {
+                $fallback['fields']['title'] = $this->coalesceString($first, ['title', 'name'], (string) $fallback['fields']['title']);
+                $fallback['fields']['description'] = $this->coalesceString($first, ['description', 'details'], (string) $fallback['fields']['description']);
+            }
+            $fallback['tips'] = array_map(fn ($task) => is_array($task) ? ($task['title'] ?? $task['name'] ?? '') : (string) $task, $tasks);
+            $fallback['tips'] = array_values(array_filter(array_map('strval', $fallback['tips'])));
+        } else {
+            $fallback['fields']['title'] = $this->coalesceString($decoded, ['title', 'task'], (string) $fallback['fields']['title']);
+            $fallback['fields']['description'] = $this->coalesceString($decoded, ['description', 'details'], (string) $fallback['fields']['description']);
+            $fallback['tips'] = $this->stringList($decoded['tips'] ?? $fallback['tips']);
+        }
+
+        return $fallback;
+    }
+
+    public function draftLoreEntry(Campaign $campaign, string $prompt, ?User $requestedBy = null): array
+    {
+        $fullPrompt = $this->buildLoreIdeaPrompt($campaign, $prompt);
+
+        $request = $this->storeRequest(
+            requestType: 'lore_brief',
+            context: $campaign,
+            prompt: $fullPrompt,
+            meta: array_filter(['prompt' => $prompt]),
+            requestedBy: $requestedBy,
+        );
+
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.lore_brief.system'));
+
+        $fallback = $this->fallbackLoreIdea($campaign, $prompt);
+        $decoded = $this->decodeIdeaPayload($response);
+
+        if (! $decoded) {
+            return $fallback;
+        }
+
+        $fields = $fallback['fields'];
+        $fields['name'] = $this->coalesceString($decoded, ['name', 'title'], (string) $fields['name']);
+        $fields['alias'] = $this->coalesceOptionalString($decoded, ['alias', 'epithet'], $fields['alias']);
+        $fields['entity_type'] = $this->coalesceString($decoded, ['entity_type', 'type'], (string) $fields['entity_type']);
+        $fields['description'] = $this->coalesceString($decoded, ['description', 'lore'], (string) $fields['description']);
+        $fields['tags'] = $this->stringList($decoded['tags'] ?? $fields['tags']);
+
+        return [
+            'summary' => $this->coalesceString($decoded, ['summary', 'description'], $fallback['summary']),
+            'fields' => $fields,
+            'tips' => $this->stringList($decoded['hooks'] ?? $decoded['tips'] ?? $fallback['tips']),
+            'image_prompt' => $this->coalesceOptionalString($decoded, ['image_prompt', 'portrait_prompt'], $fallback['image_prompt']),
+        ];
+    }
+
+    public function draftQuest(Campaign $campaign, string $prompt, ?User $requestedBy = null): array
+    {
+        $fullPrompt = $this->buildQuestIdeaPrompt($campaign, $prompt);
+
+        $request = $this->storeRequest(
+            requestType: 'quest_brief',
+            context: $campaign,
+            prompt: $fullPrompt,
+            meta: array_filter(['prompt' => $prompt]),
+            requestedBy: $requestedBy,
+        );
+
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.quest_brief.system'));
+
+        $fallback = $this->fallbackQuestIdea($campaign, $prompt);
+        $decoded = $this->decodeIdeaPayload($response);
+
+        if (! $decoded) {
+            return $fallback;
+        }
+
+        $fields = $fallback['fields'];
+        $fields['title'] = $this->coalesceString($decoded, ['title', 'name'], (string) $fields['title']);
+        $fields['summary'] = $this->coalesceString($decoded, ['summary', 'hook'], (string) $fields['summary']);
+        $fields['description'] = $this->coalesceString($decoded, ['description', 'details'], (string) $fields['description']);
+        $fields['objectives'] = $this->stringList($decoded['objectives'] ?? $fields['objectives']);
+
+        return [
+            'summary' => $this->coalesceString($decoded, ['summary', 'description'], $fallback['summary']),
+            'fields' => $fields,
+            'tips' => $this->stringList($decoded['twists'] ?? $decoded['tips'] ?? $fallback['tips']),
+            'image_prompt' => $this->coalesceOptionalString($decoded, ['image_prompt', 'scene_prompt'], $fallback['image_prompt']),
         ];
     }
 
@@ -329,6 +584,348 @@ class AiContentService
         return implode("\n", array_filter($lines, fn ($line) => $line !== ''));
     }
 
+    protected function buildWorldIdeaPrompt(Group $group, string $prompt): string
+    {
+        $lines = [];
+        $lines[] = sprintf('Group: %s (ID %d)', $group->name, $group->id);
+        $lines[] = 'Task: Draft a JSON payload describing a new shared campaign world.';
+        $lines[] = 'Required keys: name (string), summary (string), description (string), default_turn_duration_hours (integer), tips (array of strings), image_prompt (string).';
+        $lines[] = 'Keep the tone cooperative, adventurous, and inclusive for D&D tables.';
+
+        if (trim($prompt) !== '') {
+            $lines[] = 'Inspiration: '.$prompt;
+        }
+
+        return implode("\n", $lines);
+    }
+
+    protected function buildRegionIdeaPrompt(Group $group, string $prompt): string
+    {
+        $lines = [];
+        $lines[] = sprintf('Group: %s (ID %d)', $group->name, $group->id);
+        $lines[] = 'Task: Produce JSON describing a new region assignment within an existing world.';
+        $lines[] = 'Required keys: name, summary, description, turn_duration_hours, tips (array of strings), image_prompt (string).';
+        $lines[] = 'Highlight exploration hooks and pacing guidance for turn-based play.';
+
+        if (trim($prompt) !== '') {
+            $lines[] = 'Prompt focus: '.$prompt;
+        }
+
+        return implode("\n", $lines);
+    }
+
+    protected function buildTileTemplatePrompt(Group $group, string $prompt): string
+    {
+        $lines = [];
+        $lines[] = sprintf('Group: %s (ID %d)', $group->name, $group->id);
+        $lines[] = 'Task: Return JSON for a reusable terrain tile template.';
+        $lines[] = 'Required keys: name, terrain_type, movement_cost, defense_bonus, edge_profile (JSON string), summary, tips (array), image_prompt.';
+        $lines[] = 'Keep movement_cost between 1 and 12 and defense_bonus between 0 and 8.';
+
+        if (trim($prompt) !== '') {
+            $lines[] = 'Terrain inspiration: '.$prompt;
+        }
+
+        return implode("\n", $lines);
+    }
+
+    protected function buildMapPlanPrompt(Map $map, string $prompt): string
+    {
+        $lines = [];
+        $lines[] = sprintf('Map: %s (ID %d)', $map->title, $map->id);
+        $lines[] = 'Task: Provide JSON for a map setup plan with grid width, height, orientation, fog_data (JSON string), tips (array), image_prompt.';
+        $lines[] = sprintf('Current base layer: %s; orientation: %s.', $map->base_layer, $map->orientation);
+
+        if ($map->region) {
+            $lines[] = sprintf('Region context: %s.', $map->region->name);
+        }
+
+        if (trim($prompt) !== '') {
+            $lines[] = 'Desired adjustments: '.$prompt;
+        }
+
+        return implode("\n", $lines);
+    }
+
+    protected function buildTaskIdeaPrompt(Campaign $campaign, string $prompt): string
+    {
+        $lines = [];
+        $lines[] = sprintf('Campaign: %s (ID %d)', $campaign->title, $campaign->id);
+        $lines[] = 'Task: Suggest JSON for task board updates. Include tasks (array) with title and description, plus tips (array of strings).';
+        $lines[] = 'Focus on actionable steps for upcoming turns.';
+
+        if (trim($prompt) !== '') {
+            $lines[] = 'Focus prompt: '.$prompt;
+        }
+
+        return implode("\n", $lines);
+    }
+
+    protected function buildLoreIdeaPrompt(Campaign $campaign, string $prompt): string
+    {
+        $lines = [];
+        $lines[] = sprintf('Campaign: %s (ID %d)', $campaign->title, $campaign->id);
+        $lines[] = 'Task: Return JSON for a lore entry. Keys: name, alias, entity_type, description, tags (array of strings), summary, tips (array), image_prompt.';
+        $lines[] = 'Tone should be evocative but safe for players.';
+
+        if (trim($prompt) !== '') {
+            $lines[] = 'Lore inspiration: '.$prompt;
+        }
+
+        return implode("\n", $lines);
+    }
+
+    protected function buildQuestIdeaPrompt(Campaign $campaign, string $prompt): string
+    {
+        $lines = [];
+        $lines[] = sprintf('Campaign: %s (ID %d)', $campaign->title, $campaign->id);
+        $lines[] = 'Task: Produce JSON describing a quest. Keys: title, summary, description, objectives (array of strings), tips (array), image_prompt.';
+        $lines[] = 'Keep objectives concise and collaborative.';
+
+        if (trim($prompt) !== '') {
+            $lines[] = 'Quest seed: '.$prompt;
+        }
+
+        return implode("\n", $lines);
+    }
+
+    protected function decodeIdeaPayload(string $response): ?array
+    {
+        $text = trim($response);
+
+        if ($text === '') {
+            return null;
+        }
+
+        $decoded = json_decode($text, true);
+
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        $start = strpos($text, '{');
+        $end = strrpos($text, '}');
+
+        if ($start !== false && $end !== false && $end > $start) {
+            $snippet = substr($text, $start, $end - $start + 1);
+            $decoded = json_decode($snippet, true);
+
+            if (is_array($decoded)) {
+                return $decoded;
+            }
+        }
+
+        return null;
+    }
+
+    protected function coalesceString(array $data, array $keys, string $default = ''): string
+    {
+        foreach ($keys as $key) {
+            if (! array_key_exists($key, $data)) {
+                continue;
+            }
+
+            $value = $data[$key];
+
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return $default;
+    }
+
+    protected function coalesceOptionalString(array $data, array $keys, ?string $default = null): ?string
+    {
+        $value = $this->coalesceString($data, $keys, '');
+
+        if ($value === '') {
+            return $default;
+        }
+
+        return $value;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function stringList(mixed $value): array
+    {
+        if (is_string($value)) {
+            $parts = preg_split('/[\n\r]+/', $value) ?: [];
+
+            return array_values(array_filter(array_map(fn ($part) => trim((string) $part), $parts), fn ($part) => $part !== ''));
+        }
+
+        if (is_array($value)) {
+            return array_values(array_filter(array_map(function ($entry) {
+                if (is_string($entry)) {
+                    return trim($entry);
+                }
+
+                if (is_array($entry)) {
+                    $text = Arr::get($entry, 'title') ?? Arr::get($entry, 'name') ?? Arr::get($entry, 'summary');
+
+                    return is_string($text) ? trim($text) : '';
+                }
+
+                return '';
+            }, $value), fn ($entry) => $entry !== '')));
+        }
+
+        return [];
+    }
+
+    protected function fallbackWorldIdea(Group $group, string $prompt): array
+    {
+        $seed = trim($prompt) !== '' ? Str::title(Str::limit($prompt, 40, '')) : 'Radiant Expanse';
+        $summary = sprintf('%s beckons adventurers with luminous ley lines and a tapestry of cultures ready to explore.', $seed);
+
+        return [
+            'summary' => $summary,
+            'fields' => [
+                'name' => $seed,
+                'summary' => $summary,
+                'description' => sprintf('Forged as a collaborative setting for %s, this realm balances intrigue, respite, and space for new heroes.', $group->name),
+                'default_turn_duration_hours' => 24,
+            ],
+            'tips' => [
+                'Introduce two anchor settlements and a mysterious frontier region.',
+                'Define a signature magical phenomenon that influences travel and encounters.',
+            ],
+            'image_prompt' => sprintf('Painterly world map of %s, glowing ley lines, collaborative fantasy aesthetic', $seed),
+        ];
+    }
+
+    protected function fallbackRegionIdea(Group $group, string $prompt): array
+    {
+        $seed = trim($prompt) !== '' ? Str::title(Str::limit($prompt, 40, '')) : 'Auric Scriptorium Marches';
+        $summary = sprintf('A frontier of %s where each turn uncovers relics and shifting alliances.', $seed);
+
+        return [
+            'summary' => $summary,
+            'fields' => [
+                'name' => $seed,
+                'summary' => $summary,
+                'description' => 'Clockwork ruins rise from dunes of memory sand while caravans and wardens negotiate fragile truces.',
+                'turn_duration_hours' => 48,
+            ],
+            'tips' => [
+                'Feature a faction that offers escalating boons as players complete tasks.',
+                'Rotate environmental twists every other turn to keep planning dynamic.',
+            ],
+            'image_prompt' => sprintf('Isometric regional map, desert clockwork ruins, twilight hues, banners for %s', $group->name),
+        ];
+    }
+
+    protected function fallbackTileTemplateIdea(Group $group, string $prompt): array
+    {
+        $seed = trim($prompt) !== '' ? Str::snake(Str::limit($prompt, 24, '')) : 'luminous_brambles';
+        $name = Str::title(str_replace('_', ' ', $seed));
+
+        return [
+            'summary' => sprintf('A terrain tile of %s shaped for exploration encounters.', $name),
+            'fields' => [
+                'name' => $name,
+                'terrain_type' => 'enchanted-thicket',
+                'movement_cost' => 3,
+                'defense_bonus' => 1,
+                'edge_profile' => json_encode(['north' => 'open', 'south' => 'roots', 'east' => 'clearing', 'west' => 'clearing']),
+            ],
+            'tips' => [
+                'Pair with stream or road tiles to create contrast in speed.',
+                'Grant advantage on stealth checks when characters linger here.',
+            ],
+            'image_prompt' => sprintf('512x512 tile art, %s terrain, soft bioluminescent plants, tabletop top-down style', $name),
+        ];
+    }
+
+    protected function fallbackMapPlan(Map $map, string $prompt): array
+    {
+        $summary = sprintf('Sketch a grid that makes %s easy to adjudicate at the table.', $map->title);
+        $width = $map->width ?? 18;
+        $height = $map->height ?? 12;
+
+        return [
+            'summary' => $summary,
+            'fields' => [
+                'width' => $width,
+                'height' => $height,
+                'orientation' => $map->orientation,
+                'fog_data' => json_encode(['mode' => 'mask', 'opacity' => 0.6, 'revealed' => []]),
+            ],
+            'tips' => [
+                'Reserve two hexes near entrances as staging areas for tokens.',
+                'Place three notable landmarks to anchor tactical choices.',
+            ],
+            'image_prompt' => sprintf('Map concept art for %s, %dx%d grid, %s orientation', $map->title, $width, $height, $map->orientation),
+        ];
+    }
+
+    protected function fallbackCampaignTasks(Campaign $campaign, string $prompt): array
+    {
+        $title = trim($prompt) !== '' ? Str::title(Str::limit($prompt, 50, '')) : 'Stabilize the frontier routes';
+
+        return [
+            'summary' => sprintf('Prep actionable beats to keep %s on pace with its turns.', $campaign->title),
+            'fields' => [
+                'title' => $title,
+                'description' => 'Outline the obstacles, stakeholders, and success signals for the team.',
+            ],
+            'tips' => [
+                'Track which turn the task should complete and who owns the follow-up.',
+                'Add a support task that empowers non-frontline characters.',
+                'Capture one celebratory beat so the board feels encouraging.',
+            ],
+            'image_prompt' => null,
+        ];
+    }
+
+    protected function fallbackLoreIdea(Campaign $campaign, string $prompt): array
+    {
+        $name = trim($prompt) !== '' ? Str::title(Str::limit($prompt, 40, '')) : 'Archivist Seraphine';
+
+        return [
+            'summary' => sprintf('Codify a lore entry that deepens %s.', $campaign->title),
+            'fields' => [
+                'name' => $name,
+                'alias' => 'The Echoed Quill',
+                'entity_type' => 'character',
+                'description' => sprintf('%s preserves memories within sentient tomes, guiding heroes with gentle foresight.', $name),
+                'tags' => ['ally', 'mystic'],
+            ],
+            'tips' => [
+                'Add a relationship hook to another lore entry.',
+                'Note a secret only the GM should see for future reveals.',
+            ],
+            'image_prompt' => sprintf('Portrait of %s, shimmering quill, arcane librarian aesthetic', $name),
+        ];
+    }
+
+    protected function fallbackQuestIdea(Campaign $campaign, string $prompt): array
+    {
+        $title = trim($prompt) !== '' ? Str::title(Str::limit($prompt, 50, '')) : 'Calm the Whispering Leyline';
+
+        return [
+            'summary' => sprintf('Outline a cooperative quest for %s.', $campaign->title),
+            'fields' => [
+                'title' => $title,
+                'summary' => 'A destabilized leyline threatens nearby settlements; the party must weave it calm.',
+                'description' => 'Detail the key locations, allies, and risks tied to the quest. Use Markdown for readability.',
+                'objectives' => [
+                    'Secure an anchor artifact from the Sapphire Vault.',
+                    'Negotiate aid from the Verdant Chorus druids.',
+                    'Channel the ley energy safely back into the warded obelisk.',
+                ],
+            ],
+            'tips' => [
+                'Add at least one optional objective for flexibility.',
+                'Specify how success changes the world or future turns.',
+            ],
+            'image_prompt' => sprintf('Quest illustration for %s, luminous leyline, cooperative heroes, painterly fantasy style', $campaign->title),
+        ];
+    }
+
     /**
      * @param  array<int, string>  $entries
      * @return array<int, string>
@@ -371,6 +968,13 @@ class AiContentService
             'dm_takeover' => 'The AI delegate is reviewing the latest lore and will return shortly. Continue with collaborative planning until the summary is ready.',
             'npc_dialogue' => 'The NPC considers the request but remains silent for now. Try again after a brief pause.',
             'mentor_briefing' => 'The mentor is quietly gathering intel—expect a tactful briefing soon.',
+            'world_brief' => 'The worldweaver is sketching possibilities. Try another prompt in a moment.',
+            'region_brief' => 'The regional cartographer is aligning notes. Refresh after a short pause.',
+            'tile_template_brief' => 'The artisan is carving the tile concept. Give them another beat.',
+            'map_plan' => 'The battlemap stylus is recalibrating its grid. Try again shortly.',
+            'campaign_task_brief' => 'The planning steward is prioritizing cards. Ping them again soon.',
+            'lore_brief' => 'The codex spirit is whispering new lore. Invite it once more after a moment.',
+            'quest_brief' => 'The quest scribe is polishing a hook. Ask again soon.',
             default => 'AI chronicler advanced the storyline but needs a mortal to embellish the tale.',
         };
     }

@@ -27,6 +27,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'account_role',
         'is_support_admin',
         'locale',
         'timezone',
@@ -57,8 +58,24 @@ class User extends Authenticatable
             'password' => 'hashed',
             'high_contrast' => 'boolean',
             'font_scale' => 'integer',
+            'account_role' => 'string',
             'is_support_admin' => 'boolean',
         ];
+    }
+
+    /**
+     * Supported global account roles.
+     *
+     * @return array<int, string>
+     */
+    public static function accountRoles(): array
+    {
+        return ['player', 'guide', 'admin'];
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->account_role === 'admin' || $this->is_support_admin;
     }
 
     /**

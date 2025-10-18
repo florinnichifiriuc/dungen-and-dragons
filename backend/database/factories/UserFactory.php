@@ -29,6 +29,7 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'account_role' => 'player',
             'is_support_admin' => false,
             'locale' => 'en',
             'timezone' => 'UTC',
@@ -51,6 +52,7 @@ class UserFactory extends Factory
     public function supportAdmin(): static
     {
         return $this->state(fn (array $attributes) => [
+            'account_role' => 'admin',
             'is_support_admin' => true,
         ]);
     }
