@@ -678,6 +678,14 @@ export function ConditionTimerShareLinkControls({
                             value={<span>{weeklyVisitCount}</span>}
                             description={visitSummary}
                             footer={t('share_controls.insights.footnote')}
+                            analytics={{
+                                eventKey: 'condition_transparency.share_insights.weekly_total.view',
+                                groupId,
+                                payload: {
+                                    share_id: share?.id ?? null,
+                                    card: 'weekly_total',
+                                },
+                            }}
                         >
                             <InsightList items={trendItems} emptyLabel={t('share_controls.insights.empty')} />
                         </InsightCard>
@@ -691,6 +699,14 @@ export function ConditionTimerShareLinkControls({
                                       })
                                     : t('share_controls.insights.peak.empty')
                             }
+                            analytics={{
+                                eventKey: 'condition_transparency.share_insights.peak_day.view',
+                                groupId,
+                                payload: {
+                                    share_id: share?.id ?? null,
+                                    card: 'peak_day',
+                                },
+                            }}
                         >
                             <InsightList
                                 items={extensionItems}
@@ -701,6 +717,14 @@ export function ConditionTimerShareLinkControls({
                             title={t('share_controls.insights.presets.title')}
                             value={<span>{presetTotal}</span>}
                             description={t('share_controls.insights.presets.description')}
+                            analytics={{
+                                eventKey: 'condition_transparency.share_insights.presets.view',
+                                groupId,
+                                payload: {
+                                    share_id: share?.id ?? null,
+                                    card: 'preset_distribution',
+                                },
+                            }}
                         >
                             <InsightList
                                 items={presetItems}
@@ -711,6 +735,14 @@ export function ConditionTimerShareLinkControls({
                             title={t('share_controls.insights.recent_extensions.title')}
                             value={<span>{recentExtensionCount}</span>}
                             description={t('share_controls.insights.recent_extensions.description')}
+                            analytics={{
+                                eventKey: 'condition_transparency.share_insights.recent_extensions.view',
+                                groupId,
+                                payload: {
+                                    share_id: share?.id ?? null,
+                                    card: 'recent_extensions',
+                                },
+                            }}
                         >
                             <InsightList
                                 items={recentExtensionItems}
