@@ -3,6 +3,7 @@ import { FormEventHandler } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 import AppLayout from '@/Layouts/AppLayout';
+import { AiIdeaPanel } from '@/components/AiIdeaPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -68,6 +69,24 @@ export default function RegionCreate({ group, worlds, defaults, dungeonMasters }
         post(route('groups.regions.store', group.id));
     };
 
+    const applyAiFields = (fields: Record<string, unknown>) => {
+        if (typeof fields.name === 'string') {
+            setData('name', fields.name);
+        }
+
+        if (typeof fields.summary === 'string') {
+            setData('summary', fields.summary);
+        }
+
+        if (typeof fields.description === 'string') {
+            setData('description', fields.description);
+        }
+
+        if (typeof fields.turn_duration_hours === 'number') {
+            setData('turn_duration_hours', fields.turn_duration_hours.toString());
+        }
+    };
+
     return (
         <AppLayout>
             <Head title={`Assign region · ${group.name}`} />
@@ -79,10 +98,11 @@ export default function RegionCreate({ group, worlds, defaults, dungeonMasters }
                 </p>
             </div>
 
-            <form onSubmit={submit} className="space-y-6">
-                <div className="space-y-2">
-                    <Label htmlFor="name">Region name</Label>
-                    <Input
+            <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+                <form onSubmit={submit} className="space-y-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="name">Region name</Label>
+                        <Input
                         id="name"
                         value={data.name}
                         onChange={(event) => setData('name', event.target.value)}
@@ -188,7 +208,17 @@ export default function RegionCreate({ group, worlds, defaults, dungeonMasters }
                         Cancel
                     </Link>
                 </div>
-            </form>
+                </form>
+
+                <AiIdeaPanel
+                    endpoint={route('groups.ai.regions', group.id)}
+                    title="Brainstorm region beats"
+                    description="Offer a few prompts or factions and the AI mentor will return a region summary, cadence, and map prompt you can copy into the form."
+                    submitLabel="Generate region brief"
+                    applyLabel="Apply to fields"
+                    onApply={applyAiFields}
+                />
+            </div>
         </AppLayout>
     );
 }

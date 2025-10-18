@@ -18,7 +18,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     const { props } = usePage<{
         csrf_token?: string;
         flash?: { success?: string; error?: string };
-        auth?: { user?: { name: string } & PreferenceBag };
+        auth?: { user?: { name: string; account_role?: string | null } & PreferenceBag };
         notifications?: { unread_count: number };
         preferences?: PreferenceBag;
     }>();
@@ -168,6 +168,14 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 )}
                             </Link>
                         )}
+                        {user && user.account_role === 'admin' && (
+                            <Link
+                                href={route('admin.users.index')}
+                                className={`${navLinkClass} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400`}
+                            >
+                                {t('navigation.admin', 'Admin')}
+                            </Link>
+                        )}
                         {user && (
                             <Link
                                 href={route('settings.preferences.edit')}
@@ -180,7 +188,13 @@ export default function AppLayout({ children }: PropsWithChildren) {
                     <div className="flex items-center gap-3 text-sm">
                         {user && (
                             <span className={isDarkMode ? 'text-zinc-400' : 'text-slate-600'} aria-live="polite">
-                                {user.name}
+                                <span>{user.name}</span>
+                                {user.account_role && (
+                                    <span className="ml-2 inline-flex items-center gap-1 text-xs uppercase tracking-wide">
+                                        <span className="h-1 w-1 rounded-full bg-amber-400" aria-hidden="true" />
+                                        {user.account_role.replace('-', ' ')}
+                                    </span>
+                                )}
                             </span>
                         )}
                         <form method="post" action={route('logout')}>

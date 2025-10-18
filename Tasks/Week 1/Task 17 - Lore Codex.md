@@ -23,3 +23,4 @@ Introduce a campaign-level lore codex that lets facilitators chronicle character
 ## Log
 - 2025-10-22 07:40 UTC – Finalized schema/UX plan for the lore codex, drafted migration and UI checklist.
 - 2025-10-22 10:20 UTC – Delivered migrations, controller, Inertia pages, dashboard integration, and tests.
+- 2025-11-24 19:30 UTC – Integrated AI steward panel, quick lore presets, and Pest coverage for lore idea endpoints.

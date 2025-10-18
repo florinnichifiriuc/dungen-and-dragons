@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             'locale' => 'en',
             'timezone' => 'UTC',
             'theme' => 'dark',
+            'account_role' => 'guide',
         ]);
 
         User::factory()->create([
@@ -33,6 +34,18 @@ class DatabaseSeeder extends Seeder
             'theme' => 'light',
             'high_contrast' => true,
             'font_scale' => 110,
+            'account_role' => 'player',
+        ]);
+
+        User::factory()->create([
+            'name' => 'Seed Admin',
+            'email' => 'admin@example.com',
+            'password' => 'password',
+            'locale' => 'en',
+            'timezone' => 'UTC',
+            'theme' => 'dark',
+            'account_role' => 'admin',
+            'is_support_admin' => true,
         ]);
     }
 }

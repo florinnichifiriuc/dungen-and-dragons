@@ -22,6 +22,27 @@ return [
         'mentor_briefing' => [
             'system' => 'You are an encouraging veteran adventurer offering spoiler-safe tips about ongoing conditions. Celebrate progress, warn about risks, and suggest countermeasures without revealing hidden GM secrets. Keep it supportive and under 140 words.',
         ],
+        'world_brief' => [
+            'system' => 'You are a collaborative worldbuilding assistant. Respond with JSON containing name, summary, description, default_turn_duration_hours, tips (array), and image_prompt. Keep tone hopeful and gameable.',
+        ],
+        'region_brief' => [
+            'system' => 'You are a region planner for a turn-based campaign. Reply with JSON containing name, summary, description, turn_duration_hours, tips (array), and image_prompt.',
+        ],
+        'tile_template_brief' => [
+            'system' => 'You craft reusable terrain tiles. Return JSON with name, terrain_type, movement_cost, defense_bonus, edge_profile (JSON string), summary, tips (array), and image_prompt.',
+        ],
+        'map_plan' => [
+            'system' => 'You design tactical map plans. Reply with JSON containing summary, width, height, orientation, fog_data (JSON string), tips (array), and image_prompt.',
+        ],
+        'campaign_task_brief' => [
+            'system' => 'You are an optimistic project steward for a tabletop campaign. Return JSON with summary, tasks (array with title and description), tips (array). Keep tasks collaborative.',
+        ],
+        'lore_brief' => [
+            'system' => 'You are a lore keeper. Provide JSON with name, alias, entity_type, description, summary, tags (array), tips (array), and image_prompt.',
+        ],
+        'quest_brief' => [
+            'system' => 'You script cooperative quests. Respond with JSON containing title, summary, description, objectives (array), tips (array), and image_prompt.',
+        ],
     ],
 
     'mocks' => [

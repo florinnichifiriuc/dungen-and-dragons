@@ -3,6 +3,7 @@ import { FormEventHandler } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 import AppLayout from '@/Layouts/AppLayout';
+import { AiIdeaPanel } from '@/components/AiIdeaPanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -38,6 +39,24 @@ export default function WorldCreate({ group, defaults }: WorldCreateProps) {
         post(route('groups.worlds.store', group.id));
     };
 
+    const applyAiFields = (fields: Record<string, unknown>) => {
+        if (typeof fields.name === 'string') {
+            setData('name', fields.name);
+        }
+
+        if (typeof fields.summary === 'string') {
+            setData('summary', fields.summary);
+        }
+
+        if (typeof fields.description === 'string') {
+            setData('description', fields.description);
+        }
+
+        if (typeof fields.default_turn_duration_hours === 'number') {
+            setData('default_turn_duration_hours', fields.default_turn_duration_hours);
+        }
+    };
+
     return (
         <AppLayout>
             <Head title={`Found a world · ${group.name}`} />
@@ -49,10 +68,11 @@ export default function WorldCreate({ group, defaults }: WorldCreateProps) {
                 </p>
             </div>
 
-            <form onSubmit={submit} className="space-y-6">
-                <div className="space-y-2">
-                    <Label htmlFor="name">World name</Label>
-                    <Input
+            <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+                <form onSubmit={submit} className="space-y-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="name">World name</Label>
+                        <Input
                         id="name"
                         value={data.name}
                         onChange={(event) => setData('name', event.target.value)}
@@ -98,16 +118,26 @@ export default function WorldCreate({ group, defaults }: WorldCreateProps) {
                     <InputError message={errors.default_turn_duration_hours} />
                 </div>
 
-                <div className="flex items-center justify-between">
-                    <Button type="submit" disabled={processing}>
-                        Create world
-                    </Button>
+                    <div className="flex items-center justify-between">
+                        <Button type="submit" disabled={processing}>
+                            Create world
+                        </Button>
 
                     <Link href={route('groups.show', group.id)} className="text-sm text-zinc-400 hover:text-zinc-200">
                         Cancel
                     </Link>
-                </div>
-            </form>
+                    </div>
+                </form>
+
+                <AiIdeaPanel
+                    endpoint={route('groups.ai.worlds', group.id)}
+                    title="Summon a world seed"
+                    description="Feed the mentor a few themes or keywords. It will propose a name, summary, cadence, and art prompt you can apply instantly."
+                    submitLabel="Generate world brief"
+                    applyLabel="Use this world"
+                    onApply={applyAiFields}
+                />
+            </div>
         </AppLayout>
     );
 }

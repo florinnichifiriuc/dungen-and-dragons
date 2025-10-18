@@ -8,6 +8,7 @@ use App\Models\Group;
 use App\Models\TileTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,6 +36,13 @@ class TileTemplateController extends Controller
 
         $edgeProfile = $this->decodeJsonField($validated['edge_profile'] ?? null);
 
+        $imagePath = Arr::get($validated, 'image_path');
+        $imageFile = $request->file('image_upload');
+
+        if ($imageFile) {
+            $imagePath = $imageFile->store('tile-templates', 'public');
+        }
+
         $group->tileTemplates()->create([
             'world_id' => $validated['world_id'] ?? null,
             'created_by' => $request->user()?->getAuthIdentifier(),
@@ -43,7 +51,7 @@ class TileTemplateController extends Controller
             'terrain_type' => $validated['terrain_type'],
             'movement_cost' => $validated['movement_cost'],
             'defense_bonus' => $validated['defense_bonus'],
-            'image_path' => Arr::get($validated, 'image_path'),
+            'image_path' => $imagePath,
             'edge_profile' => $edgeProfile,
         ]);
 
@@ -86,6 +94,17 @@ class TileTemplateController extends Controller
 
         $edgeProfile = $this->decodeJsonField($validated['edge_profile'] ?? null);
 
+        $imagePath = Arr::get($validated, 'image_path');
+        $imageFile = $request->file('image_upload');
+
+        if ($imageFile) {
+            if ($tileTemplate->image_path) {
+                Storage::disk('public')->delete($tileTemplate->image_path);
+            }
+
+            $imagePath = $imageFile->store('tile-templates', 'public');
+        }
+
         $tileTemplate->update([
             'world_id' => $validated['world_id'] ?? null,
             'key' => Arr::get($validated, 'key'),
@@ -93,7 +112,7 @@ class TileTemplateController extends Controller
             'terrain_type' => $validated['terrain_type'],
             'movement_cost' => $validated['movement_cost'],
             'defense_bonus' => $validated['defense_bonus'],
-            'image_path' => Arr::get($validated, 'image_path'),
+            'image_path' => $imagePath,
             'edge_profile' => $edgeProfile,
         ]);
 

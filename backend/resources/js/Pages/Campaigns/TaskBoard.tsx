@@ -3,6 +3,7 @@ import { FormEventHandler } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 
 import AppLayout from '@/Layouts/AppLayout';
+import { AiIdeaPanel } from '@/components/AiIdeaPanel';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -115,6 +116,16 @@ export default function TaskBoard() {
         }, { preserveScroll: true });
     };
 
+    const applyAiTaskIdea = (fields: Record<string, unknown>) => {
+        if (typeof fields.title === 'string') {
+            createForm.setData('title', fields.title);
+        }
+
+        if (typeof fields.description === 'string') {
+            createForm.setData('description', fields.description);
+        }
+    };
+
     const handleCompleteToggle = (task: TaskPayload) => {
         const nextStatus = task.status === 'completed' ? 'ready' : 'completed';
 
@@ -168,98 +179,113 @@ export default function TaskBoard() {
 
             {can_manage && (
                 <section className="mt-8 rounded-xl border border-zinc-800 bg-zinc-950/80 p-6 shadow-inner shadow-black/30">
-                    <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h2 className="text-lg font-semibold text-zinc-100">Add a new task</h2>
-                            <p className="text-sm text-zinc-500">Anchor work to the upcoming turns so the party keeps pace.</p>
-                        </div>
-                        <span className="text-xs uppercase tracking-wide text-zinc-500">Current turn {campaign.current_turn ?? 0}</span>
-                    </header>
+                    <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr),minmax(0,2fr)]">
+                        <div className="space-y-6">
+                            <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-zinc-100">Summon the steward</h2>
+                                    <p className="text-sm text-zinc-500">
+                                        Draft a task yourself or whisper a few cues so the AI steward can conjure a ready-to-run assignment.
+                                    </p>
+                                </div>
+                                <span className="text-xs uppercase tracking-wide text-zinc-500">Current turn {campaign.current_turn ?? 0}</span>
+                            </header>
 
-                    <form onSubmit={submitCreate} className="mt-6 grid gap-4 md:grid-cols-2">
-                        <div className="md:col-span-2">
-                            <Label htmlFor="title">Title</Label>
-                            <Input
-                                id="title"
-                                value={createForm.data.title}
-                                onChange={(event) => createForm.setData('title', event.target.value)}
-                                placeholder="Secure supply lines through the Bramble Pass"
-                                required
-                            />
-                            <InputError message={createForm.errors.title} className="mt-2" />
+                            <form onSubmit={submitCreate} className="grid gap-4 sm:grid-cols-2">
+                                <div className="sm:col-span-2">
+                                    <Label htmlFor="title">Title</Label>
+                                    <Input
+                                        id="title"
+                                        value={createForm.data.title}
+                                        onChange={(event) => createForm.setData('title', event.target.value)}
+                                        placeholder="Secure supply lines through the Bramble Pass"
+                                        required
+                                    />
+                                    <InputError message={createForm.errors.title} className="mt-2" />
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <Label htmlFor="description">Brief</Label>
+                                    <Textarea
+                                        id="description"
+                                        value={createForm.data.description}
+                                        onChange={(event) => createForm.setData('description', event.target.value)}
+                                        placeholder="Outline what success looks like for the party or support crew."
+                                        rows={4}
+                                    />
+                                    <InputError message={createForm.errors.description} className="mt-2" />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="status">Status</Label>
+                                    <select
+                                        id="status"
+                                        className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 shadow-inner focus:border-indigo-500 focus:outline-none"
+                                        value={createForm.data.status}
+                                        onChange={(event) => createForm.setData('status', event.target.value)}
+                                    >
+                                        {statuses.map((status) => (
+                                            <option key={status.key} value={status.key}>
+                                                {status.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <InputError message={createForm.errors.status} className="mt-2" />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="due_turn_number">Due turn</Label>
+                                    <select
+                                        id="due_turn_number"
+                                        className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 shadow-inner focus:border-indigo-500 focus:outline-none"
+                                        value={createForm.data.due_turn_number}
+                                        onChange={(event) => createForm.setData('due_turn_number', event.target.value)}
+                                    >
+                                        <option value="">Unassigned</option>
+                                        {turn_suggestions.map((turn) => (
+                                            <option key={turn.value} value={turn.value}>
+                                                {turn.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <InputError message={createForm.errors.due_turn_number} className="mt-2" />
+                                </div>
+
+                                <div>
+                                    <Label htmlFor="assigned_user_id">Assigned to</Label>
+                                    <select
+                                        id="assigned_user_id"
+                                        className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 shadow-inner focus:border-indigo-500 focus:outline-none"
+                                        value={createForm.data.assigned_user_id}
+                                        onChange={(event) => createForm.setData('assigned_user_id', event.target.value)}
+                                    >
+                                        <option value="">Unassigned</option>
+                                        {members.map((member) => (
+                                            <option key={member.id} value={member.id}>
+                                                {member.name} – {member.role}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <InputError message={createForm.errors.assigned_user_id} className="mt-2" />
+                                </div>
+
+                                <div className="sm:col-span-2 flex items-center justify-end gap-2">
+                                    <Button type="submit" disabled={createForm.processing}>
+                                        Add task
+                                    </Button>
+                                </div>
+                            </form>
                         </div>
 
-                        <div className="md:col-span-2">
-                            <Label htmlFor="description">Description</Label>
-                            <Textarea
-                                id="description"
-                                value={createForm.data.description}
-                                onChange={(event) => createForm.setData('description', event.target.value)}
-                                placeholder="Outline what success looks like for the party or support crew."
-                                rows={3}
-                            />
-                            <InputError message={createForm.errors.description} className="mt-2" />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="status">Status</Label>
-                            <select
-                                id="status"
-                                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 shadow-inner focus:border-indigo-500 focus:outline-none"
-                                value={createForm.data.status}
-                                onChange={(event) => createForm.setData('status', event.target.value)}
-                            >
-                                {statuses.map((status) => (
-                                    <option key={status.key} value={status.key}>
-                                        {status.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <InputError message={createForm.errors.status} className="mt-2" />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="due_turn_number">Due turn</Label>
-                            <select
-                                id="due_turn_number"
-                                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 shadow-inner focus:border-indigo-500 focus:outline-none"
-                                value={createForm.data.due_turn_number}
-                                onChange={(event) => createForm.setData('due_turn_number', event.target.value)}
-                            >
-                                <option value="">Unassigned</option>
-                                {turn_suggestions.map((turn) => (
-                                    <option key={turn.value} value={turn.value}>
-                                        {turn.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <InputError message={createForm.errors.due_turn_number} className="mt-2" />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="assigned_user_id">Assigned to</Label>
-                            <select
-                                id="assigned_user_id"
-                                className="mt-1 w-full rounded-md border border-zinc-700 bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 shadow-inner focus:border-indigo-500 focus:outline-none"
-                                value={createForm.data.assigned_user_id}
-                                onChange={(event) => createForm.setData('assigned_user_id', event.target.value)}
-                            >
-                                <option value="">Unassigned</option>
-                                {members.map((member) => (
-                                    <option key={member.id} value={member.id}>
-                                        {member.name} – {member.role}
-                                    </option>
-                                ))}
-                            </select>
-                            <InputError message={createForm.errors.assigned_user_id} className="mt-2" />
-                        </div>
-
-                        <div className="md:col-span-2 flex justify-end">
-                            <Button type="submit" disabled={createForm.processing}>
-                                Add task
-                            </Button>
-                        </div>
-                    </form>
+                        <AiIdeaPanel
+                            endpoint={route('campaigns.ai.tasks', campaign.id)}
+                            title="Ask the task steward"
+                            description="Share obstacles, desired outcomes, or party roles and the steward will suggest a title, description, and inspiration tips."
+                            submitLabel="Draft with AI"
+                            applyLabel="Apply task idea"
+                            onApply={applyAiTaskIdea}
+                        />
+                    </div>
                 </section>
             )}
 
