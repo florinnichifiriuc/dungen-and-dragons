@@ -9,6 +9,17 @@ use Illuminate\Validation\Rule;
 
 class MapStoreRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'region_id' => $this->filled('region_id') ? (int) $this->input('region_id') : null,
+            'width' => $this->filled('width') ? (int) $this->input('width') : null,
+            'height' => $this->filled('height') ? (int) $this->input('height') : null,
+            'fog_data' => $this->filled('fog_data') ? $this->input('fog_data') : null,
+            'gm_only' => $this->has('gm_only') ? $this->boolean('gm_only') : false,
+        ]);
+    }
+
     public function authorize(): bool
     {
         /** @var Group $group */

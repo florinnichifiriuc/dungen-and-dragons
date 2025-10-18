@@ -9,6 +9,22 @@ use Illuminate\Validation\Rule;
 
 class MapUpdateRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $payload = [
+            'region_id' => $this->filled('region_id') ? (int) $this->input('region_id') : null,
+            'width' => $this->filled('width') ? (int) $this->input('width') : null,
+            'height' => $this->filled('height') ? (int) $this->input('height') : null,
+            'fog_data' => $this->filled('fog_data') ? $this->input('fog_data') : null,
+        ];
+
+        if ($this->has('gm_only')) {
+            $payload['gm_only'] = $this->boolean('gm_only');
+        }
+
+        $this->merge($payload);
+    }
+
     public function authorize(): bool
     {
         /** @var Map $map */

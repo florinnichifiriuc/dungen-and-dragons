@@ -1,9 +1,22 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import type { PageProps as InertiaPageProps } from '@inertiajs/core';
 
 import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/components/ui/button';
 
+type DashboardPageProps = InertiaPageProps & {
+    permissions?: {
+        can_view_campaigns?: boolean;
+        can_view_groups?: boolean;
+    };
+};
+
 export default function Dashboard() {
+    const { props } = usePage<DashboardPageProps>();
+
+    const canViewCampaigns = props.permissions?.can_view_campaigns ?? false;
+    const canViewGroups = props.permissions?.can_view_groups ?? false;
+
     return (
         <AppLayout>
             <Head title="Dashboard" />
@@ -20,20 +33,24 @@ export default function Dashboard() {
                         <p className="mt-2 text-sm text-zinc-400">Turn processing automation arrives in Task 5. Configure durations from campaign settings.</p>
                         <Button variant="outline" size="sm" className="mt-4">View scheduler</Button>
                     </article>
-                    <article className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-6 shadow-inner shadow-black/40">
-                        <h2 className="text-lg font-semibold text-zinc-100">Campaigns</h2>
-                        <p className="mt-2 text-sm text-zinc-400">Spin up new arcs, manage invitations, and steer narrative cadence.</p>
-                        <Button asChild variant="outline" size="sm" className="mt-4">
-                            <Link href={route('campaigns.index')}>Manage campaigns</Link>
-                        </Button>
-                    </article>
-                    <article className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-6 shadow-inner shadow-black/40">
-                        <h2 className="text-lg font-semibold text-zinc-100">Groups & regions</h2>
-                        <p className="mt-2 text-sm text-zinc-400">Invite new parties, assign dungeon masters, and configure turn cadence for each realm.</p>
-                        <Button asChild variant="outline" size="sm" className="mt-4">
-                            <Link href={route('groups.index')}>Open groups</Link>
-                        </Button>
-                    </article>
+                    {canViewCampaigns && (
+                        <article className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-6 shadow-inner shadow-black/40">
+                            <h2 className="text-lg font-semibold text-zinc-100">Campaigns</h2>
+                            <p className="mt-2 text-sm text-zinc-400">Spin up new arcs, manage invitations, and steer narrative cadence.</p>
+                            <Button asChild variant="outline" size="sm" className="mt-4">
+                                <Link href={route('campaigns.index')}>Manage campaigns</Link>
+                            </Button>
+                        </article>
+                    )}
+                    {canViewGroups && (
+                        <article className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-6 shadow-inner shadow-black/40">
+                            <h2 className="text-lg font-semibold text-zinc-100">Groups & regions</h2>
+                            <p className="mt-2 text-sm text-zinc-400">Invite new parties, assign dungeon masters, and configure turn cadence for each realm.</p>
+                            <Button asChild variant="outline" size="sm" className="mt-4">
+                                <Link href={route('groups.index')}>Open groups</Link>
+                            </Button>
+                        </article>
+                    )}
                     <article className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-6 shadow-inner shadow-black/40">
                         <h2 className="text-lg font-semibold text-zinc-100">Session log</h2>
                         <p className="mt-2 text-sm text-zinc-400">Live workspace with notes, initiative, dice, and map uploads lands in Week 3.</p>

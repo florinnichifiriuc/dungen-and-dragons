@@ -14,6 +14,15 @@ window.axios = axios;
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 window.axios.defaults.withCredentials = true;
 
+const csrfToken = document.head.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null;
+
+if (csrfToken) {
+    window.axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfToken.content;
+} else if (import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.warn('CSRF token meta tag not found; POST requests may be rejected with HTTP 419.');
+}
+
 const reverbKey = import.meta.env.VITE_REVERB_APP_KEY as string | undefined;
 
 if (reverbKey) {

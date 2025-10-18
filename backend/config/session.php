@@ -156,7 +156,19 @@ return [
     |
     */
 
-    'domain' => env('SESSION_DOMAIN'),
+    'domain' => value(function () {
+        $domain = env('SESSION_DOMAIN');
+
+        if ($domain === null || $domain === '') {
+            return null;
+        }
+
+        if (in_array($domain, ['localhost', '127.0.0.1', '::1'], true)) {
+            return null;
+        }
+
+        return $domain;
+    }),
 
     /*
     |--------------------------------------------------------------------------

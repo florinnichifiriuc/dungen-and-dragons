@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Campaign;
+use App\Models\Group;
 use DateTimeZone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Lang;
@@ -71,6 +73,10 @@ class HandleInertiaRequests extends Middleware
             'translations' => [
                 'app' => fn () => Lang::get('app'),
                 'condition_timers' => fn () => Lang::get('condition_timers'),
+            ],
+            'permissions' => [
+                'can_view_campaigns' => fn () => $request->user()?->can('viewAny', Campaign::class) ?? false,
+                'can_view_groups' => fn () => $request->user()?->can('viewAny', Group::class) ?? false,
             ],
         ]);
     }

@@ -1,6 +1,7 @@
 import { FormEventHandler, useEffect } from 'react';
 
 import { Head, Link, useForm } from '@inertiajs/react';
+import { safeRoute } from '@/lib/route';
 
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,7 @@ export default function Login({ canRegister, status }: LoginProps) {
     const submit: FormEventHandler = (event) => {
         event.preventDefault();
 
-        post(route('login.store'));
+        post(safeRoute('login.store', '/login'));
     };
 
     return (
@@ -90,7 +91,7 @@ export default function Login({ canRegister, status }: LoginProps) {
                 {canRegister && (
                     <p className="text-center text-sm text-zinc-400">
                         Need an account?{' '}
-                        <Link href={route('register')} className="font-medium text-amber-300 hover:text-amber-200">
+                    <Link href={safeRoute('register', '/register')} className="font-medium text-amber-300 hover:text-amber-200">
                             Create one now
                         </Link>
                         .

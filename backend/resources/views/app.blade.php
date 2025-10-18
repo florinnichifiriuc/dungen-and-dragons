@@ -5,7 +5,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title inertia>{{ config('app.name', 'D&D Nexus') }}</title>
-        @routes
+    @routes
+    @php($ziggy = new Tighten\Ziggy\Ziggy())
+    <meta name="ziggy" content='@json($ziggy)'>
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx'])
         @inertiaHead

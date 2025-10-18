@@ -1,6 +1,7 @@
 import { FormEventHandler } from 'react';
 
 import { Head, Link, useForm } from '@inertiajs/react';
+import { safeRoute } from '@/lib/route';
 
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ export default function Register() {
     const submit: FormEventHandler = (event) => {
         event.preventDefault();
 
-        post(route('register.store'));
+        post(safeRoute('register.store', '/register'));
     };
 
     return (
@@ -96,7 +97,7 @@ export default function Register() {
 
                 <p className="text-center text-sm text-zinc-400">
                     Already registered?{' '}
-                    <Link href={route('login')} className="font-medium text-amber-300 hover:text-amber-200">
+                    <Link href={safeRoute('login', '/login')} className="font-medium text-amber-300 hover:text-amber-200">
                         Sign in here
                     </Link>
                     .

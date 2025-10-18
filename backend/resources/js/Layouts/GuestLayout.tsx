@@ -1,13 +1,14 @@
 import { PropsWithChildren } from 'react';
 
 import { Link } from '@inertiajs/react';
+import { safeRoute } from '@/lib/route';
 
 export default function GuestLayout({ children }: PropsWithChildren) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-stone-950 to-zinc-900 text-zinc-100">
             <div className="flex min-h-screen flex-col items-center justify-center px-4 py-12">
                 <div className="mb-8 text-center">
-                    <Link href={route('welcome')} className="inline-flex items-center gap-2 text-2xl font-semibold tracking-wide">
+                    <Link href={safeRoute('welcome', '/')} className="inline-flex items-center gap-2 text-2xl font-semibold tracking-wide">
                         <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/90 text-zinc-950 font-black">
                             D
                         </span>

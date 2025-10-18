@@ -21,6 +21,11 @@
 | 2025-10-18 13:10 | Task Board Workflow | Delivered campaign Kanban board with turn-based due dates, assignment controls, and priority reordering backed by authorization and tests. |
 | 2025-10-18 14:35 | Reverb Echo Bootstrap Fix | Updated frontend Echo configuration to target the Reverb broadcaster with a default cluster option, resolving the "Options object must provide a cluster" runtime error. |
 | 2025-10-18 15:05 | Welcome CTA Route Guard | Added a safe Ziggy route resolver so the welcome page gracefully falls back to static auth URLs when route manifests omit `register`, preventing runtime crashes for new visitors. |
+| 2025-10-18 16:20 | Auth Routes + Ziggy Fix | Ensured Inertia uses the live `window.Ziggy` manifest when resolving routes and added a `safeRoute()` helper for auth pages, fixing "Ziggy error: route 'login' is not in the route list" and enabling account creation. |
+| 2025-10-18 16:50 | Ziggy Runtime Guard | Refreshed the global `route()` helper to resolve Ziggy config on every call, eliminating repeated fallback warnings while keeping auth CTAs resilient during HMR. |
+| 2025-10-18 17:10 | Registration CSRF & Ziggy Meta Fallback | Added meta-based Ziggy manifest hydration so guest pages receive auth routes reliably and verified Laravel CSRF headers to stop 419 errors during sign-up. |
+| 2025-10-18 17:45 | Dev Workflow Cross-Platform Logs | Introduced `php artisan dev:logs` with platform-aware fallbacks and wired `composer dev` to it so Windows environments can run the full dev stack without the `pcntl` extension. |
+| 2025-10-18 17:55 | Map Creation Input Normalization | Converted optional world/region fields to nullable integers so tile template and map creation no longer 500 when dropdowns are left blank. |
 | 2025-10-19 10:20 | AI Services | Connected Ollama Gemma3 for turn summaries, AI DM delegation, and the session NPC guide with logged requests and coverage. |
 | 2025-10-20 09:15 | Search Infrastructure | Implemented scoped global search across campaigns, sessions, notes, and tasks with authorization-aware filtering and coverage. |
 | 2025-10-20 17:40 | Session Exports & Vault | Added Markdown/PDF session exports, Inertia UI download controls, and managed recording uploads with authorization-aware storage. |
@@ -103,6 +108,7 @@
 | 2025-11-24 12:50 | Transparency Task Audit | Verified completion of Tasks 3, 4, 50, and 55, updated task records, and confirmed documentation remains in sync. |
 | 2025-11-24 13:55 | Demo Readiness Alignment | Reopened CI gating tasks, added pre-demo documentation backlog (setup guide, site map, API swagger, known issues), and scheduled manual Playwright cadence review ahead of the stakeholder rehearsal. |
 | 2025-11-24 15:05 | Demo Manual QA Cadence | Published the manual Playwright rehearsal checklist, linked it from the backlog, and reiterated coverage/lint spot checks required before demo sign-off. |
+| 2025-11-24 17:40 | Authorization & Navigation Hardening | Resolved group index authorize middleware regression, exposed campaign/group visibility flags via Inertia, and hid dashboard links for users lacking access to prevent 500/403 confusion. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.
 

@@ -24,3 +24,4 @@ Introduce a reusable tile library and hex map editor so dungeon masters can sket
 ## Log
 - 2025-10-16 09:15 UTC – Kickoff. Reviewed README map specification and outlined schema plus controller surfaces for initial implementation.
 - 2025-10-16 13:40 UTC – Delivered tile template management, map CRUD, Inertia editor flows, and Pest coverage for axial placement and locks.
+- 2025-10-18 17:55 UTC – Patched creation forms to normalize optional world/region fields, eliminating 500 errors when facilitators leave dropdowns blank.

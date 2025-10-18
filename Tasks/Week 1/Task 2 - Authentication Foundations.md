@@ -28,3 +28,5 @@ Provide secure authentication for the platform by configuring Laravel Sanctum fo
 - **2025-10-14 14:10 UTC** – Built Inertia login/register pages, dashboard shell, and shadcn form primitives; seeded demo GM/Player accounts.
 - **2025-10-14 14:25 UTC** – Documented auth workflow in README, verified Vite build and Pest suite after generating app key.
 - **2025-10-18 15:05 UTC** – Hardened welcome CTA routing with a Ziggy fallback so registration links stay functional even if client route manifests omit auth endpoints.
+- **2025-10-18 16:50 UTC** – Updated the Ziggy route helper to resolve config on-demand, removing console warnings while preserving resilient auth CTAs.
+- **2025-10-18 17:10 UTC** – Confirmed CSRF headers and hydrated Ziggy via meta fallback so guest registration works without 419 errors or missing route warnings.

@@ -5,7 +5,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import { StrictMode } from 'react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { Ziggy } from './ziggy';
+import { resolveZiggyConfig } from './ziggy';
 import { route as ziggyRoute } from 'ziggy-js';
 
 declare global {
@@ -21,8 +21,16 @@ createInertiaApp({
     },
     resolve: (name) => resolvePageComponent(`./Pages/${name}.tsx`, pages),
     setup({ el, App, props }) {
-        window.route = (name: Parameters<typeof ziggyRoute>[0], params?: Parameters<typeof ziggyRoute>[1], absolute?: Parameters<typeof ziggyRoute>[2]) =>
-            ziggyRoute(name, params, absolute, Ziggy);
+        // Always resolve the Ziggy config at call time so HMR or navigation swaps don't leave us
+        // with a stale or empty route manifest.
+        const routeResolver = (
+            name?: unknown,
+            params?: unknown,
+            absolute?: boolean,
+            config?: unknown,
+        ) => ziggyRoute(name as never, params as never, absolute, (config ?? resolveZiggyConfig()) as never);
+
+        window.route = routeResolver as typeof ziggyRoute;
 
         createRoot(el).render(
             <StrictMode>

@@ -15,7 +15,7 @@ Use this guide to bootstrap the transparency solution locally and understand the
 6. Configure database/queue credentials inside `.env`
 7. Run migrations and seed demo data: `php artisan migrate --seed` (includes the `E2EBugReportingSeeder` accounts used for demos). 【F:backend/database/seeders/E2EBugReportingSeeder.php†L7-L82】
 8. Start the Laravel server: `php artisan serve`
-9. In a second terminal, start Vite: `npm run dev` (or use the Composer `dev` script to launch server, queue, logs, and Vite together). 【F:backend/package.json†L6-L20】【F:backend/composer.json†L37-L57】
+9. In a second terminal, start Vite: `npm run dev` (or use the Composer `dev` script to launch server, queue, logs, and Vite together—on Windows it now falls back to a PowerShell log follower automatically when the `pcntl` extension is unavailable). 【F:backend/package.json†L6-L20】【F:backend/composer.json†L37-L57】
 
 > **Tip:** `composer run setup` bootstraps install, env copy, key generation, migration, npm install, and production build in one command. 【F:backend/composer.json†L37-L57】
 
@@ -30,6 +30,7 @@ Use this guide to bootstrap the transparency solution locally and understand the
 - `php artisan condition-transparency:share-maintenance {groupId?}` – Summarizes share maintenance attention items for facilitators. 【F:backend/app/Console/Commands/ConditionTimerShareMaintenanceCommand.php†L7-L68】
 - `php artisan condition-transparency:ping [--group=id]` – Synthetic uptime checks for condition transparency share links. 【F:backend/app/Console/Commands/ConditionTransparencyPingCommand.php†L7-L63】
 - `php artisan queue:listen --tries=1` – Recommended during demos to process notifications and transparency jobs live. 【F:backend/composer.json†L37-L57】
+- `php artisan dev:logs` – Streams logs with Laravel Pail when supported, or gracefully tails `storage/logs/laravel.log` on platforms without the `pcntl` extension (e.g., Windows). 【F:backend/app/Console/Commands/DevLogsCommand.php†L7-L56】
 
 ## Frontend Structure Quick Reference
 - Inertia pages live in `resources/js/Pages/` (e.g., the group index page) with shared layouts under `resources/js/Layouts`. 【F:backend/resources/js/Pages/Groups/Index.tsx†L1-L120】【F:backend/resources/js/Layouts/AppLayout.tsx†L1-L120】

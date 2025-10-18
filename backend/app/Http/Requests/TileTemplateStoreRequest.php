@@ -9,6 +9,15 @@ use Illuminate\Validation\Rule;
 
 class TileTemplateStoreRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'world_id' => $this->filled('world_id') ? (int) $this->input('world_id') : null,
+            'key' => $this->filled('key') ? $this->input('key') : null,
+            'image_path' => $this->filled('image_path') ? $this->input('image_path') : null,
+        ]);
+    }
+
     public function authorize(): bool
     {
         /** @var Group $group */
