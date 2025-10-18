@@ -201,6 +201,7 @@ class ConditionTimerSummaryShareService
             $state = 'evergreen';
         } else {
             $relative = $expiresAt->diffForHumans($now, ['parts' => 2, 'short' => true]);
+            $hoursUntilExpiry = $expiresAt->diffInHours($now, true);
 
             if ($expiresAt->isPast()) {
                 $state = 'expired';
@@ -208,7 +209,7 @@ class ConditionTimerSummaryShareService
                 if ($expiresAt->addHours(48)->isPast()) {
                     $redacted = true;
                 }
-            } elseif ($expiresAt->diffInHours($now) <= 24) {
+            } elseif ($hoursUntilExpiry <= 24) {
                 $state = 'expiring_soon';
             }
         }
@@ -450,7 +451,10 @@ class ConditionTimerSummaryShareService
             'user_agent_hash' => Arr::get($attributes, 'user_agent_hash'),
             'user_id' => Arr::get($attributes, 'user_id'),
             'quiet_hour_suppressed' => (bool) Arr::get($attributes, 'quiet_hour_suppressed', false),
-            'metadata' => Arr::except($attributes, ['ip_hash', 'user_agent_hash', 'user_id', 'quiet_hour_suppressed']),
+            'metadata' => array_merge(
+                ['quiet_hour_suppressed' => (bool) Arr::get($attributes, 'quiet_hour_suppressed', false)],
+                Arr::except($attributes, ['ip_hash', 'user_agent_hash', 'user_id', 'quiet_hour_suppressed'])
+            ),
         ]);
     }
 }

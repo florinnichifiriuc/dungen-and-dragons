@@ -1,6 +1,6 @@
 # Task 40 – Condition Timer Mobile Recap Widgets
 
-**Status:** Planned
+**Status:** Completed
 **Owner:** UI/Frontend
 **Dependencies:** Task 39
 
@@ -8,12 +8,12 @@
 Deliver a mobile-first recap experience that surfaces player-safe timer summaries within the Inertia session workspace, ensuring tables using tablets or phones stay informed without overwhelming the main dashboard.
 
 ## Subtasks
-- [ ] Prototype responsive panels or bottom sheets that integrate with existing session layout patterns and Task 42 wireframes.
-- [ ] Implement offline-friendly caching so the view remains available during connectivity hiccups.
-- [ ] Sync urgency iconography and typography with existing Tailwind design tokens.
-- [ ] Validate accessibility (focus order, screen reader labels) for mobile interactions.
-- [ ] Run Lighthouse/performance audits against baseline budgets and document results.
-- [ ] Integrate analytics/tracking events defined in Task 44 without impacting load times.
+- [x] Prototype responsive panels or bottom sheets that integrate with existing session layout patterns and Task 42 wireframes.
+- [x] Implement offline-friendly caching so the view remains available during connectivity hiccups.
+- [x] Sync urgency iconography and typography with existing Tailwind design tokens.
+- [x] Validate accessibility (focus order, screen reader labels) for mobile interactions.
+- [x] Run Lighthouse/performance audits against baseline budgets and document results.
+- [x] Integrate analytics/tracking events defined in Task 44 without impacting load times.
 
 ## Notes
 - Coordinate with localization to keep copy expandable without breaking layouts.
@@ -24,3 +24,4 @@ Deliver a mobile-first recap experience that surfaces player-safe timer summarie
 
 ## Log
 - 2025-10-28 09:40 UTC – Added after strategic sync to phase player transparency rollout.
+- 2025-11-20 09:40 UTC – Finalized mobile recap widget with offline caching, accessibility polish, telemetry hooks, and performance audits aligned with Task 42 wireframes.

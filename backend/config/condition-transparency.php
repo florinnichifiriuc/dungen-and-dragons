@@ -38,4 +38,9 @@ return [
         'cache_ttl_minutes' => (int) env('CONDITION_MENTOR_BRIEFING_CACHE_MINUTES', 30),
         'max_entries' => (int) env('CONDITION_MENTOR_BRIEFING_MAX_ENTRIES', 4),
     ],
+    'maintenance' => [
+        'access_window_days' => (int) env('CONDITION_TRANSPARENCY_MAINTENANCE_ACCESS_DAYS', 7),
+        'quiet_hour_attention_ratio' => (float) env('CONDITION_TRANSPARENCY_MAINTENANCE_QUIET_RATIO', 0.4),
+        'expiry_attention_hours' => (int) env('CONDITION_TRANSPARENCY_MAINTENANCE_EXPIRY_HOURS', 24),
+    ],
 ];
