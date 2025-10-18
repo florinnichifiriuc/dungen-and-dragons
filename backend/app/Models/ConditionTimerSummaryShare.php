@@ -23,6 +23,7 @@ class ConditionTimerSummaryShare extends Model
         'token',
         'expires_at',
         'visibility_mode',
+        'preset_key',
         'consent_snapshot',
         'access_count',
         'last_accessed_at',

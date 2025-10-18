@@ -22,6 +22,7 @@ class ConditionTimerSummaryShareStoreRequest extends FormRequest
             'expiry_preset' => ['nullable', 'in:24h,72h,custom,never'],
             'expires_in_hours' => ['nullable', 'integer', 'min:1', 'max:336'],
             'visibility_mode' => ['nullable', 'in:counts,details'],
+            'preset_key' => ['nullable', 'string', 'max:64'],
             'notes' => ['nullable', 'string', 'max:500'],
         ];
     }

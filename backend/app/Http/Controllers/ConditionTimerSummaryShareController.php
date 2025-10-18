@@ -16,6 +16,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -117,7 +118,7 @@ class ConditionTimerSummaryShareController extends Controller
         return redirect()->back()->with('success', 'Share link generated.');
     }
 
-    public function destroy(Group $group, ConditionTimerSummaryShare $share): RedirectResponse
+    public function destroy(Request $request, Group $group, ConditionTimerSummaryShare $share): RedirectResponse
     {
         $this->authorize('update', $group);
 

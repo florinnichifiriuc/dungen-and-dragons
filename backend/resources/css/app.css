@@ -19,6 +19,38 @@ body {
     outline-offset: 3px;
 }
 
+@layer base {
+    :root {
+        --transparency-card-border-default: rgba(39, 39, 42, 0.6);
+        --transparency-card-border-success: rgba(5, 150, 105, 0.4);
+        --transparency-card-border-warning: rgba(245, 158, 11, 0.4);
+        --transparency-card-border-danger: rgba(244, 63, 94, 0.4);
+
+        --transparency-card-background-default: rgba(9, 9, 11, 0.8);
+        --transparency-card-background-success: rgba(16, 185, 129, 0.1);
+        --transparency-card-background-warning: rgba(245, 158, 11, 0.1);
+        --transparency-card-background-danger: rgba(244, 63, 94, 0.1);
+
+        --transparency-card-foreground-default: rgb(244, 244, 245);
+        --transparency-card-foreground-success: rgb(209, 250, 229);
+        --transparency-card-foreground-warning: rgb(254, 243, 199);
+        --transparency-card-foreground-danger: rgb(255, 228, 230);
+
+        --transparency-card-label-color: rgba(161, 161, 170, 0.8);
+        --transparency-card-value-color: rgb(244, 244, 245);
+        --transparency-card-description-color: rgba(161, 161, 170, 0.9);
+        --transparency-card-body-color: rgba(228, 228, 231, 0.9);
+        --transparency-card-footer-color: rgba(161, 161, 170, 0.8);
+
+        --transparency-list-border-color: rgba(39, 39, 42, 0.6);
+        --transparency-list-background-color: rgba(9, 9, 11, 0.7);
+        --transparency-list-title-color: rgb(228, 228, 231);
+        --transparency-list-description-color: rgb(161, 161, 170);
+        --transparency-list-icon-color: rgb(252, 211, 77);
+        --transparency-list-empty-color: rgb(113, 113, 122);
+    }
+}
+
 .hero-gradient {
     background: radial-gradient(circle at 20% 20%, rgba(248, 113, 113, 0.35), transparent 55%),
         radial-gradient(circle at 80% 10%, rgba(96, 165, 250, 0.3), transparent 60%),

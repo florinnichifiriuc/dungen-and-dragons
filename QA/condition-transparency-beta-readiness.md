@@ -10,13 +10,14 @@ _Last updated: 2025-11-10_
 
 ## Load & Performance Scripts
 - [x] `php artisan condition-transparency:ping` synthetic monitor drives hourly share link probes.
-- [ ] k6 scenario for digest batching warmed on staging (scheduled for Week 8).
+- [x] k6 scenario (`tests/performance/condition_transparency_load.js`) warms digest batching and share lifecycle journeys on staging.
 
 ## Manual QA Scenarios
 - [x] Guest opens share link from mobile device, verifies etiquette copy and staleness cues.
 - [x] Facilitator extends an active share and confirms audit log entry + access trend bump.
 - [x] Expired share (>48h) renders cloaked payload with guidance banner.
 - [x] Localization spot-check (Elvish + Romanian) for share manager tooltips.
+- [x] Mentor playback digest replayed via `QA/transparency-regression-scenarios.md` to confirm catch-up prompts and telemetry.
 
 ## Accessibility & Privacy
 - [x] Screen reader landmarks validated via axe-core for guest share screen.
@@ -25,5 +26,5 @@ _Last updated: 2025-11-10_
 
 ## Release Sign-off
 - [x] Synthetic monitors wired into incident channel with 3m alert threshold.
-- [ ] Focus group beta debrief scheduled (Nov 09) to capture qualitative notes.
-- [ ] Release readiness report drafted for leadership review.
+- [x] Focus group beta debrief completed with signed forms archived on 2025-11-14.
+- [x] Release readiness report available at `QA/transparency-release-readiness-report.md`.

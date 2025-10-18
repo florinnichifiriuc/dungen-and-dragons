@@ -1,21 +1,57 @@
-import { PropsWithChildren, ReactNode } from 'react';
+import {
+    CSSProperties,
+    PropsWithChildren,
+    ReactNode,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+} from 'react';
 
+import { recordAnalyticsEventSync } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
+
+export type InsightCardTone = 'default' | 'success' | 'warning' | 'danger';
+
+export type InsightCardAnalyticsConfig = {
+    eventKey: string;
+    groupId?: number | null;
+    payload?: Record<string, unknown>;
+    trigger?: 'mount' | 'manual';
+    onReady?: (fire: () => void) => void;
+};
 
 export type InsightCardProps = PropsWithChildren<{
     title: string;
     value: ReactNode;
     description?: ReactNode;
-    tone?: 'default' | 'success' | 'warning' | 'danger';
+    tone?: InsightCardTone;
     footer?: ReactNode;
     className?: string;
+    analytics?: InsightCardAnalyticsConfig;
 }>;
 
-const toneMap: Record<NonNullable<InsightCardProps['tone']>, string> = {
-    default: 'border-zinc-800 bg-zinc-950/80 text-zinc-100',
-    success: 'border-emerald-600/40 bg-emerald-500/10 text-emerald-100',
-    warning: 'border-amber-500/40 bg-amber-500/10 text-amber-100',
-    danger: 'border-rose-500/40 bg-rose-500/10 text-rose-100',
+const toneDefaults: Record<InsightCardTone, { border: string; background: string; foreground: string }> = {
+    default: {
+        border: 'rgba(39, 39, 42, 0.6)',
+        background: 'rgba(9, 9, 11, 0.8)',
+        foreground: 'rgb(244, 244, 245)',
+    },
+    success: {
+        border: 'rgba(5, 150, 105, 0.4)',
+        background: 'rgba(16, 185, 129, 0.1)',
+        foreground: 'rgb(209, 250, 229)',
+    },
+    warning: {
+        border: 'rgba(245, 158, 11, 0.4)',
+        background: 'rgba(245, 158, 11, 0.1)',
+        foreground: 'rgb(254, 243, 199)',
+    },
+    danger: {
+        border: 'rgba(244, 63, 94, 0.4)',
+        background: 'rgba(244, 63, 94, 0.1)',
+        foreground: 'rgb(255, 228, 230)',
+    },
 };
 
 export function InsightCard({
@@ -26,22 +62,89 @@ export function InsightCard({
     footer,
     className,
     children,
+    analytics,
 }: InsightCardProps) {
+    const payload = useMemo(() => analytics?.payload ?? {}, [analytics?.payload]);
+    const eventKey = analytics?.eventKey ?? null;
+    const groupId = analytics?.groupId ?? null;
+    const trigger = analytics?.trigger ?? 'mount';
+
+    const firedSignature = useRef<string | null>(null);
+
+    const fireAnalytics = useCallback(() => {
+        if (!eventKey) {
+            return;
+        }
+
+        const signature = JSON.stringify({ eventKey, groupId, payload });
+
+        if (firedSignature.current === signature) {
+            return;
+        }
+
+        recordAnalyticsEventSync({ key: eventKey, groupId, payload });
+        firedSignature.current = signature;
+    }, [eventKey, groupId, payload]);
+
+    const onReady = analytics?.onReady;
+
+    useEffect(() => {
+        if (typeof onReady === 'function') {
+            onReady(fireAnalytics);
+        }
+    }, [fireAnalytics, onReady]);
+
+    useEffect(() => {
+        if (trigger !== 'mount') {
+            return;
+        }
+
+        fireAnalytics();
+    }, [fireAnalytics, trigger]);
+
+    const toneStyle: CSSProperties = {
+        '--transparency-card-border-color': `var(--transparency-card-border-${tone}, ${toneDefaults[tone].border})`,
+        '--transparency-card-background-color': `var(--transparency-card-background-${tone}, ${toneDefaults[tone].background})`,
+        '--transparency-card-foreground-color': `var(--transparency-card-foreground-${tone}, ${toneDefaults[tone].foreground})`,
+    };
+
     return (
         <article
             className={cn(
                 'flex h-full flex-col rounded-xl border p-4 shadow-inner shadow-black/20 transition-colors',
-                toneMap[tone],
+                'border-[color:var(--transparency-card-border-color)]',
+                'bg-[color:var(--transparency-card-background-color)]',
+                'text-[color:var(--transparency-card-foreground-color)]',
                 className,
             )}
+            style={toneStyle}
         >
             <header className="mb-3 space-y-1">
-                <p className="text-xs uppercase tracking-wide text-zinc-400/80">{title}</p>
-                <div className="text-2xl font-semibold leading-tight">{value}</div>
-                {description && <p className="text-xs text-zinc-400/90">{description}</p>}
+                <p
+                    className="text-xs uppercase tracking-wide"
+                    style={{ color: 'var(--transparency-card-label-color)' }}
+                >
+                    {title}
+                </p>
+                <div className="text-2xl font-semibold leading-tight" style={{ color: 'var(--transparency-card-value-color)' }}>
+                    {value}
+                </div>
+                {description && (
+                    <p className="text-xs" style={{ color: 'var(--transparency-card-description-color)' }}>
+                        {description}
+                    </p>
+                )}
             </header>
-            {children && <div className="flex-1 text-xs text-zinc-200/90">{children}</div>}
-            {footer && <footer className="mt-4 text-[11px] text-zinc-400/80">{footer}</footer>}
+            {children && (
+                <div className="flex-1 text-xs" style={{ color: 'var(--transparency-card-body-color)' }}>
+                    {children}
+                </div>
+            )}
+            {footer && (
+                <footer className="mt-4 text-[11px]" style={{ color: 'var(--transparency-card-footer-color)' }}>
+                    {footer}
+                </footer>
+            )}
         </article>
     );
 }

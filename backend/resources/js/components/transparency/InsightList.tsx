@@ -1,5 +1,7 @@
 import { ReactNode } from 'react';
 
+import { cn } from '@/lib/utils';
+
 export type InsightListItem = {
     id: string;
     title: ReactNode;
@@ -15,20 +17,46 @@ export type InsightListProps = {
 
 export function InsightList({ items, emptyLabel, className }: InsightListProps) {
     if (items.length === 0) {
-        return <p className={className ? `${className} text-xs text-zinc-500` : 'text-xs text-zinc-500'}>{emptyLabel}</p>;
+        return (
+            <p
+                className={cn('text-xs', className)}
+                style={{ color: 'var(--transparency-list-empty-color)' }}
+            >
+                {emptyLabel}
+            </p>
+        );
     }
 
     return (
-        <ul className={className ? `${className} space-y-2` : 'space-y-2'}>
+        <ul className={cn('space-y-2', className)}>
             {items.map((item) => (
                 <li
                     key={item.id}
-                    className="flex items-start gap-3 rounded-lg border border-zinc-800/60 bg-zinc-950/70 p-3 text-xs text-zinc-200"
+                    className="flex items-start gap-3 rounded-lg border p-3 text-xs"
+                    style={{
+                        borderColor: 'var(--transparency-list-border-color)',
+                        background: 'var(--transparency-list-background-color)',
+                        color: 'var(--transparency-list-title-color)',
+                    }}
                 >
-                    {item.icon && <span className="mt-[2px] text-amber-300" aria-hidden>{item.icon}</span>}
+                    {item.icon && (
+                        <span
+                            className="mt-[2px]"
+                            style={{ color: 'var(--transparency-list-icon-color)' }}
+                            aria-hidden
+                        >
+                            {item.icon}
+                        </span>
+                    )}
                     <div className="space-y-1">
-                        <p className="font-medium text-zinc-100">{item.title}</p>
-                        {item.description && <p className="text-[11px] text-zinc-400">{item.description}</p>}
+                        <p className="font-medium" style={{ color: 'var(--transparency-list-title-color)' }}>
+                            {item.title}
+                        </p>
+                        {item.description && (
+                            <p className="text-[11px]" style={{ color: 'var(--transparency-list-description-color)' }}>
+                                {item.description}
+                            </p>
+                        )}
                     </div>
                 </li>
             ))}

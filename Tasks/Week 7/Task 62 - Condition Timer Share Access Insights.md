@@ -8,11 +8,11 @@
 Augment share analytics with trend data so facilitators can understand how often guests return to outlook summaries. Deliver rolling seven-day view counts, extension actor callouts, and preset bundle adoption summaries inside the manager controls plus export-ready highlights for narrative teams.
 
 ## Subtasks
-- [ ] Aggregate share access logs by day for trailing week slices, respecting UTC boundaries and zero-visit days.
-- [ ] Correlate access spikes with preset bundle selections and extension actors, surfacing anonymized attributions in the dashboard.
-- [ ] Render trend data inside the share controls UI with clear copy highlighting spikes, lulls, and extension-triggered resurfaces.
-- [ ] Extend exports and regression dashboards to include the new insight payloads and surface filter options.
-- [ ] Publish lightweight API endpoints for in-app widgets referenced by Tasks 58 (mentor briefings) and 59 (QA dashboards).
+- [x] Aggregate share access logs by day for trailing week slices, respecting UTC boundaries and zero-visit days.
+- [x] Correlate access spikes with preset bundle selections and extension actors, surfacing anonymized attributions in the dashboard.
+- [x] Render trend data inside the share controls UI with clear copy highlighting spikes, lulls, and extension-triggered resurfaces.
+- [x] Extend exports and regression dashboards to include the new insight payloads and surface filter options.
+- [x] Publish lightweight API endpoints for in-app widgets referenced by Tasks 58 (mentor briefings) and 59 (QA dashboards).
 
 ## Notes
 - Ensure aggregation respects localization needs and masks sensitive data before surfacing counts.
@@ -26,3 +26,4 @@ Augment share analytics with trend data so facilitators can understand how often
 - 2025-11-07 11:00 UTC – Shipped seven-night access trend widget with copy, export surfacing, and QA hooks for regression dashboards.
 - 2025-11-12 16:25 UTC – Updated brief post focus group sync to track extension actors, preset adoption, and mentor widget API needs.
 - 2025-11-14 18:30 UTC – Delivered facilitator insights cards, API endpoint, export payload updates, and shared component documentation.
+- 2025-11-15 17:25 UTC – Validated trend payloads, export hooks, and mentor widget responses with QA regression suite.

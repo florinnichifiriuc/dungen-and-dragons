@@ -22,6 +22,13 @@ class ConditionTimerSummaryShareFactory extends Factory
             'created_by' => User::factory(),
             'token' => Str::random(48),
             'expires_at' => now('UTC')->addDays(7),
+            'visibility_mode' => 'counts',
+            'preset_key' => null,
+            'consent_snapshot' => [
+                'granted_user_ids' => [],
+            ],
+            'access_count' => 0,
+            'last_accessed_at' => null,
         ];
     }
 }

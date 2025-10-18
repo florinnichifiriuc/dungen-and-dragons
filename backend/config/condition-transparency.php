@@ -9,6 +9,28 @@ return [
         'webhook_min_interval_seconds' => (int) env('CONDITION_TRANSPARENCY_WEBHOOK_MIN_INTERVAL', 60),
         'slack_webhook' => env('CONDITION_TRANSPARENCY_SLACK_WEBHOOK'),
     ],
+    'share_links' => [
+        'bundles' => [
+            'one_shot_preview' => [
+                'label' => 'One-shot preview',
+                'description' => '24-hour glimpse for quick check-ins with limited detail.',
+                'expiry_preset' => '24h',
+                'visibility_mode' => 'counts',
+            ],
+            'extended_allies' => [
+                'label' => 'Extended ally access',
+                'description' => 'Three-day access with detailed condition context for trusted allies.',
+                'expiry_preset' => '72h',
+                'visibility_mode' => 'details',
+            ],
+            'evergreen_scouting' => [
+                'label' => 'Evergreen scouting party',
+                'description' => 'Never-expiring read-only link for persistent scouting companions.',
+                'expiry_preset' => 'never',
+                'visibility_mode' => 'counts',
+            ],
+        ],
+    ],
     'webhooks' => [
         'signature_header' => 'X-Condition-Transparency-Signature',
     ],
