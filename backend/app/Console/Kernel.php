@@ -13,6 +13,12 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('condition-transparency:ping')->hourly()->withoutOverlapping();
+
+        $schedule->job(new \App\Jobs\SendBugReportDigestJob())
+            ->dailyAt(config('bug-reporting.digest_time', '08:00'))
+            ->timezone(config('bug-reporting.digest_timezone', 'UTC'))
+            ->name('bug-report-digest')
+            ->withoutOverlapping();
     }
 
     /**

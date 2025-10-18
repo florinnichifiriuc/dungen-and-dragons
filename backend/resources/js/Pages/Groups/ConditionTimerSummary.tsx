@@ -1,4 +1,4 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef } from 'react';
 
 import AppLayout from '@/Layouts/AppLayout';
@@ -11,6 +11,7 @@ import ConditionTimerShareLinkControls, {
 } from '@/components/condition-timers/ConditionTimerShareLinkControls';
 import ConditionTransparencyExportPanel from '@/components/condition-timers/ConditionTransparencyExportPanel';
 import ConditionMentorBriefingPanel from '@/components/condition-timers/ConditionMentorBriefingPanel';
+import { Button } from '@/components/ui/button';
 import { useConditionTimerSummaryCache } from '@/hooks/useConditionTimerSummaryCache';
 import {
     applyAcknowledgementToSummary,
@@ -166,6 +167,14 @@ export default function ConditionTimerSummaryPage({
         [t]
     );
 
+    const bugReportRoute = canManageShare
+        ? route('bug-reports.create', {
+              group_id: group.id,
+              context_type: 'facilitator',
+              context_identifier: `group:${group.id}:condition-summary`,
+          })
+        : null;
+
     return (
         <AppLayout>
             <Head title={headTitle} />
@@ -173,6 +182,14 @@ export default function ConditionTimerSummaryPage({
                 <div className="space-y-2">
                     <h1 className="text-2xl font-semibold text-zinc-100">{pageTitle}</h1>
                     <p className="text-sm text-zinc-400">{pageDescription}</p>
+                    {bugReportRoute && (
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Button asChild size="sm" className="bg-brand-500/20 text-brand-100 hover:bg-brand-500/30">
+                                <Link href={bugReportRoute}>{t('bug_report_entry.facilitator_cta')}</Link>
+                            </Button>
+                            <span className="text-xs text-zinc-500">{t('bug_report_entry.facilitator_hint')}</span>
+                        </div>
+                    )}
                 </div>
                 <MobileConditionTimerRecapWidget
                     summary={hydratedSummary}

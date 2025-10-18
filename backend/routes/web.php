@@ -3,6 +3,8 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\AnalyticsEventController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\Admin\BugReportController as AdminBugReportController;
+use App\Http\Controllers\BugReportController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CampaignDigestPreviewController;
 use App\Http\Controllers\CampaignInvitationAcceptController;
@@ -16,6 +18,7 @@ use App\Http\Controllers\CampaignQuestUpdateController;
 use App\Http\Controllers\ConditionMentorBriefingModerationController;
 use App\Http\Controllers\ConditionTimerAcknowledgementController;
 use App\Http\Controllers\ConditionTimerSummaryController;
+use App\Http\Controllers\ConditionTimerShareBugReportController;
 use App\Http\Controllers\ConditionTimerSummaryShareController;
 use App\Http\Controllers\ConditionTimerShareConsentController;
 use App\Http\Controllers\ConditionTimerShareMaintenanceController;
@@ -195,6 +198,17 @@ Route::middleware('auth')->group(function (): void {
     Route::post('campaigns/{campaign}/sessions/{session}/initiative', [InitiativeEntryController::class, 'store'])->name('campaigns.sessions.initiative.store');
     Route::patch('campaigns/{campaign}/sessions/{session}/initiative/{entry}', [InitiativeEntryController::class, 'update'])->name('campaigns.sessions.initiative.update');
     Route::delete('campaigns/{campaign}/sessions/{session}/initiative/{entry}', [InitiativeEntryController::class, 'destroy'])->name('campaigns.sessions.initiative.destroy');
+    Route::get('bug-reports/create', [BugReportController::class, 'create'])->name('bug-reports.create');
+    Route::post('bug-reports', [BugReportController::class, 'store'])->name('bug-reports.store');
+    Route::get('bug-reports/{bugReport}', [BugReportController::class, 'show'])->name('bug-reports.show');
+
+    Route::prefix('admin')->name('admin.')->middleware('can:viewAny',\App\Models\BugReport::class)->group(function (): void {
+        Route::get('bug-reports', [AdminBugReportController::class, 'index'])->name('bug-reports.index');
+        Route::get('bug-reports/export', [AdminBugReportController::class, 'export'])->name('bug-reports.export');
+        Route::get('bug-reports/{bugReport}', [AdminBugReportController::class, 'show'])->name('bug-reports.show');
+        Route::patch('bug-reports/{bugReport}', [AdminBugReportController::class, 'update'])->name('bug-reports.update');
+        Route::post('bug-reports/{bugReport}/comments', [AdminBugReportController::class, 'comment'])->name('bug-reports.comment');
+    });
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
 
@@ -202,3 +216,11 @@ Route::get(
     'share/condition-timers/{token}',
     [ConditionTimerSummaryShareController::class, 'showPublic']
 )->name('shares.condition-timers.player-summary.show');
+Route::get(
+    'share/condition-timers/{token}/report',
+    [ConditionTimerShareBugReportController::class, 'create']
+)->name('shares.condition-timers.bug-report.create');
+Route::post(
+    'share/condition-timers/{token}/report',
+    [ConditionTimerShareBugReportController::class, 'store']
+)->name('shares.condition-timers.bug-report.store');

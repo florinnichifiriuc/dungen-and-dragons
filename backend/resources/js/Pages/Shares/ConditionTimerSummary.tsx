@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { useCallback, useMemo } from 'react';
 
 import GuestLayout from '@/Layouts/GuestLayout';
@@ -7,6 +7,7 @@ import PlayerConditionTimerSummaryPanel, {
 } from '@/components/condition-timers/PlayerConditionTimerSummaryPanel';
 import { MobileConditionTimerRecapWidget } from '@/components/condition-timers/MobileConditionTimerRecapWidget';
 import { useTranslations } from '@/hooks/useTranslations';
+import { Button } from '@/components/ui/button';
 
 type MentorCatchUpPrompt = {
     id: string;
@@ -19,6 +20,7 @@ type ConditionTimerSummarySharePageProps = {
     group: { id: number; name: string };
     summary: ConditionTimerSummaryResource;
     share: {
+        token: string;
         created_at: string | null;
         expires_at: string | null;
         state?: { state: string; relative?: string | null; redacted?: boolean } | null;
@@ -35,6 +37,7 @@ export default function ConditionTimerSummarySharePage({
     catch_up_prompts: catchUpPrompts,
 }: ConditionTimerSummarySharePageProps) {
     const { t, locale } = useTranslations('condition_timers');
+    const shareToken = share.token;
 
     const formatTimestamp = useCallback(
         (value: string | null): string | null => {
@@ -117,6 +120,8 @@ export default function ConditionTimerSummarySharePage({
         });
     }, [catchUpPrompts, formatTimestamp]);
 
+    const bugReportRoute = route('shares.condition-timers.bug-report.create', shareToken);
+
     return (
         <GuestLayout>
             <Head title={headTitle} />
@@ -134,6 +139,12 @@ export default function ConditionTimerSummarySharePage({
                     <p className="text-sm text-zinc-400">{t('share_view.description')}</p>
                     {freshnessLabel && <p className="text-xs text-amber-200">{freshnessLabel}</p>}
                     <p className="text-xs text-zinc-500">{t('share_view.contact_hint', undefined, { facilitator: t('share_view.facilitator_generic') })}</p>
+                    <div className="flex flex-wrap items-center justify-center gap-3">
+                        <Button asChild size="sm" className="bg-brand-500/20 text-brand-100 hover:bg-brand-500/30">
+                            <Link href={bugReportRoute}>{t('bug_report_entry.share_cta')}</Link>
+                        </Button>
+                        <span className="text-[11px] text-zinc-500">{t('bug_report_entry.share_hint')}</span>
+                    </div>
                     <div className="space-y-1 text-xs text-zinc-500">
                         {createdLabel && <p>{t('share_view.summoned', undefined, { timestamp: createdLabel })}</p>}
                         {summaryUpdatedLabel && (

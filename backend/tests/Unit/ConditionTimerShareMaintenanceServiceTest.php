@@ -20,7 +20,7 @@ class ConditionTimerShareMaintenanceServiceTest extends TestCase
 
     public function test_snapshot_flags_attention_reasons(): void
     {
-        $this->freezeTime(CarbonImmutable::parse('2025-11-21 09:00:00', 'UTC'));
+        $this->travelTo(CarbonImmutable::parse('2025-11-21 09:00:00', 'UTC'));
 
         config()->set('condition-transparency.maintenance.access_window_days', 7);
         config()->set('condition-transparency.maintenance.quiet_hour_attention_ratio', 0.5);
@@ -105,11 +105,13 @@ class ConditionTimerShareMaintenanceServiceTest extends TestCase
             now('UTC')->subMinutes(30)->toIso8601String(),
             Arr::get($snapshot, 'share.last_accessed_at')
         );
+
+        $this->travelBack();
     }
 
     public function test_attention_queue_only_returns_groups_needing_attention(): void
     {
-        $this->freezeTime(CarbonImmutable::parse('2025-11-21 12:00:00', 'UTC'));
+        $this->travelTo(CarbonImmutable::parse('2025-11-21 12:00:00', 'UTC'));
 
         config()->set('condition-transparency.maintenance.access_window_days', 7);
         config()->set('condition-transparency.maintenance.quiet_hour_attention_ratio', 0.5);
@@ -175,5 +177,7 @@ class ConditionTimerShareMaintenanceServiceTest extends TestCase
         $this->assertCount(1, $queue);
         $this->assertSame($groupWithIssues->id, Arr::get($queue[0], 'group.id'));
         $this->assertContains('consent_missing', Arr::get($queue[0], 'attention.reasons'));
+
+        $this->travelBack();
     }
 }

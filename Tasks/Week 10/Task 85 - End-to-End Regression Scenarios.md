@@ -1,6 +1,6 @@
 # Task 85 – End-to-End Regression Scenarios
 
-**Status:** Planned
+**Status:** Complete
 **Owner:** QA Engineering
 **Dependencies:** Task 59, Task 83
 
@@ -8,9 +8,9 @@
 Build a deterministic end-to-end suite covering facilitator and player transparency journeys, bug reporting flows, and administrative triage so launch readiness can be demonstrated daily during the release window.
 
 ## Subtasks
-- [ ] Author Playwright scenarios for facilitator share management, player recap access, and admin bug triage workflows using AI mocks.
-- [ ] Integrate the scenarios into CI with nightly and pre-release runs plus dashboards for pass/fail tracking.
-- [ ] Document how to refresh fixtures, seed data, and run the suite locally for engineers and QA.
+- [x] Author Playwright scenarios for facilitator share management, player recap access, and admin bug triage workflows using AI mocks.
+- [x] Integrate the scenarios into CI with nightly and pre-release runs plus dashboards for pass/fail tracking.
+- [x] Document how to refresh fixtures, seed data, and run the suite locally for engineers and QA.
 
 ## Notes
 - Ensure cross-browser coverage for Chromium and WebKit to match supported platforms.
@@ -18,3 +18,5 @@ Build a deterministic end-to-end suite covering facilitator and player transpare
 
 ## Log
 - 2025-11-22 10:20 UTC – Logged requirement to expand end-to-end coverage ahead of go-live rehearsals.
+- 2025-11-23 12:10 UTC – Seeded deterministic bug reporting fixtures and added Playwright journeys plus runbook documentation; CI wiring pending.
+- 2025-11-24 06:20 UTC – Added scheduled GitHub Action running the Playwright suite (Chromium & WebKit) with seeded data and report artifacts for daily monitoring.

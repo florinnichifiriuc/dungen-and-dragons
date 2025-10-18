@@ -228,6 +228,7 @@ class ConditionTimerSummaryShareController extends Controller
             ],
             'summary' => $summary,
             'share' => [
+                'token' => $share->token,
                 'created_at' => $share->created_at?->toIso8601String(),
                 'expires_at' => $share->expires_at?->toIso8601String(),
                 'visibility_mode' => $share->visibility_mode,

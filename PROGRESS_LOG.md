@@ -85,5 +85,18 @@
 | 2025-11-20 09:55 | Mobile Recap & Mentor Moderation Finalization | Completed Task 40 mobile recap widget launch, Task 57 share state telemetry + access logging, and Task 58 mentor moderation queue with playback digests and manifest-driven catch-up prompts. |
 | 2025-11-21 17:55 | Share Maintenance Toolkit | Delivered Tasks 72–81 covering maintenance snapshot service, facilitator API, artisan command, digest job, configuration knobs, documentation, and full regression coverage. |
 | 2025-11-22 09:20 | Final Launch Planning | Scoped Tasks 82–91 to cover release timeline, AI test mocks, unit and end-to-end automation, bug reporting intake, admin triage, monitoring, and launch governance for the two-week ship window. |
+| 2025-11-22 17:30 | Bug Reporting Intake & Admin Triage | Implemented facilitator and share-link bug submission flows, admin triage dashboard with filtering/assignment, AI context query fix, and localization + task log updates. |
+| 2025-11-23 11:10 | Release Timeline Alignment | Published two-week release candidate calendar, risk register, and notification plan covering Tasks 82–91 dependencies. |
+| 2025-11-23 11:20 | AI Mock Harness Documentation | Added developer guide for fixture-backed AI service swaps and validated deterministic mentor briefing responses in feature tests. |
+| 2025-11-23 11:45 | Unit Test Hardening | Landed BugReportService Pest coverage with analytics + automation mocks; CI coverage gate work remains pending. |
+| 2025-11-23 12:10 | Playwright Bug Journeys | Seeded E2E fixtures, documented setup, and added facilitator/player/admin bug reporting scenarios (CI integration outstanding). |
+| 2025-11-23 17:10 | Bug Intake Tracking | Delivered player-facing reference banner with clipboard copy, reinforcing status tracking for launch bug submissions (Task 86). |
+| 2025-11-23 17:25 | Admin Triage Automation | Finalised Slack + PagerDuty notifications, quiet-hour routing, and analytics widgets powering the admin dashboard (Tasks 87–88). |
+| 2025-11-23 17:35 | Monitoring & Rollback Runbook | Added launch monitoring dashboard guidance and rollback drill procedures to QA playbooks (Task 89). |
+| 2025-11-23 17:45 | Launch Communications Playbook | Published announcement cadence, support scripts, and knowledge base updates for launch hypercare (Task 90). |
+| 2025-11-23 17:55 | Go/No-Go Governance | Logged daily huddle checklist, decision matrix, and post-launch retro plan for launch readiness (Task 91). |
+| 2025-11-24 06:15 | Unit Test Coverage Gate | Added GitHub Action enforcing `php artisan test --coverage --min=80` with HTML reports so regressions block merges (Task 84). |
+| 2025-11-24 06:20 | Playwright CI Integration | Wired nightly/pull request GitHub Action to seed bug data, run Chromium & WebKit journeys, and publish artifacts (Task 85). |
+| 2025-11-24 09:10 | Admin Bug Triage Filters | Added updated timeframe filters to the triage dashboard so support admins can focus on recent reports during launch (Task 87). |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.
