@@ -1,8 +1,9 @@
 import { Link, router } from '@inertiajs/react';
 import { CalendarClock, Link2, RefreshCcw } from 'lucide-react';
-import { FormEvent, useCallback, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { InsightCard, InsightList } from '@/components/transparency';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/hooks/useTranslations';
 
@@ -12,15 +13,36 @@ export type ConditionTimerShareResource = {
     created_at: string | null;
     expires_at: string | null;
     visibility_mode?: string | null;
+    preset_key?: string | null;
     access_count?: number;
     last_accessed_at?: string | null;
     state?: {
         state: string;
         relative?: string | null;
         redacted?: boolean;
+        preset?: {
+            key: string;
+            label: string;
+            description?: string | null;
+        } | null;
     } | null;
     access_trend?: { date: string; count: number }[];
+    insights?: {
+        trend: { date: string; count: number }[];
+        totals?: { week?: number };
+        peak?: {
+            date: string;
+            count: number;
+            bundle_key?: string | null;
+            bundle_label?: string | null;
+            extension_roles?: string[];
+        } | null;
+        extension_actors?: { role: string; count: number }[];
+        recent_extensions?: { occurred_at?: string | null; actor_role?: string; expires_at?: string | null }[];
+        preset_distribution?: { preset_key: string; label: string; total: number }[];
+    } | null;
     extend_route?: string | null;
+    insights_route?: string | null;
     redacted?: boolean;
 };
 
@@ -56,6 +78,13 @@ type ConditionTimerShareLinkControlsProps = {
         audit_log: ConsentAuditEntry[];
         consent_route: string;
         extend_presets: { key: string; label: string }[];
+        preset_bundles: {
+            key: string;
+            label: string;
+            description?: string | null;
+            expiry_preset?: string;
+            visibility_mode?: string;
+        }[];
     };
 };
 
@@ -69,11 +98,45 @@ export function ConditionTimerShareLinkControls({
     const { t, locale } = useTranslations('condition_timers');
     const [isProcessing, setIsProcessing] = useState(false);
     const [isExtending, setIsExtending] = useState(false);
+    const initialPresetKey = useMemo(
+        () => share?.state?.preset?.key ?? share?.preset_key ?? 'custom',
+        [share?.preset_key, share?.state?.preset?.key]
+    );
+    const [bundleKey, setBundleKey] = useState<string>(initialPresetKey);
     const [expiryPreset, setExpiryPreset] = useState<string>(settings.expiry_presets[0]?.key ?? '24h');
     const [customHours, setCustomHours] = useState('');
-    const [visibilityMode, setVisibilityMode] = useState<string>(settings.visibility_modes[0]?.key ?? 'counts');
+    const [visibilityMode, setVisibilityMode] = useState<string>(
+        share?.visibility_mode ?? settings.visibility_modes[0]?.key ?? 'counts'
+    );
     const [extendPreset, setExtendPreset] = useState<string>(settings.extend_presets[0]?.key ?? '24h');
     const [extendCustomHours, setExtendCustomHours] = useState('');
+
+    useEffect(() => {
+        setBundleKey(initialPresetKey);
+    }, [initialPresetKey]);
+
+    useEffect(() => {
+        if (bundleKey === 'custom') {
+            if (share?.state?.state === 'evergreen') {
+                setExpiryPreset('never');
+            }
+
+            if (share?.visibility_mode) {
+                setVisibilityMode(share.visibility_mode);
+            }
+
+            return;
+        }
+
+        const bundle = settings.preset_bundles.find((candidate) => candidate.key === bundleKey);
+
+        if (!bundle) {
+            return;
+        }
+
+        setExpiryPreset(bundle.expiry_preset ?? '24h');
+        setVisibilityMode(bundle.visibility_mode ?? 'counts');
+    }, [bundleKey, settings.preset_bundles, share?.state?.state, share?.visibility_mode]);
 
     const formatTimestamp = useCallback(
         (value: string | null): string => {
@@ -182,21 +245,114 @@ export function ConditionTimerShareLinkControls({
             label,
             relative: share.state.relative ?? null,
             redacted: Boolean(share.state.redacted),
+            preset: share.state.preset ?? null,
         };
     }, [share?.state, t]);
 
+    const insightTrend = useMemo(
+        () => share?.insights?.trend ?? share?.access_trend ?? [],
+        [share?.insights?.trend, share?.access_trend]
+    );
+
     const weeklyVisitCount = useMemo(() => {
-        if (!share?.access_trend) {
-            return 0;
+        if (share?.insights?.totals?.week !== undefined && share?.insights?.totals?.week !== null) {
+            return share.insights.totals.week ?? 0;
         }
 
-        return share.access_trend.reduce((total, entry) => total + entry.count, 0);
-    }, [share?.access_trend]);
+        return insightTrend.reduce((total, entry) => total + entry.count, 0);
+    }, [insightTrend, share?.insights?.totals?.week]);
 
     const visitSummary = useMemo(
-        () => t('share_controls.insights.summary', undefined, { count: weeklyVisitCount }),
+        () => t('share_controls.insights.weekly_summary', undefined, { count: weeklyVisitCount }),
         [t, weeklyVisitCount]
     );
+
+    const peakInsight = share?.insights?.peak ?? null;
+
+    const extensionRoleLabel = useCallback(
+        (role: string) => t(`share_controls.insights.roles.${role}`, role),
+        [t]
+    );
+
+    const trendItems = useMemo(
+        () =>
+            insightTrend.map((entry) => {
+                const isPeak = peakInsight?.date === entry.date;
+                const formattedDate = formatTrendDate(entry.date);
+                const bundleLabel = peakInsight?.bundle_label ?? peakInsight?.bundle_key ?? t('share_controls.insights.bundle_custom');
+                const roleSummary = peakInsight?.extension_roles?.length
+                    ? peakInsight.extension_roles.map(extensionRoleLabel).join(', ')
+                    : extensionRoleLabel('unknown');
+
+                return {
+                    id: entry.date,
+                    title: (
+                        <div className="flex w-full items-center justify-between">
+                            <span className={isPeak ? 'font-semibold text-amber-200' : undefined}>{formattedDate}</span>
+                            <span className={isPeak ? 'font-semibold text-amber-200' : 'font-semibold text-zinc-100'}>
+                                {entry.count}
+                            </span>
+                        </div>
+                    ),
+                    description:
+                        isPeak && peakInsight
+                            ? t('share_controls.insights.peak.description', undefined, {
+                                  bundle: bundleLabel,
+                                  roles: roleSummary,
+                              })
+                            : undefined,
+                    icon: isPeak ? <CalendarClock className="h-4 w-4" /> : undefined,
+                };
+            }),
+        [extensionRoleLabel, formatTrendDate, insightTrend, peakInsight, t]
+    );
+
+    const extensionItems = useMemo(
+        () =>
+            (share?.insights?.extension_actors ?? []).map((actor, index) => ({
+                id: `${actor.role ?? 'unknown'}-${index}`,
+                title: extensionRoleLabel(actor.role ?? 'unknown'),
+                description: t('share_controls.insights.extension_count', undefined, { count: actor.count }),
+            })),
+        [extensionRoleLabel, share?.insights?.extension_actors, t]
+    );
+
+    const presetItems = useMemo(
+        () =>
+            (share?.insights?.preset_distribution ?? []).map((preset) => ({
+                id: preset.preset_key,
+                title: preset.label,
+                description: t('share_controls.insights.preset_usage', undefined, { count: preset.total }),
+            })),
+        [share?.insights?.preset_distribution, t]
+    );
+
+    const recentExtensionItems = useMemo(
+        () =>
+            (share?.insights?.recent_extensions ?? []).map((entry, index) => {
+                const occurred = entry.occurred_at ? formatTimestamp(entry.occurred_at) : t('generic.unknown');
+                const expires = entry.expires_at ? formatTimestamp(entry.expires_at) : null;
+
+                return {
+                    id: entry.occurred_at ?? `extension-${index}`,
+                    title: extensionRoleLabel(entry.actor_role ?? 'unknown'),
+                    description: expires
+                        ? t('share_controls.insights.recent_extension_with_expiry', undefined, {
+                              timestamp: occurred,
+                              expires,
+                          })
+                        : t('share_controls.insights.recent_extension', undefined, { timestamp: occurred }),
+                };
+            }),
+        [extensionRoleLabel, formatTimestamp, share?.insights?.recent_extensions, t]
+    );
+
+    const presetTotal = useMemo(
+        () => (share?.insights?.preset_distribution ?? []).reduce((sum, entry) => sum + entry.total, 0),
+        [share?.insights?.preset_distribution]
+    );
+
+    const recentExtensionCount = share?.insights?.recent_extensions?.length ?? 0;
 
     const formatTrendDate = useCallback(
         (value: string) => {
@@ -227,6 +383,7 @@ export function ConditionTimerShareLinkControls({
                 expiry_preset: expiryPreset,
                 expires_in_hours: expiryPreset === 'custom' ? Number(customHours) || null : null,
                 visibility_mode: visibilityMode,
+                preset_key: bundleKey,
             },
             {
                 preserveScroll: true,
@@ -332,6 +489,13 @@ export function ConditionTimerShareLinkControls({
                                     <span className="text-[11px] text-zinc-300/70">{shareState.relative}</span>
                                 )}
                             </span>
+                            {shareState.preset && (
+                                <span className="text-[11px] text-zinc-400">
+                                    {t('share_controls.states.preset_label', 'Bundle: :label', {
+                                        label: shareState.preset.label,
+                                    })}
+                                </span>
+                            )}
                         </div>
                     )}
                     {createdLabel && (
@@ -365,10 +529,34 @@ export function ConditionTimerShareLinkControls({
                     <form onSubmit={generateShare} className="space-y-4">
                         <div className="grid gap-3 md:grid-cols-3">
                             <label className="flex flex-col gap-1 text-xs text-zinc-400">
+                                {t('share_controls.form.preset_bundle')}
+                                <select
+                                    value={bundleKey}
+                                    onChange={(event) => setBundleKey(event.target.value)}
+                                    className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-100"
+                                >
+                                    <option value="custom">{t('share_controls.form.bundle_custom')}</option>
+                                    {settings.preset_bundles.map((bundle) => (
+                                        <option key={bundle.key} value={bundle.key}>
+                                            {bundle.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                {bundleKey !== 'custom' && (
+                                    <span className="text-[11px] text-zinc-500">
+                                        {
+                                            settings.preset_bundles.find((bundle) => bundle.key === bundleKey)
+                                                ?.description
+                                        }
+                                    </span>
+                                )}
+                            </label>
+                            <label className="flex flex-col gap-1 text-xs text-zinc-400">
                                 {t('share_controls.form.expiry_preset')}
                                 <select
                                     value={expiryPreset}
                                     onChange={(event) => setExpiryPreset(event.target.value)}
+                                    disabled={bundleKey !== 'custom'}
                                     className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-100"
                                 >
                                     {settings.expiry_presets.map((preset) => (
@@ -387,6 +575,7 @@ export function ConditionTimerShareLinkControls({
                                         max={336}
                                         value={customHours}
                                         onChange={(event) => setCustomHours(event.target.value)}
+                                        disabled={bundleKey !== 'custom'}
                                         className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-100"
                                     />
                                 </label>
@@ -396,6 +585,7 @@ export function ConditionTimerShareLinkControls({
                                 <select
                                     value={visibilityMode}
                                     onChange={(event) => setVisibilityMode(event.target.value)}
+                                    disabled={bundleKey !== 'custom'}
                                     className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm text-zinc-100"
                                 >
                                     {settings.visibility_modes.map((mode) => (
@@ -474,25 +664,61 @@ export function ConditionTimerShareLinkControls({
                 </div>
             )}
 
-            {share?.access_trend && share.access_trend.length > 0 && (
-                <div className="mt-6 space-y-3 rounded-xl border border-zinc-900/60 bg-zinc-950/70 p-4">
+            {share?.insights && (
+                <section className="mt-6 space-y-4" aria-labelledby="share-insights-heading">
                     <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                        <h4 className="text-sm font-semibold text-zinc-100">{t('share_controls.insights.title')}</h4>
+                        <h4 id="share-insights-heading" className="text-sm font-semibold text-zinc-100">
+                            {t('share_controls.insights.title')}
+                        </h4>
                         <p className="text-[11px] text-zinc-500">{visitSummary}</p>
                     </div>
-                    <ul className="grid gap-2 md:grid-cols-2">
-                        {share.access_trend.map((entry) => (
-                            <li
-                                key={entry.date}
-                                className="flex items-center justify-between rounded-lg border border-zinc-900 bg-zinc-950/80 px-3 py-2 text-xs"
-                            >
-                                <span className="text-zinc-400">{formatTrendDate(entry.date)}</span>
-                                <span className="font-semibold text-zinc-100">{entry.count}</span>
-                            </li>
-                        ))}
-                    </ul>
-                    <p className="text-[11px] text-zinc-500">{t('share_controls.insights.footnote')}</p>
-                </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <InsightCard
+                            title={t('share_controls.insights.weekly_total.title')}
+                            value={<span>{weeklyVisitCount}</span>}
+                            description={visitSummary}
+                            footer={t('share_controls.insights.footnote')}
+                        >
+                            <InsightList items={trendItems} emptyLabel={t('share_controls.insights.empty')} />
+                        </InsightCard>
+                        <InsightCard
+                            title={t('share_controls.insights.peak.title')}
+                            value={<span>{peakInsight ? peakInsight.count : '—'}</span>}
+                            description={
+                                peakInsight
+                                    ? t('share_controls.insights.peak.subtitle', undefined, {
+                                          date: formatTrendDate(peakInsight.date),
+                                      })
+                                    : t('share_controls.insights.peak.empty')
+                            }
+                        >
+                            <InsightList
+                                items={extensionItems}
+                                emptyLabel={t('share_controls.insights.extension_empty')}
+                            />
+                        </InsightCard>
+                        <InsightCard
+                            title={t('share_controls.insights.presets.title')}
+                            value={<span>{presetTotal}</span>}
+                            description={t('share_controls.insights.presets.description')}
+                        >
+                            <InsightList
+                                items={presetItems}
+                                emptyLabel={t('share_controls.insights.presets.empty')}
+                            />
+                        </InsightCard>
+                        <InsightCard
+                            title={t('share_controls.insights.recent_extensions.title')}
+                            value={<span>{recentExtensionCount}</span>}
+                            description={t('share_controls.insights.recent_extensions.description')}
+                        >
+                            <InsightList
+                                items={recentExtensionItems}
+                                emptyLabel={t('share_controls.insights.recent_extensions.empty')}
+                            />
+                        </InsightCard>
+                    </div>
+                </section>
             )}
 
             <div className="mt-6 space-y-4">

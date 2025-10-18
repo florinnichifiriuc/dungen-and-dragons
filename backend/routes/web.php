@@ -13,6 +13,7 @@ use App\Http\Controllers\CampaignTaskController;
 use App\Http\Controllers\CampaignEntityController;
 use App\Http\Controllers\CampaignQuestController;
 use App\Http\Controllers\CampaignQuestUpdateController;
+use App\Http\Controllers\ConditionMentorBriefingModerationController;
 use App\Http\Controllers\ConditionTimerAcknowledgementController;
 use App\Http\Controllers\ConditionTimerSummaryController;
 use App\Http\Controllers\ConditionTimerSummaryShareController;
@@ -88,6 +89,10 @@ Route::middleware('auth')->group(function (): void {
         'groups/{group}/condition-timers/player-summary/share-links/{share}/extend',
         [ConditionTimerSummaryShareController::class, 'extend']
     )->name('groups.condition-timers.player-summary.share-links.extend');
+    Route::get(
+        'groups/{group}/condition-timers/player-summary/share-links/insights',
+        [ConditionTimerSummaryShareController::class, 'insights']
+    )->name('groups.condition-timers.player-summary.share-links.insights');
     Route::post(
         'groups/{group}/condition-timers/share-consents',
         [ConditionTimerShareConsentController::class, 'store']
@@ -116,6 +121,10 @@ Route::middleware('auth')->group(function (): void {
         'groups/{group}/condition-transparency/mentor-briefings',
         [GroupMentorBriefingPreferenceController::class, 'update']
     )->name('groups.condition-transparency.mentor-briefings.update');
+    Route::patch(
+        'groups/{group}/condition-transparency/mentor-briefings/moderation',
+        [ConditionMentorBriefingModerationController::class, 'update']
+    )->name('groups.condition-transparency.mentor-briefings.moderation');
     Route::resource('groups.memberships', GroupMembershipController::class)
         ->only(['store', 'update', 'destroy'])
         ->scoped();

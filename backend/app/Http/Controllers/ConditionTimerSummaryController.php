@@ -62,16 +62,24 @@ class ConditionTimerSummaryController extends Controller
 
         $activeShare = $this->shareService->activeShareForGroup($group);
 
+        $shareInsights = $activeShare ? $this->shareService->insights($activeShare, $group) : null;
+
         $share = $activeShare ? [
             'id' => $activeShare->id,
             'url' => route('shares.condition-timers.player-summary.show', $activeShare->token),
             'created_at' => $activeShare->created_at?->toIso8601String(),
             'expires_at' => $activeShare->expires_at?->toIso8601String(),
             'visibility_mode' => $activeShare->visibility_mode,
+            'preset_key' => $activeShare->preset_key,
             'access_count' => $activeShare->access_count,
             'last_accessed_at' => $activeShare->last_accessed_at?->toIso8601String(),
             'state' => $this->shareService->describeShareState($activeShare),
             'access_trend' => $this->shareService->accessTrend($activeShare),
+            'insights' => $shareInsights,
+            'insights_route' => route(
+                'groups.condition-timers.player-summary.share-links.insights',
+                [$group->id]
+            ),
             'extend_route' => route(
                 'groups.condition-timers.player-summary.share-links.extend',
                 [$group->id, $activeShare->id]
@@ -110,6 +118,9 @@ class ConditionTimerSummaryController extends Controller
             ->all();
 
         $mentorBriefing = $this->mentorBriefings->getBriefing($group);
+        $moderationQueue = $mentorBriefing['pending_queue'] ?? [];
+        $moderationDigest = $mentorBriefing['playback_digest'] ?? [];
+        unset($mentorBriefing['pending_queue'], $mentorBriefing['playback_digest']);
 
         return Inertia::render('Groups/ConditionTimerSummary', [
             'group' => [
@@ -132,6 +143,7 @@ class ConditionTimerSummaryController extends Controller
                     ['key' => 'counts', 'label' => 'Anonymized counts'],
                     ['key' => 'details', 'label' => 'Full details'],
                 ],
+                'preset_bundles' => array_values($this->shareService->presetBundles()),
                 'consents' => $consentStatuses,
                 'audit_log' => $consentAudit,
                 'consent_route' => route('groups.condition-timers.share-consents.store', $group->id),
@@ -151,6 +163,11 @@ class ConditionTimerSummaryController extends Controller
                 'webhook_route' => route('groups.condition-transparency.webhooks.store', $group->id),
             ],
             'mentor_briefing' => $mentorBriefing,
+            'mentor_briefing_moderation' => [
+                'queue' => $moderationQueue,
+                'digest' => $moderationDigest,
+                'action_route' => route('groups.condition-transparency.mentor-briefings.moderation', $group->id),
+            ],
         ]);
     }
 }

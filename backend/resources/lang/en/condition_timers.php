@@ -25,6 +25,8 @@ return [
             'redacted' => 'Payload redacted until a fresh link is issued to protect expired lore.',
         ],
         'form' => [
+            'preset_bundle' => 'Bundle preset',
+            'bundle_custom' => 'Custom configuration',
             'expiry_preset' => 'Expiry preset',
             'custom_hours' => 'Custom hours',
             'guest_visibility' => 'Guest visibility',
@@ -42,8 +44,40 @@ return [
         ],
         'insights' => [
             'title' => 'Access insights',
-            'summary' => 'zero: No visits recorded over the last seven nights.|one: :count visit recorded across the last seven nights.|other: :count visits recorded across the last seven nights.',
+            'weekly_summary' => 'zero: No visits recorded over the last seven nights.|one: :count visit recorded across the last seven nights.|other: :count visits recorded across the last seven nights.',
+            'weekly_total' => [
+                'title' => 'Seven-night traffic',
+            ],
             'footnote' => 'These counts blend guest traffic regardless of device. Rotate links if the cadence feels off compared to your adventuring party’s habits.',
+            'empty' => 'No visits recorded in this window.',
+            'bundle_custom' => 'Custom configuration',
+            'peak' => [
+                'title' => 'Peak day',
+                'subtitle' => 'Highlight from :date',
+                'description' => 'Bundle :bundle • extension roles: :roles',
+                'empty' => 'No spikes detected yet.',
+            ],
+            'roles' => [
+                'owner' => 'Facilitator',
+                'dungeon-master' => 'Dungeon Master',
+                'player' => 'Player',
+                'unknown' => 'Unknown actor',
+            ],
+            'extension_count' => 'one: :count extension|other: :count extensions',
+            'extension_empty' => 'No extensions logged in this window.',
+            'presets' => [
+                'title' => 'Preset adoption',
+                'description' => 'Bundle usage across all issued links.',
+                'empty' => 'No bundle selections recorded yet.',
+            ],
+            'preset_usage' => 'one: :count selection|other: :count selections',
+            'recent_extensions' => [
+                'title' => 'Recent extensions',
+                'description' => 'Most recent actors extending guest access.',
+                'empty' => 'No recent extensions to review.',
+            ],
+            'recent_extension' => ':timestamp — extension delivered.',
+            'recent_extension_with_expiry' => ':timestamp — extension delivered (expires :expires).',
         ],
         'consent' => [
             'title' => 'Player consent ledger',
@@ -71,6 +105,7 @@ return [
             'active' => 'Active',
             'expiring_soon' => 'Expiring soon',
             'expired' => 'Expired',
+            'preset_label' => 'Bundle: :label',
         ],
         'access_trend' => [
             'weekday_format' => ':weekday, :month :day',
@@ -156,6 +191,20 @@ return [
         'retires' => 'Share retires :timestamp',
         'redacted_banner' => 'This outlook has gone silent. The storyteller cloaked the details to keep expired lore from leaking. Ask your facilitator for a renewed link if you still need guidance.',
         'redacted_empty' => 'The pages of this chronicle have faded. Request a fresh briefing to reveal the latest maladies.',
+        'staleness' => [
+            'fresh' => 'Freshly updated within the last hour.',
+            'day_old' => 'Last refreshed about :relative ago—check with your facilitator if you need a new briefing.',
+            'stale' => 'This ledger is over a day old (:relative). Treat it as legend until a new link arrives.',
+        ],
+        'contact_hint' => 'Need a fresher briefing? Send a sending stone to :facilitator.',
+        'facilitator_generic' => 'your facilitator',
+        'catch_up' => [
+            'title' => 'Mentor catch-up prompts',
+            'subtitle' => 'Highlights from the mentor since your last visit.',
+            'empty' => 'No mentor prompts fired while you were away.',
+            'item_timestamp' => 'Delivered :timestamp',
+            'cta' => 'Mark conditions reviewed once you are caught up to keep the ledger in sync.',
+        ],
         'footer' => 'Powered by the Dungen & Dragons campaign workspace.',
     ],
 ];

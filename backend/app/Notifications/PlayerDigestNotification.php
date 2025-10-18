@@ -61,6 +61,20 @@ class PlayerDigestNotification extends Notification implements ShouldQueue
             ->line(sprintf('Urgency: %s', Str::title($this->digest['urgency'] ?? 'calm')));
 
         $sections = Arr::get($this->digest, 'sections', []);
+        $mentorTip = Arr::get($this->digest, 'mentor_tip.items', []);
+
+        if ($mentorTip !== []) {
+            $mail->line(trans('condition_timers.share_view.catch_up.email_intro'));
+
+            foreach ($mentorTip as $entry) {
+                $mail->line(trans('condition_timers.share_view.catch_up.item_email', [
+                    'excerpt' => Arr::get($entry, 'excerpt', ''),
+                    'timestamp' => Arr::get($entry, 'delivered_at', trans('condition_timers.generic.unknown')),
+                ]));
+            }
+
+            $mail->line(trans('condition_timers.share_view.catch_up.cta'));
+        }
 
         $conditionEntries = Arr::get($sections, 'conditions', []);
 
@@ -128,11 +142,13 @@ class PlayerDigestNotification extends Notification implements ShouldQueue
         $conditions = count(Arr::get($this->digest, 'sections.conditions', []));
         $quests = count(Arr::get($this->digest, 'sections.quests', []));
         $rewards = count(Arr::get($this->digest, 'sections.rewards', []));
+        $mentorTips = count(Arr::get($this->digest, 'mentor_tip.items', []));
 
         $parts = array_filter([
             $conditions > 0 ? sprintf('%d condition change%s', $conditions, $conditions === 1 ? '' : 's') : null,
             $quests > 0 ? sprintf('%d quest update%s', $quests, $quests === 1 ? '' : 's') : null,
             $rewards > 0 ? sprintf('%d reward log%s', $rewards, $rewards === 1 ? '' : 's') : null,
+            $mentorTips > 0 ? trans_choice('condition_timers.share_view.catch_up.summary', $mentorTips, ['count' => $mentorTips]) : null,
         ]);
 
         return $parts === [] ? 'Fresh tracks, but no major changes.' : implode(' · ', $parts);

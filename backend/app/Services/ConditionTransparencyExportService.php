@@ -92,6 +92,7 @@ class ConditionTransparencyExportService
                 'visibility_mode' => $activeShare->visibility_mode,
                 'state' => $this->shares->describeShareState($activeShare),
                 'access_trend' => $this->shares->accessTrend($activeShare),
+                'insights' => $this->shares->insights($activeShare, $group),
             ] : null,
             'trails' => $this->shares->exportAccessTrails($group),
         ];

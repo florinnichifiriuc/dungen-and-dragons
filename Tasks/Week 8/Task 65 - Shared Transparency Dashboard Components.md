@@ -1,6 +1,6 @@
 # Task 65 – Shared Transparency Dashboard Components
 
-**Status:** Not Started
+**Status:** Completed
 **Owner:** Frontend Guild
 **Dependencies:** Tasks 34, 35, 52, 62
 
@@ -21,3 +21,4 @@ Generalize the transparency dashboards and widgets into an Inertia + shadcn/ui c
 
 ## Log
 - 2025-11-13 18:20 UTC – Logged after retro decision to accelerate reuse of transparency insights across upcoming initiatives.
+- 2025-11-14 18:30 UTC – Extracted InsightCard/InsightList components, documented usage in `docs/frontend-components.md`, and wired share insights to the new library.

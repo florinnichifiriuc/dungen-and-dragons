@@ -8,6 +8,13 @@ import PlayerConditionTimerSummaryPanel, {
 import { MobileConditionTimerRecapWidget } from '@/components/condition-timers/MobileConditionTimerRecapWidget';
 import { useTranslations } from '@/hooks/useTranslations';
 
+type MentorCatchUpPrompt = {
+    id: string;
+    delivered_at?: string | null;
+    excerpt?: string | null;
+    focus_summary?: string | null;
+};
+
 type ConditionTimerSummarySharePageProps = {
     group: { id: number; name: string };
     summary: ConditionTimerSummaryResource;
@@ -16,13 +23,16 @@ type ConditionTimerSummarySharePageProps = {
         expires_at: string | null;
         state?: { state: string; relative?: string | null; redacted?: boolean } | null;
         redacted?: boolean;
+        freshness?: { status: string; generated_at?: string | null; relative?: string | null } | null;
     };
+    catch_up_prompts: MentorCatchUpPrompt[];
 };
 
 export default function ConditionTimerSummarySharePage({
     group,
     summary,
     share,
+    catch_up_prompts: catchUpPrompts,
 }: ConditionTimerSummarySharePageProps) {
     const { t, locale } = useTranslations('condition_timers');
 
@@ -79,6 +89,34 @@ export default function ConditionTimerSummarySharePage({
         [group.name, t]
     );
 
+    const freshness = share.freshness ?? null;
+    const freshnessLabel = useMemo(() => {
+        if (!freshness?.status) {
+            return null;
+        }
+
+        return t(`share_view.staleness.${freshness.status}`, undefined, {
+            relative: freshness.relative ?? '',
+        });
+    }, [freshness?.relative, freshness?.status, t]);
+
+    const catchUpItems = useMemo(() => {
+        if (!catchUpPrompts || catchUpPrompts.length === 0) {
+            return [];
+        }
+
+        return catchUpPrompts.map((prompt) => {
+            const delivered = formatTimestamp(prompt.delivered_at ?? null);
+
+            return {
+                id: prompt.id,
+                excerpt: prompt.excerpt ?? '',
+                delivered,
+                focus: prompt.focus_summary ?? null,
+            };
+        });
+    }, [catchUpPrompts, formatTimestamp]);
+
     return (
         <GuestLayout>
             <Head title={headTitle} />
@@ -94,6 +132,8 @@ export default function ConditionTimerSummarySharePage({
                         <h1 className="text-3xl font-semibold">{pageTitle}</h1>
                     </div>
                     <p className="text-sm text-zinc-400">{t('share_view.description')}</p>
+                    {freshnessLabel && <p className="text-xs text-amber-200">{freshnessLabel}</p>}
+                    <p className="text-xs text-zinc-500">{t('share_view.contact_hint', undefined, { facilitator: t('share_view.facilitator_generic') })}</p>
                     <div className="space-y-1 text-xs text-zinc-500">
                         {createdLabel && <p>{t('share_view.summoned', undefined, { timestamp: createdLabel })}</p>}
                         {summaryUpdatedLabel && (
@@ -128,6 +168,37 @@ export default function ConditionTimerSummarySharePage({
                     <div className="flex flex-1 items-center justify-center rounded-xl border border-zinc-900 bg-zinc-950/80 p-8 text-center text-sm text-zinc-400">
                         {t('share_view.redacted_empty')}
                     </div>
+                )}
+                {!share.redacted && (
+                    <section className="space-y-3 rounded-xl border border-zinc-900/70 bg-zinc-950/70 p-4" aria-labelledby="mentor-catch-up-heading">
+                        <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                            <h2 id="mentor-catch-up-heading" className="text-sm font-semibold text-zinc-100">
+                                {t('share_view.catch_up.title')}
+                            </h2>
+                            <p className="text-[11px] text-zinc-500">{t('share_view.catch_up.subtitle')}</p>
+                        </div>
+                        {catchUpItems.length === 0 ? (
+                            <p className="text-xs text-zinc-500">{t('share_view.catch_up.empty')}</p>
+                        ) : (
+                            <ul className="space-y-2 text-left text-xs">
+                                {catchUpItems.map((item) => (
+                                    <li
+                                        key={item.id}
+                                        className="rounded-lg border border-zinc-900/60 bg-zinc-950/80 p-3 text-zinc-200"
+                                    >
+                                        <p className="font-medium text-amber-100">{item.excerpt}</p>
+                                        <p className="text-[11px] text-zinc-400">
+                                            {t('share_view.catch_up.item_timestamp', undefined, { timestamp: item.delivered ?? t('generic.unknown') })}
+                                        </p>
+                                        {item.focus && (
+                                            <p className="text-[11px] text-zinc-500">{item.focus}</p>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        <p className="text-[11px] text-zinc-500">{t('share_view.catch_up.cta')}</p>
+                    </section>
                 )}
                 <footer className="mt-auto text-center text-xs text-zinc-600">
                     {t('share_view.footer')}

@@ -25,6 +25,8 @@ return [
             'redacted' => 'Conținutul este redat doar după emiterea unui link nou pentru a proteja povestea expirată.',
         ],
         'form' => [
+            'preset_bundle' => 'Presetare recomandată',
+            'bundle_custom' => 'Configurare personalizată',
             'expiry_preset' => 'Presetare expirare',
             'custom_hours' => 'Ore personalizate',
             'guest_visibility' => 'Vizibilitate pentru invitați',
@@ -42,8 +44,40 @@ return [
         ],
         'insights' => [
             'title' => 'Informații despre accesări',
-            'summary' => 'zero: Nu s-au înregistrat vizite în ultimele șapte nopți.|one: :count vizită înregistrată în ultimele șapte nopți.|few: :count vizite înregistrate în ultimele șapte nopți.|other: :count de vizite înregistrate în ultimele șapte nopți.',
+            'weekly_summary' => 'zero: Nu s-au înregistrat vizite în ultimele șapte nopți.|one: :count vizită înregistrată în ultimele șapte nopți.|few: :count vizite înregistrate în ultimele șapte nopți.|other: :count de vizite înregistrate în ultimele șapte nopți.',
+            'weekly_total' => [
+                'title' => 'Trafic pe șapte nopți',
+            ],
             'footnote' => 'Valorile cumulează traficul invitaților indiferent de dispozitiv. Rotește linkurile dacă ritmul nu se potrivește obiceiurilor grupului.',
+            'empty' => 'Nu există vizite în acest interval.',
+            'bundle_custom' => 'Configurare personalizată',
+            'peak' => [
+                'title' => 'Vârf de trafic',
+                'subtitle' => 'Evidențiat la :date',
+                'description' => 'Presetare :bundle • roluri de extensie: :roles',
+                'empty' => 'Nu s-au identificat vârfuri încă.',
+            ],
+            'roles' => [
+                'owner' => 'Facilitator',
+                'dungeon-master' => 'Maestru de joc',
+                'player' => 'Jucător',
+                'unknown' => 'Actor necunoscut',
+            ],
+            'extension_count' => 'one: :count extensie|few: :count extensii|other: :count de extensii',
+            'extension_empty' => 'Nu există extensii înregistrate în acest interval.',
+            'presets' => [
+                'title' => 'Adopție presetări',
+                'description' => 'Utilizarea pachetelor pentru toate linkurile emise.',
+                'empty' => 'Nu a fost selectată nicio presetare încă.',
+            ],
+            'preset_usage' => 'one: :count selecție|few: :count selecții|other: :count de selecții',
+            'recent_extensions' => [
+                'title' => 'Extensii recente',
+                'description' => 'Cei mai recenți actori care au extins accesul invitaților.',
+                'empty' => 'Nu există extensii recente de revizuit.',
+            ],
+            'recent_extension' => ':timestamp — extensie trimisă.',
+            'recent_extension_with_expiry' => ':timestamp — extensie trimisă (expiră :expires).',
         ],
         'consent' => [
             'title' => 'Registrul consimțământelor jucătorilor',
@@ -71,6 +105,7 @@ return [
             'active' => 'Activ',
             'expiring_soon' => 'Pe cale să expire',
             'expired' => 'Expirat',
+            'preset_label' => 'Presetare: :label',
         ],
         'access_trend' => [
             'weekday_format' => ':weekday, :day :month',
@@ -156,6 +191,20 @@ return [
         'retires' => 'Linkul expiră la :timestamp',
         'redacted_banner' => 'Această panoramă a fost învăluită. Povestitorul a ascuns detaliile pentru a proteja firul narativ. Cere un link nou dacă mai ai nevoie de îndrumare.',
         'redacted_empty' => 'Paginile acestui jurnal s-au estompat. Solicită un nou briefing pentru a afla ultimele afecțiuni.',
+        'staleness' => [
+            'fresh' => 'Actualizat în ultima oră.',
+            'day_old' => 'Ultima actualizare aproximativ :relative în urmă—cere facilitatorului o reîmprospătare dacă ai nevoie de mai mult context.',
+            'stale' => 'Acest registru are peste o zi (:relative). Tratează-l ca legendă până sosește un link nou.',
+        ],
+        'contact_hint' => 'Ai nevoie de un briefing proaspăt? Trimite o piatră de legătură către :facilitator.',
+        'facilitator_generic' => 'facilitatorul tău',
+        'catch_up' => [
+            'title' => 'Mesaje de recuperare ale mentorului',
+            'subtitle' => 'Reperele mentorului de când ai vizitat ultima dată.',
+            'empty' => 'Nu au fost generate mesaje de mentor cât ai fost plecat.',
+            'item_timestamp' => 'Livrat la :timestamp',
+            'cta' => 'După ce parcurgi mesajele, marchează condițiile ca revizuite pentru a ține registrul sincronizat.',
+        ],
         'footer' => 'Alimentat de platforma de campanie Dungen & Dragons.',
     ],
 ];

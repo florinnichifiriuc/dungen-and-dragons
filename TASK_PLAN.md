@@ -7,27 +7,22 @@
 - [x] Task 54 – Offline Sync Reliability (queued acknowledgement reconciliation, background sync workers, and degraded-mode UI messaging).
 - [x] Task 55 – Localization & Accessibility Audit (timer surfaces internationalization review, screen reader scripts, and QA regression harness updates).
 - [x] Task 56 – Condition Transparency Data Exports (CSV/JSON exports, webhook triggers, and admin governance controls).
-- [ ] Task 57 – Share Link & Consent Controls (configurable expiry policies, guest acknowledgement visibility toggles, and audit consent logs).
-- [ ] Task 58 – AI Mentor Briefings (condition trend prompts, spoiler-safe recommendations, and facilitator override tools leveraging existing AI services).
-- [ ] Task 59 – End-to-End Transparency QA Suite (guest regression coverage, load/perf scripts, and beta launch acceptance checklist).
-- [ ] Task 60 – Condition Timer Share Access Trails (immutable access logging, masked telemetry, and export hooks layered on top of summary shares).
-- [ ] Task 61 – Condition Timer Share Expiry Stewardship (configurable expiry presets, lifecycle warnings, and lightweight extension controls in the manager UI).
-- [ ] Task 62 – Condition Timer Share Access Insights (trend dashboards for share usage, facilitator highlight panels, and export-ready datasets).
-- [ ] Task 63 – Condition Timer Share Guest Experience Polish (guest-facing narrative framing, responsive recap layouts, and regression coverage for refreshed copy).
-- [ ] Task 64 – Transparency Initiative Completion Dossier (stakeholder dossier compiling architecture, QA artifacts, telemetry dashboards, and narrative assets).
-- [ ] Task 65 – Shared Transparency Dashboard Components (extract reusable Inertia/shadcn UI components plus telemetry docs for future initiatives).
-- [ ] Task 66 – AI Mentor Prompt Localization Manifest (centralized manifest, workflow, and localization pilot for mentor briefing prompts).
-- [ ] Task 67 – Knowledge Transfer Series (two-session onboarding program with recordings, slides, and follow-up tracking).
-- [ ] Task 68 – Consent Audit KPI Dashboard (recurring Looker dashboard with consent/expiry KPIs and runbook integration).
+- [x] Task 57 – Share Link & Consent Controls (configurable expiry policies, guest acknowledgement visibility toggles, and audit consent logs).
+- [x] Task 58 – AI Mentor Briefings (condition trend prompts, spoiler-safe recommendations, and facilitator override tools leveraging existing AI services).
+- [x] Task 59 – End-to-End Transparency QA Suite (guest regression coverage, load/perf scripts, and beta launch acceptance checklist).
+- [x] Task 60 – Condition Timer Share Access Trails (immutable access logging, masked telemetry, and export hooks layered on top of summary shares).
+- [x] Task 61 – Condition Timer Share Expiry Stewardship (configurable expiry presets, lifecycle warnings, and lightweight extension controls in the manager UI).
+- [x] Task 62 – Condition Timer Share Access Insights (trend dashboards for share usage, facilitator highlight panels, and export-ready datasets).
+- [x] Task 63 – Condition Timer Share Guest Experience Polish (guest-facing narrative framing, responsive recap layouts, and regression coverage for refreshed copy).
+- [x] Task 64 – Transparency Initiative Completion Dossier (stakeholder dossier compiling architecture, QA artifacts, telemetry dashboards, and narrative assets).
+- [x] Task 65 – Shared Transparency Dashboard Components (extract reusable Inertia/shadcn UI components plus telemetry docs for future initiatives).
+- [x] Task 66 – AI Mentor Prompt Localization Manifest (centralized manifest, workflow, and localization pilot for mentor briefing prompts).
+- [x] Task 67 – Knowledge Transfer Series (two-session onboarding program with recordings, slides, and follow-up tracking).
+- [x] Task 68 – Consent Audit KPI Dashboard (recurring Looker dashboard with consent/expiry KPIs and runbook integration).
+- [x] Task 69 – Transparency Engineering Onboarding Quickstart (single-source quickstart mapping setup, workflows, and cohort materials).
+- [x] Task 70 – Consent Telemetry Alerting Playbook (threshold definitions, PagerDuty routing, communication templates).
+- [x] Task 71 – Transparency Maintenance Transition Plan (ownership roster, maintenance cadences, transition backlog, stakeholder comms).
 ## In Progress
-- Task 57 – Share Link & Consent Controls (finalizing review of consent-aware share UI and policies).
-- Task 58 – AI Mentor Briefings (moderation playback digest and guardrail review in flight).
-- Task 59 – End-to-End Transparency QA Suite (regression tagging, load scripts, and beta readiness reporting).
-- Task 60 – Condition Timer Share Access Trails (immutable access logging with telemetry feeds for insights).
-- Task 61 – Condition Timer Share Expiry Stewardship (preset bundles, extension workflows, and redaction guardrails).
-- Task 62 – Condition Timer Share Access Insights (trend dashboards correlating preset adoption and extension actors).
-- Task 63 – Condition Timer Share Guest Experience Polish (guest copy refresh, recap catch-up prompts, and responsive layout tuning).
-- Task 64 – Transparency Initiative Completion Dossier (asset inventory and stakeholder sign-off circulation).
 
 ## Completed
 - Initial architectural plan updated for multi-group, turn-based world.
