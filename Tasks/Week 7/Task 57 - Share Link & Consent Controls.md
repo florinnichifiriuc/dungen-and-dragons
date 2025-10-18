@@ -1,6 +1,6 @@
 # Task 57 – Share Link & Consent Controls
 
-**Status:** In Review
+**Status:** Completed
 **Owner:** Product & Engineering
 **Dependencies:** Tasks 49, 50, 56
 
@@ -23,3 +23,4 @@ Enhance shareable condition outlooks with configurable expiry policies, consent 
 ## Log
 - 2025-11-05 17:05 UTC – Captured after facilitators reported aggressive expiry defaults during focus group review.
 - 2025-11-09 15:45 UTC – Completed consent-aware share UI refactor and added Pest coverage ensuring facilitators cannot issue detailed links without granted player consent.
+- 2025-11-20 09:50 UTC – Hardened share link state handling, catch-up prompt hydration, and access event metadata for mentor moderation awareness; refreshed regression suite.

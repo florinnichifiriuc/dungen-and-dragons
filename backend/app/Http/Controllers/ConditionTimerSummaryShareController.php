@@ -174,7 +174,7 @@ class ConditionTimerSummaryShareController extends Controller
         $summary = $this->projector->projectForGroup($group);
         $summary = $this->chronicle->attachPublicTimeline($group, $summary);
 
-        $previousAccess = $share->last_accessed_at?->toIso8601String() ?? $share->created_at?->toIso8601String();
+        $previousAccess = $share->last_accessed_at?->toIso8601String();
         $catchUpPrompts = $this->mentorBriefings->catchUpPrompts($group, $previousAccess);
 
         $freshness = null;

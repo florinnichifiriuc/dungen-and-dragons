@@ -16,6 +16,10 @@ class AiRequest extends Model
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_FAILED = 'failed';
 
+    public const MODERATION_PENDING = 'pending';
+    public const MODERATION_APPROVED = 'approved';
+    public const MODERATION_REJECTED = 'rejected';
+
     /**
      * @var bool
      */
@@ -42,6 +46,10 @@ class AiRequest extends Model
         'provider',
         'model',
         'created_by',
+        'moderation_status',
+        'moderation_notes',
+        'moderated_by',
+        'moderated_at',
         'completed_at',
         'failed_at',
         'error_message',
@@ -55,6 +63,7 @@ class AiRequest extends Model
         'response_payload' => 'array',
         'completed_at' => 'datetime',
         'failed_at' => 'datetime',
+        'moderated_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -76,6 +85,11 @@ class AiRequest extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function moderator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'moderated_by');
+    }
+
     public function markCompleted(string $responseText, array $payload = []): void
     {
         $this->forceFill([
@@ -94,6 +108,36 @@ class AiRequest extends Model
             'status' => self::STATUS_FAILED,
             'failed_at' => now('UTC'),
             'error_message' => $message,
+        ])->save();
+    }
+
+    public function markModerationPending(?string $notes = null): void
+    {
+        $this->forceFill([
+            'moderation_status' => self::MODERATION_PENDING,
+            'moderation_notes' => $notes,
+            'moderated_by' => null,
+            'moderated_at' => null,
+        ])->save();
+    }
+
+    public function markModerationApproved(?int $moderatorId, ?string $notes = null): void
+    {
+        $this->forceFill([
+            'moderation_status' => self::MODERATION_APPROVED,
+            'moderation_notes' => $notes,
+            'moderated_by' => $moderatorId,
+            'moderated_at' => now('UTC'),
+        ])->save();
+    }
+
+    public function markModerationRejected(?int $moderatorId, ?string $notes = null): void
+    {
+        $this->forceFill([
+            'moderation_status' => self::MODERATION_REJECTED,
+            'moderation_notes' => $notes,
+            'moderated_by' => $moderatorId,
+            'moderated_at' => now('UTC'),
         ])->save();
     }
 }

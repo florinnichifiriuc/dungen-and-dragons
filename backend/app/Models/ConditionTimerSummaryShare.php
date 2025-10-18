@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Models\ConditionTimerSummaryShareAccess;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -40,6 +42,54 @@ class ConditionTimerSummaryShare extends Model
         'consent_snapshot' => 'array',
         'last_accessed_at' => 'immutable_datetime',
     ];
+
+    public function scopeActive(Builder $query): Builder
+    {
+        $now = CarbonImmutable::now('UTC');
+
+        return $query
+            ->whereNull('deleted_at')
+            ->where(function (Builder $builder) use ($now) {
+                $builder
+                    ->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', $now);
+            });
+    }
+
+    public function scopeExpired(Builder $query): Builder
+    {
+        $now = CarbonImmutable::now('UTC');
+
+        return $query
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', $now);
+    }
+
+    public function scopeEvergreen(Builder $query): Builder
+    {
+        return $query->whereNull('expires_at');
+    }
+
+    public function isEvergreen(): bool
+    {
+        return $this->expires_at === null;
+    }
+
+    public function expiresWithinHours(int $hours): bool
+    {
+        if ($this->expires_at === null) {
+            return false;
+        }
+
+        $threshold = CarbonImmutable::now('UTC')->addHours($hours);
+
+        return $this->expires_at->lessThanOrEqualTo($threshold) && $this->expires_at->isFuture();
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast();
+    }
 
     public function group(): BelongsTo
     {

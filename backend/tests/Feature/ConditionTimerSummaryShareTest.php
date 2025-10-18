@@ -217,7 +217,7 @@ it('allows managers to extend share expiries and logs the change', function () {
     $share->refresh();
 
     expect($share->expires_at)->toBeInstanceOf(CarbonImmutable::class);
-    expect($share->expires_at->diffInHours(CarbonImmutable::now('UTC')))->toBeGreaterThan(12);
+    expect($share->expires_at->diffInHours(CarbonImmutable::now('UTC'), true))->toBeGreaterThan(12);
 
     $extensionEvent = ConditionTimerSummaryShareAccess::query()
         ->where('condition_timer_summary_share_id', $share->id)
@@ -349,7 +349,7 @@ it('applies preset bundles when generating share links', function () {
 
     expect($share->preset_key)->toBe('extended_allies');
     expect($share->visibility_mode)->toBe('details');
-    expect($share->expires_at?->diffInHours(now('UTC')))->toBeGreaterThanOrEqual(70);
+    expect($share->expires_at?->diffInHours(now('UTC'), true))->toBeGreaterThanOrEqual(70);
 
     $creationEvent = ConditionTimerSummaryShareAccess::query()
         ->where('condition_timer_summary_share_id', $share->id)
