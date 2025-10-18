@@ -27,8 +27,14 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $table->timestampsTz();
 
-            $table->index(['condition_timer_summary_share_id', 'occurred_at']);
-            $table->index(['condition_timer_summary_share_id', 'event_type']);
+            $table->index([
+                'condition_timer_summary_share_id',
+                'occurred_at',
+            ], 'ctssa_share_occurred_at_index');
+            $table->index([
+                'condition_timer_summary_share_id',
+                'event_type',
+            ], 'ctssa_share_event_type_index');
         });
     }
 
