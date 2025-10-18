@@ -6,6 +6,7 @@ use App\Models\Campaign;
 use App\Models\CampaignQuestUpdate;
 use App\Models\CampaignRoleAssignment;
 use App\Models\ConditionTimerAdjustment;
+use App\Models\Group;
 use App\Models\GroupMembership;
 use App\Models\MapToken;
 use App\Models\SessionReward;
@@ -19,6 +20,10 @@ use Illuminate\Support\Str;
 
 class PlayerDigestService
 {
+    public function __construct(private readonly ConditionMentorBriefingService $mentorBriefings)
+    {
+    }
+
     /**
      * Build a digest payload for the given user.
      *
@@ -61,6 +66,7 @@ class PlayerDigestService
         $conditions = $this->collectConditionHighlights($groupIds, $since);
         $quests = $this->collectQuestUpdates($campaignIds, $groupIds, $since);
         $rewards = $this->collectRewardUpdates($campaignIds, $since);
+        $mentorCatchUps = $this->collectMentorCatchUps($groupIds, $since);
 
         if ($mode === 'urgent') {
             $conditions = $conditions->filter(function (array $entry): bool {
@@ -73,6 +79,25 @@ class PlayerDigestService
         $hasUpdates = $conditions->isNotEmpty() || $quests->isNotEmpty() || $rewards->isNotEmpty();
 
         $digestUrgency = $this->resolveDigestUrgency($conditions);
+
+        $mentorTip = null;
+
+        if ($mentorCatchUps->isNotEmpty()) {
+            $mentorTip = [
+                'count' => $mentorCatchUps->count(),
+                'summary' => trans_choice('condition_timers.share_view.catch_up.summary', $mentorCatchUps->count(), [
+                    'count' => $mentorCatchUps->count(),
+                ]),
+                'items' => $mentorCatchUps->take(5)->map(function (array $entry) {
+                    return [
+                        'id' => $entry['id'],
+                        'excerpt' => $entry['excerpt'],
+                        'delivered_at' => $entry['delivered_at'],
+                        'focus_summary' => $entry['focus_summary'],
+                    ];
+                })->values()->all(),
+            ];
+        }
 
         return [
             'user_id' => $user->id,
@@ -87,9 +112,54 @@ class PlayerDigestService
                 'quests' => $quests->all(),
                 'rewards' => $rewards->all(),
             ],
-            'mentor_tip' => null,
-            'markdown' => $this->renderMarkdown($user, $now, $since, $conditions, $quests, $rewards, $digestUrgency),
+            'mentor_tip' => $mentorTip,
+            'markdown' => $this->renderMarkdown(
+                $user,
+                $now,
+                $since,
+                $conditions,
+                $quests,
+                $rewards,
+                $mentorCatchUps,
+                $digestUrgency
+            ),
         ];
+    }
+
+    /**
+     * @param  Collection<int, int>  $groupIds
+     * @return Collection<int, array<string, mixed>>
+     */
+    protected function collectMentorCatchUps(Collection $groupIds, CarbonImmutable $since): Collection
+    {
+        if ($groupIds->isEmpty()) {
+            return collect();
+        }
+
+        $groups = Group::query()->whereIn('id', $groupIds)->get();
+
+        return $groups
+            ->flatMap(function (Group $group) use ($since) {
+                return $this->mentorBriefings->catchUpPrompts($group, $since);
+            })
+            ->filter(function ($entry) {
+                return is_array($entry) && ($entry['excerpt'] ?? null) !== null;
+            })
+            ->unique('id')
+            ->sortByDesc(function (array $entry) {
+                $timestamp = $entry['delivered_at'] ?? null;
+
+                if (! $timestamp) {
+                    return 0;
+                }
+
+                try {
+                    return CarbonImmutable::parse($timestamp, 'UTC')->getTimestamp();
+                } catch (\Throwable) {
+                    return 0;
+                }
+            })
+            ->values();
     }
 
     /**
@@ -315,6 +385,7 @@ class PlayerDigestService
         Collection $conditions,
         Collection $quests,
         Collection $rewards,
+        Collection $mentorCatchUps,
         string $urgency
     ): string {
         $lines = [];
@@ -323,6 +394,33 @@ class PlayerDigestService
         $lines[] = sprintf('_Window: %s → %s UTC_', $since->format('Y-m-d H:i'), $now->format('Y-m-d H:i'));
         $lines[] = sprintf('_Urgency: **%s**_', Str::title($urgency));
         $lines[] = '';
+
+        if ($mentorCatchUps->isNotEmpty()) {
+            $lines[] = '## '.trans('condition_timers.share_view.catch_up.title');
+            $lines[] = trans('condition_timers.share_view.catch_up.email_intro');
+
+            foreach ($mentorCatchUps as $entry) {
+                $excerpt = Arr::get($entry, 'excerpt', '');
+                $deliveredAt = Arr::get($entry, 'delivered_at');
+                $formatted = $deliveredAt;
+
+                if ($deliveredAt) {
+                    try {
+                        $formatted = CarbonImmutable::parse($deliveredAt, 'UTC')->format('Y-m-d H:i');
+                    } catch (\Throwable) {
+                        $formatted = $deliveredAt;
+                    }
+                }
+
+                $lines[] = trans('condition_timers.share_view.catch_up.item_email', [
+                    'excerpt' => $excerpt,
+                    'timestamp' => $formatted ?? trans('condition_timers.generic.unknown'),
+                ]);
+            }
+
+            $lines[] = trans('condition_timers.share_view.catch_up.cta');
+            $lines[] = '';
+        }
 
         if ($conditions->isNotEmpty()) {
             $lines[] = '## Condition highlights';

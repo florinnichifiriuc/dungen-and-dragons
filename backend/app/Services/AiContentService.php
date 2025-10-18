@@ -17,6 +17,10 @@ use Throwable;
 
 class AiContentService
 {
+    public function __construct(private readonly ConditionMentorPromptManifest $mentorManifest)
+    {
+    }
+
     public function summarizeTurn(Region $region, CarbonImmutable $windowStart, CarbonImmutable $windowEnd, ?User $requestedBy = null): string
     {
         $prompt = $this->buildTurnSummaryPrompt($region, $windowStart, $windowEnd);
@@ -262,39 +266,103 @@ class AiContentService
      */
     protected function buildMentorBriefingPrompt(Group $group, array $focus): string
     {
+        $manifest = $this->mentorManifest->mentorBriefing();
+        $sections = $this->mentorManifest->sections($manifest);
+        $toneTags = $this->mentorManifest->toneTags($manifest);
+
         $lines = [];
         $lines[] = sprintf('Group: %s (ID %d)', $group->name, $group->id);
+
+        $intro = Arr::get($manifest, 'intro');
+
+        if (is_string($intro) && $intro !== '') {
+            $lines[] = $intro;
+        }
+
+        if ($toneTags !== []) {
+            $lines[] = 'Tone tags: '.implode(', ', $toneTags);
+        }
 
         $critical = Arr::get($focus, 'critical_conditions', []);
         $unacknowledged = Arr::get($focus, 'unacknowledged_tokens', []);
         $recurring = Arr::get($focus, 'recurring_conditions', []);
 
+        $focusIncluded = false;
+
         if ($critical !== []) {
-            $lines[] = 'Critical conditions:';
-            foreach ($critical as $entry) {
-                $lines[] = '- '.$entry;
-            }
+            $focusIncluded = true;
+            $lines = array_merge(
+                $lines,
+                $this->renderManifestSection($sections['critical_conditions'] ?? [], $critical)
+            );
         }
 
         if ($unacknowledged !== []) {
-            $lines[] = 'Unacknowledged effects:';
-            foreach ($unacknowledged as $entry) {
-                $lines[] = '- '.$entry;
-            }
+            $focusIncluded = true;
+            $lines = array_merge(
+                $lines,
+                $this->renderManifestSection($sections['unacknowledged_tokens'] ?? [], $unacknowledged)
+            );
         }
 
         if ($recurring !== []) {
-            $lines[] = 'Recurring concerns:';
-            foreach ($recurring as $entry) {
-                $lines[] = '- '.$entry;
-            }
+            $focusIncluded = true;
+            $lines = array_merge(
+                $lines,
+                $this->renderManifestSection($sections['recurring_conditions'] ?? [], $recurring)
+            );
         }
 
-        if (count($lines) === 1) {
-            $lines[] = 'No urgent conditions detected; offer congratulations and light scouting advice.';
+        if (! $focusIncluded) {
+            $fallback = Arr::get($manifest, 'fallback');
+            $lines[] = is_string($fallback) && $fallback !== ''
+                ? $fallback
+                : 'No urgent conditions detected; offer congratulations and light scouting advice.';
         }
 
-        return implode("\n", $lines);
+        $closing = Arr::get($manifest, 'closing');
+
+        if (is_string($closing) && $closing !== '') {
+            $lines[] = $closing;
+        }
+
+        return implode("\n", array_filter($lines, fn ($line) => $line !== ''));
+    }
+
+    /**
+     * @param  array<int, string>  $entries
+     * @return array<int, string>
+     */
+    protected function renderManifestSection(array $definition, array $entries): array
+    {
+        $lines = [];
+
+        $heading = Arr::get($definition, 'heading', 'Focus items:');
+        $notes = Arr::get($definition, 'narrative_notes');
+        $moderation = Arr::get($definition, 'moderation');
+        $tone = Arr::get($definition, 'tone');
+
+        if (is_string($heading) && $heading !== '') {
+            $lines[] = $heading;
+        }
+
+        if (is_string($tone) && $tone !== '') {
+            $lines[] = 'Suggested tone: '.$tone;
+        }
+
+        foreach ($entries as $entry) {
+            $lines[] = '- '.$entry;
+        }
+
+        if (is_string($notes) && $notes !== '') {
+            $lines[] = 'Narrative notes: '.$notes;
+        }
+
+        if (is_string($moderation) && $moderation !== '') {
+            $lines[] = 'Moderation guardrails: '.$moderation;
+        }
+
+        return $lines;
     }
 
     protected function fallbackText(string $requestType, string $prompt): string

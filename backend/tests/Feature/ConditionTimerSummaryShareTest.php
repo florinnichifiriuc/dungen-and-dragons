@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AiRequest;
 use App\Models\ConditionTimerShareConsentLog;
 use App\Models\ConditionTimerSummaryShare;
 use App\Models\ConditionTimerSummaryShareAccess;
@@ -71,6 +72,21 @@ it('allows facilitators to generate shareable condition outlook links when playe
     config()->set('app.asset_url', 'http://localhost/build');
     $version = hash('xxh128', config('app.asset_url'));
 
+    AiRequest::factory()->create([
+        'request_type' => 'mentor_briefing',
+        'context_type' => Group::class,
+        'context_id' => $group->id,
+        'status' => AiRequest::STATUS_COMPLETED,
+        'moderation_status' => AiRequest::MODERATION_APPROVED,
+        'completed_at' => CarbonImmutable::now('UTC')->subHour(),
+        'response_text' => 'Focus on detoxifying Sir Reginald.',
+        'meta' => [
+            'focus' => [
+                'critical_conditions' => ['Sir Reginald • Poisoned'],
+            ],
+        ],
+    ]);
+
     $shareResponse = $this
         ->withServerVariables(['REMOTE_ADDR' => '203.0.113.77'])
         ->get(
@@ -87,13 +103,24 @@ it('allows facilitators to generate shareable condition outlook links when playe
     expect($payload['component'])->toBe('Shares/ConditionTimerSummary');
     expect(data_get($payload, 'props.share.created_at'))->not->toBeNull();
     expect(data_get($payload, 'props.share.state.state'))->toBe('active');
+    expect(data_get($payload, 'props.share.freshness.status'))->toBe('fresh');
+    expect(data_get($payload, 'props.catch_up_prompts'))->toBeArray()->not->toBeEmpty();
+    expect(data_get($payload, 'props.catch_up_prompts.0.excerpt'))->toContain('Focus on detoxifying');
 
-    $access = ConditionTimerSummaryShareAccess::query()->first();
+    $access = ConditionTimerSummaryShareAccess::query()
+        ->where('event_type', 'access')
+        ->first();
 
     expect($access)->not->toBeNull();
     expect($access->event_type)->toBe('access');
     expect($access->ip_hash)->not->toBe('203.0.113.77');
     expect($access->user_agent_hash)->not->toBeNull();
+
+    $insights = $this->actingAs($manager)
+        ->getJson(route('groups.condition-timers.player-summary.share-links.insights', $group));
+
+    $insights->assertOk();
+    expect(data_get($insights->json(), 'insights.trend'))->toBeArray();
 });
 
 it('prevents outsiders from managing share links', function () {
@@ -199,6 +226,7 @@ it('allows managers to extend share expiries and logs the change', function () {
 
     expect($extensionEvent)->not->toBeNull();
     expect($extensionEvent->metadata['expires_at'] ?? null)->toBe($share->expires_at?->toIso8601String());
+    expect($extensionEvent->user_id)->toBe($manager->id);
 });
 
 it('redacts shares that have been expired for more than forty-eight hours', function () {
@@ -281,4 +309,55 @@ it('requires player consent before issuing detailed share links', function () {
         ->assertSessionHasErrors(['share']);
 
     expect(ConditionTimerSummaryShare::query()->exists())->toBeFalse();
+});
+
+it('applies preset bundles when generating share links', function () {
+    $manager = User::factory()->create();
+    $group = Group::factory()->create([
+        'created_by' => $manager->id,
+    ]);
+
+    GroupMembership::create([
+        'group_id' => $group->id,
+        'user_id' => $manager->id,
+        'role' => GroupMembership::ROLE_OWNER,
+    ]);
+
+    $player = User::factory()->create();
+
+    GroupMembership::create([
+        'group_id' => $group->id,
+        'user_id' => $player->id,
+        'role' => GroupMembership::ROLE_PLAYER,
+    ]);
+
+    ConditionTimerShareConsentLog::factory()->create([
+        'group_id' => $group->id,
+        'user_id' => $player->id,
+        'recorded_by' => $manager->id,
+        'action' => 'granted',
+        'visibility' => 'details',
+    ]);
+
+    $this->actingAs($manager)
+        ->post(route('groups.condition-timers.player-summary.share-links.store', $group), [
+            'preset_key' => 'extended_allies',
+        ])
+        ->assertRedirect();
+
+    $share = ConditionTimerSummaryShare::query()->where('group_id', $group->id)->firstOrFail();
+
+    expect($share->preset_key)->toBe('extended_allies');
+    expect($share->visibility_mode)->toBe('details');
+    expect($share->expires_at?->diffInHours(now('UTC')))->toBeGreaterThanOrEqual(70);
+
+    $creationEvent = ConditionTimerSummaryShareAccess::query()
+        ->where('condition_timer_summary_share_id', $share->id)
+        ->where('event_type', 'created')
+        ->first();
+
+    expect($creationEvent)->not->toBeNull();
+    expect($creationEvent->user_id)->toBe($manager->id);
+    expect($creationEvent->metadata['preset_key'] ?? null)->toBe('extended_allies');
+    expect($creationEvent->metadata['visibility_mode'] ?? null)->toBe('details');
 });
