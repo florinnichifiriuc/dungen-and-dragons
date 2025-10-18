@@ -1,6 +1,6 @@
 # Task 4 – Campaign Management Foundations
 
-**Status:** In Progress
+**Status:** Completed
 **Owner:** Engineering
 **Dependencies:** Task 3
 **Related Backlog Items:** Implement campaign CRUD with group invitations and role assignments
@@ -24,3 +24,4 @@ Deliver initial campaign CRUD flows wired to group permissions so game masters c
 
 ## Log
 - 2025-10-14 18:40 UTC – Added campaign CRUD, role assignments, invitations, UI, and tests (Pest + Dusk) while updating documentation.
+- 2025-11-24 12:35 UTC – Reviewed campaign management flows, confirmed automated coverage, and closed the task as completed.

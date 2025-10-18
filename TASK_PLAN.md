@@ -1,49 +1,14 @@
 # Task Plan
 
 ## Backlog
-- [x] Task 51 – Player Digest & Nudge Summaries (cross-feature digest aggregation, narrative tone review, delivery scheduling, and opt-out flows).
-- [x] Task 52 – Facilitator Insights Dashboard (timer health analytics, acknowledgement funnels, and risk flags with drill-down filters).
-- [x] Task 53 – Condition Timer API Hardening (rate limiting, conflict resolution improvements, circuit breaker alarms, and chaos testing playbook).
-- [x] Task 54 – Offline Sync Reliability (queued acknowledgement reconciliation, background sync workers, and degraded-mode UI messaging).
-- [x] Task 55 – Localization & Accessibility Audit (timer surfaces internationalization review, screen reader scripts, and QA regression harness updates).
-- [x] Task 56 – Condition Transparency Data Exports (CSV/JSON exports, webhook triggers, and admin governance controls).
-- [x] Task 57 – Share Link & Consent Controls (configurable expiry policies, guest acknowledgement visibility toggles, and audit consent logs).
-- [x] Task 58 – AI Mentor Briefings (condition trend prompts, spoiler-safe recommendations, and facilitator override tools leveraging existing AI services).
-- [x] Task 59 – End-to-End Transparency QA Suite (guest regression coverage, load/perf scripts, and beta launch acceptance checklist).
-- [x] Task 60 – Condition Timer Share Access Trails (immutable access logging, masked telemetry, and export hooks layered on top of summary shares).
-- [x] Task 61 – Condition Timer Share Expiry Stewardship (configurable expiry presets, lifecycle warnings, and lightweight extension controls in the manager UI).
-- [x] Task 62 – Condition Timer Share Access Insights (trend dashboards for share usage, facilitator highlight panels, and export-ready datasets).
-- [x] Task 63 – Condition Timer Share Guest Experience Polish (guest-facing narrative framing, responsive recap layouts, and regression coverage for refreshed copy).
-- [x] Task 64 – Transparency Initiative Completion Dossier (stakeholder dossier compiling architecture, QA artifacts, telemetry dashboards, and narrative assets).
-- [x] Task 65 – Shared Transparency Dashboard Components (extract reusable Inertia/shadcn UI components plus telemetry docs for future initiatives).
-- [x] Task 66 – AI Mentor Prompt Localization Manifest (centralized manifest, workflow, and localization pilot for mentor briefing prompts).
-- [x] Task 67 – Knowledge Transfer Series (two-session onboarding program with recordings, slides, and follow-up tracking).
-- [x] Task 68 – Consent Audit KPI Dashboard (recurring Looker dashboard with consent/expiry KPIs and runbook integration).
-- [x] Task 69 – Transparency Engineering Onboarding Quickstart (single-source quickstart mapping setup, workflows, and cohort materials).
-- [x] Task 70 – Consent Telemetry Alerting Playbook (threshold definitions, PagerDuty routing, communication templates).
-- [x] Task 71 – Transparency Maintenance Transition Plan (ownership roster, maintenance cadences, transition backlog, stakeholder comms).
-- [x] Task 72 – Condition Timer Share Maintenance Snapshot (model scopes, maintenance service, and attention payloads).
-- [x] Task 73 – Condition Transparency Maintenance API (authorized endpoint exposing maintenance snapshots for facilitators).
-- [x] Task 74 – Share Maintenance Artisan Command (operations CLI for reviewing attention queues and consent gaps).
-- [x] Task 75 – Share Maintenance Digest Job (queue job logging attention reasons for downstream alerts).
-- [x] Task 76 – Maintenance Threshold Configuration (configurable windows, quiet-hour ratios, and expiry warnings).
-- [x] Task 77 – Maintenance Operations Runbook (documentation for snapshots, CLI usage, and digest scheduling).
-- [x] Task 78 – Maintenance Service Test Coverage (unit specs verifying snapshot math and queue filters).
-- [x] Task 79 – Maintenance Interface Tests (feature tests for the maintenance API and artisan command output).
-- [x] Task 80 – Maintenance Digest Test Suite (job log assertions for attention versus healthy scenarios).
-- [x] Task 81 – Maintenance Rollout Tracking (progress log updates and follow-up alignment notes).
-- [x] Task 82 – Release Candidate Scope and Timeline (final two-week schedule, risk register, and cross-team checkpoints).
-- [x] Task 83 – AI Service Mocking and Test Harness (fixture-backed AI replacements powering all automated tests).
-- [x] Task 84 – Unit Test Hardening Sprint (coverage review, edge-case specs, and CI gates).
-- [x] Task 85 – End-to-End Regression Scenarios (Playwright suite for facilitator, player, and admin journeys).
-- [x] Task 86 – Bug Reporting Intake Experience (player/facilitator submission flows with telemetry capture).
-- [x] Task 87 – Admin Bug Triage Platform (role-gated dashboards for intake review and assignment).
-- [x] Task 88 – Bug Workflow Automation and Reporting (alerts, analytics widgets, and escalation playbooks).
-- [x] Task 89 – Release Monitoring and Rollback Readiness (observability, synthetic checks, and rollback drills).
-- [x] Task 90 – Launch Communications and Support Playbook (announcements, support scripts, and knowledge base updates).
-- [x] Task 91 – Launch Go/No-Go and Post-Launch Review (decision checkpoints, documentation, and retro scheduling).
+- [x] Demo enhancements & known issues brief so stakeholders have a current risk snapshot before the rehearsal (see `backend/docs/operations/demo-enhancements-known-issues.md`).
+- [x] Solution setup & CLI catalog outlining environment prerequisites and available artisan/Vite commands (see `backend/docs/onboarding/solution-setup-and-cli.md`).
+- [x] Site structure map aligning Laravel domains with Inertia/React entry points for demo navigation prep (see `backend/docs/architecture/site-structure.md`).
+- [x] API Swagger documentation draft covering auth, campaign, group, and transparency routes for handoff (see `backend/docs/api/swagger-overview.md`).
+- [x] Demo end-to-end rehearsal checklist covering manual Playwright cadence while CI automation is disabled (see `backend/docs/testing/demo-end-to-end-rehearsal-checklist.md`).
 ## In Progress
-- _None_
+- Task 84 – Unit Test Hardening Sprint (coverage gate replacement required after GitHub Actions removal).
+- Task 85 – End-to-End Regression Scenarios (manual Playwright runs pending automation alternative).
 ## Completed
 - Initial architectural plan updated for multi-group, turn-based world.
 - Task 1 – Project Bootstrap (Laravel + Inertia React scaffolding, tooling)

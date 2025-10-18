@@ -98,5 +98,9 @@
 | 2025-11-24 06:15 | Unit Test Coverage Gate | Added GitHub Action enforcing `php artisan test --coverage --min=80` with HTML reports so regressions block merges (Task 84). |
 | 2025-11-24 06:20 | Playwright CI Integration | Wired nightly/pull request GitHub Action to seed bug data, run Chromium & WebKit journeys, and publish artifacts (Task 85). |
 | 2025-11-24 09:10 | Admin Bug Triage Filters | Added updated timeframe filters to the triage dashboard so support admins can focus on recent reports during launch (Task 87). |
+| 2025-11-24 12:50 | Transparency Task Audit | Verified completion of Tasks 3, 4, 50, and 55, updated task records, and confirmed documentation remains in sync. |
+| 2025-11-24 13:55 | Demo Readiness Alignment | Reopened CI gating tasks, added pre-demo documentation backlog (setup guide, site map, API swagger, known issues), and scheduled manual Playwright cadence review ahead of the stakeholder rehearsal. |
+| 2025-11-24 15:05 | Demo Manual QA Cadence | Published the manual Playwright rehearsal checklist, linked it from the backlog, and reiterated coverage/lint spot checks required before demo sign-off. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.
+
