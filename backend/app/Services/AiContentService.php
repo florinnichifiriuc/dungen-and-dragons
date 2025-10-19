@@ -113,6 +113,35 @@ class AiContentService
         ];
     }
 
+    /**
+     * Generic creative helper hook that stores and dispatches custom prompts.
+     *
+     * @param  array<string, mixed>  $meta
+     */
+    public function creativeIdea(
+        Model $context,
+        string $requestType,
+        string $prompt,
+        string $systemPrompt,
+        array $meta = [],
+        ?User $requestedBy = null
+    ): array {
+        $request = $this->storeRequest(
+            requestType: $requestType,
+            context: $context,
+            prompt: $prompt,
+            meta: $meta,
+            requestedBy: $requestedBy,
+        );
+
+        $response = $this->dispatch($request, $prompt, $systemPrompt);
+
+        return [
+            'request' => $request->fresh(),
+            'content' => $response,
+        ];
+    }
+
     protected function dispatch(AiRequest $request, string $prompt, ?string $systemPrompt = null): string
     {
         try {
