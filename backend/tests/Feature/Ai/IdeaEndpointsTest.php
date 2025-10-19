@@ -45,9 +45,9 @@ it('returns fallback world ideas for group managers', function () {
 
     $payload = $response->json();
 
-    expect($payload['fields']['name'])->toBe('Radiant Expanse');
-    expect($payload['fields']['default_turn_duration_hours'])->toBe(24);
-    expect($payload['tips'])->toBeArray()->toHaveCount(3);
+    expect($payload['structured']['fields']['name'])->toBe('Radiant Expanse');
+    expect($payload['structured']['fields']['default_turn_duration_hours'])->toBe(24);
+    expect($payload['structured']['tips'])->toBeArray()->toHaveCount(3);
 });
 
 it('prevents non-members from requesting world ideas', function () {
@@ -66,9 +66,9 @@ it('returns fallback region ideas for group managers', function () {
 
     $payload = $response->json();
 
-    expect($payload['fields']['name'])->toBe('Auric Scriptorium Marches');
-    expect($payload['fields']['turn_duration_hours'])->toBe(48);
-    expect($payload['image_prompt'])->toContain($group->name);
+    expect($payload['structured']['fields']['name'])->toBe('Auric Scriptorium Marches');
+    expect($payload['structured']['fields']['turn_duration_hours'])->toBe(48);
+    expect($payload['structured']['image_prompt'])->toContain($group->name);
 });
 
 it('returns fallback tile template ideas for group managers', function () {
@@ -80,9 +80,9 @@ it('returns fallback tile template ideas for group managers', function () {
 
     $payload = $response->json();
 
-    expect($payload['fields']['terrain_type'])->toBe('enchanted-thicket');
-    expect($payload['fields']['movement_cost'])->toBe(3);
-    expect($payload['fields']['edge_profile'])->toContain('"north"');
+    expect($payload['structured']['fields']['terrain_type'])->toBe('enchanted-thicket');
+    expect($payload['structured']['fields']['movement_cost'])->toBe(3);
+    expect($payload['structured']['fields']['edge_profile'])->toContain('"north"');
 });
 
 it('returns fallback map plan ideas for group managers', function () {
@@ -100,9 +100,9 @@ it('returns fallback map plan ideas for group managers', function () {
 
     $payload = $response->json();
 
-    expect($payload['fields']['width'])->toBe(18);
-    expect($payload['fields']['orientation'])->toBe('pointy');
-    expect($payload['tips'])->toBeArray()->toHaveCount(2);
+    expect($payload['structured']['fields']['width'])->toBe(18);
+    expect($payload['structured']['fields']['orientation'])->toBe('pointy');
+    expect($payload['structured']['tips'])->toBeArray()->toHaveCount(2);
 });
 
 it('returns fallback campaign task ideas for managers', function () {
@@ -117,9 +117,9 @@ it('returns fallback campaign task ideas for managers', function () {
 
     $payload = $response->json();
 
-    expect($payload['fields']['title'])->toBe('Stabilize the frontier routes');
-    expect($payload['fields']['description'])->toContain('obstacles');
-    expect($payload['tips'])->toBeArray()->toHaveCount(3);
+    expect($payload['structured']['fields']['title'])->toBe('Stabilize the frontier routes');
+    expect($payload['structured']['fields']['description'])->toContain('obstacles');
+    expect($payload['structured']['tips'])->toBeArray()->toHaveCount(3);
 });
 
 it('returns fallback lore ideas for managers', function () {
@@ -134,9 +134,9 @@ it('returns fallback lore ideas for managers', function () {
 
     $payload = $response->json();
 
-    expect($payload['fields']['name'])->toBe('Archivist Seraphine');
-    expect($payload['fields']['tags'])->toBeArray()->toContain('ally');
-    expect($payload['image_prompt'])->toContain('Archivist Seraphine');
+    expect($payload['structured']['fields']['name'])->toBe('Archivist Seraphine');
+    expect($payload['structured']['fields']['tags'])->toBeArray()->toContain('ally');
+    expect($payload['structured']['image_prompt'])->toContain('Archivist Seraphine');
 });
 
 it('returns fallback quest ideas for managers', function () {
@@ -151,8 +151,8 @@ it('returns fallback quest ideas for managers', function () {
 
     $payload = $response->json();
 
-    expect($payload['fields']['title'])->toBe('Calm the Whispering Leyline');
-    expect($payload['fields']['objectives'])->toBeArray()->toHaveCount(3);
+    expect($payload['structured']['fields']['title'])->toBe('Calm the Whispering Leyline');
+    expect($payload['structured']['fields']['objectives'])->toBeArray()->toHaveCount(3);
 });
 
 it('prevents non-managers from requesting campaign task ideas', function () {

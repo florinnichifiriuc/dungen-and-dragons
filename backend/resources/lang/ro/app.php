@@ -4,7 +4,6 @@ return [
     'app_name' => 'Dungen & Dragons',
     'navigation' => [
         'search' => 'Căutare',
-        'admin' => 'Administrare',
         'preferences' => 'Preferințe',
         'notifications' => 'Notificări',
         'notifications_badge' => 'alerte necitite',

@@ -4,7 +4,6 @@ return [
     'app_name' => 'Dungen & Dragons',
     'navigation' => [
         'search' => 'Search',
-        'admin' => 'Admin',
         'preferences' => 'Preferences',
         'notifications' => 'Notifications',
         'notifications_badge' => 'unread alerts',

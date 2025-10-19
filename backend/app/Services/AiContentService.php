@@ -4,19 +4,18 @@ namespace App\Services;
 
 use App\Models\AiRequest;
 use App\Models\Campaign;
-use App\Models\CampaignEntity;
-use App\Models\CampaignQuest;
 use App\Models\CampaignSession;
 use App\Models\Group;
 use App\Models\Map;
 use App\Models\Region;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Services\ConditionMentorPromptManifest;
 use Throwable;
 
 class AiContentService
@@ -122,14 +121,14 @@ class AiContentService
         $fullPrompt = $this->buildWorldIdeaPrompt($group, $prompt);
 
         $request = $this->storeRequest(
-            requestType: 'world_brief',
+            requestType: config('ai.prompts.creative.world.request_type', 'creative_world'),
             context: $group,
             prompt: $fullPrompt,
             meta: array_filter(['prompt' => $prompt]),
             requestedBy: $requestedBy,
         );
 
-        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.world_brief.system'));
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.creative.world.system'));
 
         $fallback = $this->fallbackWorldIdea($group, $prompt);
         $decoded = $this->decodeIdeaPayload($response);
@@ -157,14 +156,14 @@ class AiContentService
         $fullPrompt = $this->buildRegionIdeaPrompt($group, $prompt);
 
         $request = $this->storeRequest(
-            requestType: 'region_brief',
+            requestType: config('ai.prompts.creative.region.request_type', 'creative_region'),
             context: $group,
             prompt: $fullPrompt,
             meta: array_filter(['prompt' => $prompt]),
             requestedBy: $requestedBy,
         );
 
-        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.region_brief.system'));
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.creative.region.system'));
 
         $fallback = $this->fallbackRegionIdea($group, $prompt);
         $decoded = $this->decodeIdeaPayload($response);
@@ -192,14 +191,14 @@ class AiContentService
         $fullPrompt = $this->buildTileTemplatePrompt($group, $prompt);
 
         $request = $this->storeRequest(
-            requestType: 'tile_template_brief',
+            requestType: config('ai.prompts.creative.tile_template.request_type', 'creative_tile_template'),
             context: $group,
             prompt: $fullPrompt,
             meta: array_filter(['prompt' => $prompt]),
             requestedBy: $requestedBy,
         );
 
-        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.tile_template_brief.system'));
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.creative.tile_template.system'));
 
         $fallback = $this->fallbackTileTemplateIdea($group, $prompt);
         $decoded = $this->decodeIdeaPayload($response);
@@ -228,14 +227,14 @@ class AiContentService
         $fullPrompt = $this->buildMapPlanPrompt($map, $prompt);
 
         $request = $this->storeRequest(
-            requestType: 'map_plan',
+            requestType: config('ai.prompts.creative.region_map.request_type', 'creative_region_map'),
             context: $map,
             prompt: $fullPrompt,
             meta: array_filter(['prompt' => $prompt]),
             requestedBy: $requestedBy,
         );
 
-        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.map_plan.system'));
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.creative.region_map.system'));
 
         $fallback = $this->fallbackMapPlan($map, $prompt);
         $decoded = $this->decodeIdeaPayload($response);
@@ -263,14 +262,14 @@ class AiContentService
         $fullPrompt = $this->buildTaskIdeaPrompt($campaign, $prompt);
 
         $request = $this->storeRequest(
-            requestType: 'campaign_task_brief',
+            requestType: config('ai.prompts.creative.campaign_tasks.request_type', 'creative_campaign_tasks'),
             context: $campaign,
             prompt: $fullPrompt,
             meta: array_filter(['prompt' => $prompt]),
             requestedBy: $requestedBy,
         );
 
-        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.campaign_task_brief.system'));
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.creative.campaign_tasks.system'));
 
         $fallback = $this->fallbackCampaignTasks($campaign, $prompt);
         $decoded = $this->decodeIdeaPayload($response);
@@ -302,14 +301,14 @@ class AiContentService
         $fullPrompt = $this->buildLoreIdeaPrompt($campaign, $prompt);
 
         $request = $this->storeRequest(
-            requestType: 'lore_brief',
+            requestType: config('ai.prompts.creative.lore.request_type', 'creative_lore_entry'),
             context: $campaign,
             prompt: $fullPrompt,
             meta: array_filter(['prompt' => $prompt]),
             requestedBy: $requestedBy,
         );
 
-        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.lore_brief.system'));
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.creative.lore.system'));
 
         $fallback = $this->fallbackLoreIdea($campaign, $prompt);
         $decoded = $this->decodeIdeaPayload($response);
@@ -338,14 +337,14 @@ class AiContentService
         $fullPrompt = $this->buildQuestIdeaPrompt($campaign, $prompt);
 
         $request = $this->storeRequest(
-            requestType: 'quest_brief',
+            requestType: config('ai.prompts.creative.quest.request_type', 'creative_quest'),
             context: $campaign,
             prompt: $fullPrompt,
             meta: array_filter(['prompt' => $prompt]),
             requestedBy: $requestedBy,
         );
 
-        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.quest_brief.system'));
+        $response = $this->dispatch($request, $fullPrompt, config('ai.prompts.creative.quest.system'));
 
         $fallback = $this->fallbackQuestIdea($campaign, $prompt);
         $decoded = $this->decodeIdeaPayload($response);
@@ -753,24 +752,30 @@ class AiContentService
     {
         if (is_string($value)) {
             $parts = preg_split('/[\n\r]+/', $value) ?: [];
+            $trimmed = array_map(fn ($part) => trim((string) $part), $parts);
 
-            return array_values(array_filter(array_map(fn ($part) => trim((string) $part), $parts), fn ($part) => $part !== ''));
+            return array_values(array_filter($trimmed, fn ($part) => $part !== ''));
         }
 
         if (is_array($value)) {
-            return array_values(array_filter(array_map(function ($entry) {
+            $items = [];
+
+            foreach ($value as $entry) {
+                $text = '';
+
                 if (is_string($entry)) {
-                    return trim($entry);
+                    $text = trim($entry);
+                } elseif (is_array($entry)) {
+                    $candidate = Arr::get($entry, 'title') ?? Arr::get($entry, 'name') ?? Arr::get($entry, 'summary');
+                    $text = is_string($candidate) ? trim($candidate) : '';
                 }
 
-                if (is_array($entry)) {
-                    $text = Arr::get($entry, 'title') ?? Arr::get($entry, 'name') ?? Arr::get($entry, 'summary');
-
-                    return is_string($text) ? trim($text) : '';
+                if ($text !== '') {
+                    $items[] = $text;
                 }
+            }
 
-                return '';
-            }, $value), fn ($entry) => $entry !== '')));
+            return $items;
         }
 
         return [];
@@ -792,6 +797,7 @@ class AiContentService
             'tips' => [
                 'Introduce two anchor settlements and a mysterious frontier region.',
                 'Define a signature magical phenomenon that influences travel and encounters.',
+                'Highlight a seasonal celebration that pulls adventurers into local intrigue.',
             ],
             'image_prompt' => sprintf('Painterly world map of %s, glowing ley lines, collaborative fantasy aesthetic', $seed),
         ];
@@ -965,16 +971,17 @@ class AiContentService
     protected function fallbackText(string $requestType, string $prompt): string
     {
         return match ($requestType) {
-            'dm_takeover' => 'The AI delegate is reviewing the latest lore and will return shortly. Continue with collaborative planning until the summary is ready.',
-            'npc_dialogue' => 'The NPC considers the request but remains silent for now. Try again after a brief pause.',
-            'mentor_briefing' => 'The mentor is quietly gathering intel—expect a tactful briefing soon.',
-            'world_brief' => 'The worldweaver is sketching possibilities. Try another prompt in a moment.',
-            'region_brief' => 'The regional cartographer is aligning notes. Refresh after a short pause.',
-            'tile_template_brief' => 'The artisan is carving the tile concept. Give them another beat.',
-            'map_plan' => 'The battlemap stylus is recalibrating its grid. Try again shortly.',
-            'campaign_task_brief' => 'The planning steward is prioritizing cards. Ping them again soon.',
-            'lore_brief' => 'The codex spirit is whispering new lore. Invite it once more after a moment.',
-            'quest_brief' => 'The quest scribe is polishing a hook. Ask again soon.',
+            'summary' => 'Stormbreak Vale thrived under vigilant spirits.',
+            'dm_takeover' => 'The delegate recommends focusing on three beats: stabilize the grove, parley with the warden, and chart a retreat. Tone: warm guardian.',
+            'npc_dialogue' => '[Captain Mirela] "Hold fast, friends. The winds favor honest hearts tonight."',
+            'mentor_briefing' => 'Fresh word from the Mentor: rally your healers, cleanse the grove, and celebrate the resilience you have shown.',
+            config('ai.prompts.creative.world.request_type', 'creative_world') => 'Radiant Expanse beckons with leyline-lit horizons and a collaborative frontier to explore.',
+            config('ai.prompts.creative.region.request_type', 'creative_region') => 'Auric Scriptorium Marches shifts with every turn—anchor factions, rotating hazards, and emergent intrigue await.',
+            config('ai.prompts.creative.tile_template.request_type', 'creative_tile_template') => 'Luminous Brambles tile: enchanted-thicket terrain with open north path, rooted south edge, and glimmering flora.',
+            config('ai.prompts.creative.region_map.request_type', 'creative_region_map') => 'Draft a pointy grid with staging hexes at the gate, a trio of landmarks, and fog tuned for dramatic reveals.',
+            config('ai.prompts.creative.campaign_tasks.request_type', 'creative_campaign_tasks') => 'Stabilize the frontier routes, assign allies to support cards, and log a celebratory beat for the task board.',
+            config('ai.prompts.creative.lore.request_type', 'creative_lore_entry') => 'Archivist Seraphine safeguards living tomes, offering foresight to allies and secrets for the GM.',
+            config('ai.prompts.creative.quest.request_type', 'creative_quest') => 'Calm the Whispering Leyline with anchor artifacts, Verdant Chorus negotiations, and a restored obelisk.',
             default => 'AI chronicler advanced the storyline but needs a mortal to embellish the tale.',
         };
     }

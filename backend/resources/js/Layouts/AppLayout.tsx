@@ -3,6 +3,7 @@ import { PropsWithChildren, useEffect, useMemo, useState } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useTranslations } from '@/hooks/useTranslations';
 
 type PreferenceBag = {
@@ -18,7 +19,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     const { props } = usePage<{
         csrf_token?: string;
         flash?: { success?: string; error?: string };
-        auth?: { user?: { name: string; account_role?: string | null } & PreferenceBag };
+        auth?: { user?: { name: string; is_support_admin?: boolean; account_role?: string | null } & PreferenceBag };
         notifications?: { unread_count: number };
         preferences?: PreferenceBag;
     }>();
@@ -168,12 +169,12 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 )}
                             </Link>
                         )}
-                        {user && user.account_role === 'admin' && (
+                        {(user?.is_support_admin || user?.account_role === 'admin') && (
                             <Link
                                 href={route('admin.users.index')}
                                 className={`${navLinkClass} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400`}
                             >
-                                {t('navigation.admin', 'Admin')}
+                                {user?.is_support_admin ? 'Support console' : 'Admin console'}
                             </Link>
                         )}
                         {user && (
@@ -187,13 +188,29 @@ export default function AppLayout({ children }: PropsWithChildren) {
                     </div>
                     <div className="flex items-center gap-3 text-sm">
                         {user && (
-                            <span className={isDarkMode ? 'text-zinc-400' : 'text-slate-600'} aria-live="polite">
-                                <span>{user.name}</span>
+                            <span className={`flex items-center gap-2 ${isDarkMode ? 'text-zinc-400' : 'text-slate-600'}`} aria-live="polite">
+                                <span className="font-medium">{user.name}</span>
                                 {user.account_role && (
-                                    <span className="ml-2 inline-flex items-center gap-1 text-xs uppercase tracking-wide">
-                                        <span className="h-1 w-1 rounded-full bg-amber-400" aria-hidden="true" />
-                                        {user.account_role.replace('-', ' ')}
-                                    </span>
+                                    <Badge
+                                        variant="outline"
+                                        className={`text-[11px] uppercase tracking-wide ${
+                                            isDarkMode
+                                                ? 'border-amber-400/40 text-amber-200'
+                                                : 'border-amber-600/40 text-amber-700'
+                                        }`}
+                                    >
+                                        {user.account_role}
+                                    </Badge>
+                                )}
+                                {user.is_support_admin && (
+                                    <Badge
+                                        variant="secondary"
+                                        className={`text-[11px] uppercase tracking-wide ${
+                                            isDarkMode ? 'bg-indigo-500/20 text-indigo-100' : 'bg-indigo-200/60 text-indigo-800'
+                                        }`}
+                                    >
+                                        Support admin
+                                    </Badge>
                                 )}
                             </span>
                         )}

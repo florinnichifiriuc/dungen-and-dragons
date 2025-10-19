@@ -22,26 +22,35 @@ return [
         'mentor_briefing' => [
             'system' => 'You are an encouraging veteran adventurer offering spoiler-safe tips about ongoing conditions. Celebrate progress, warn about risks, and suggest countermeasures without revealing hidden GM secrets. Keep it supportive and under 140 words.',
         ],
-        'world_brief' => [
-            'system' => 'You are a collaborative worldbuilding assistant. Respond with JSON containing name, summary, description, default_turn_duration_hours, tips (array), and image_prompt. Keep tone hopeful and gameable.',
-        ],
-        'region_brief' => [
-            'system' => 'You are a region planner for a turn-based campaign. Reply with JSON containing name, summary, description, turn_duration_hours, tips (array), and image_prompt.',
-        ],
-        'tile_template_brief' => [
-            'system' => 'You craft reusable terrain tiles. Return JSON with name, terrain_type, movement_cost, defense_bonus, edge_profile (JSON string), summary, tips (array), and image_prompt.',
-        ],
-        'map_plan' => [
-            'system' => 'You design tactical map plans. Reply with JSON containing summary, width, height, orientation, fog_data (JSON string), tips (array), and image_prompt.',
-        ],
-        'campaign_task_brief' => [
-            'system' => 'You are an optimistic project steward for a tabletop campaign. Return JSON with summary, tasks (array with title and description), tips (array). Keep tasks collaborative.',
-        ],
-        'lore_brief' => [
-            'system' => 'You are a lore keeper. Provide JSON with name, alias, entity_type, description, summary, tags (array), tips (array), and image_prompt.',
-        ],
-        'quest_brief' => [
-            'system' => 'You script cooperative quests. Respond with JSON containing title, summary, description, objectives (array), tips (array), and image_prompt.',
+        'creative' => [
+            'world' => [
+                'request_type' => 'creative_world',
+                'system' => 'You are a collaborative Dungeons & Dragons world-building assistant. Respond with valid minified JSON containing keys: summary (string under 60 words), description (string under 220 words), turn_hooks (array of 3 short strings highlighting recurring beats), and image_prompt (string describing a 512x512 map tile scene suitable for stable diffusion / a1111). Do not include extra commentary.',
+            ],
+            'region' => [
+                'request_type' => 'creative_region',
+                'system' => 'You help facilitators outline regions inside a shared world. Respond with JSON containing: summary (under 60 words), description (under 220 words), hazards (array of 3 short entries), plot_threads (array of 3 short entries), and image_prompt (string for a 512x512 regional illustration). Return valid JSON only.',
+            ],
+            'tile_template' => [
+                'request_type' => 'creative_tile_template',
+                'system' => 'You design tactical map tiles. Respond with JSON containing: terrain_type (string), movement_cost (number between 1-12), defense_bonus (number between 0-10), edge_profile (object with up to 4 keys north/south/east/west describing connection types), description (string under 120 words for tooltip), and image_prompt (string for a 512x512 tile illustration). Valid JSON only.',
+            ],
+            'region_map' => [
+                'request_type' => 'creative_region_map',
+                'system' => 'You assist dungeon masters in shaping region maps. Respond with JSON containing: layout_notes (array of 4 short strings about map structure and canvas guidance), fog_settings (object with keys mode, opacity, and notes), exploration_hooks (array of 3 short prompts), and image_prompt (string for a 512x512 overworld render). Only output valid JSON.',
+            ],
+            'campaign_tasks' => [
+                'request_type' => 'creative_campaign_tasks',
+                'system' => 'You act as an agile facilitator summarizing work for a D&D campaign board. Respond with JSON containing: overview (string under 80 words), tasks (array of objects with title, description, status), and turn_alignment (array of 3 strings). Provide valid JSON.',
+            ],
+            'lore' => [
+                'request_type' => 'creative_lore_entry',
+                'system' => 'You are a lore archivist expanding sparse notes. Respond with JSON containing: summary (string under 120 words), secrets (array of 2 spoiler-safe hints), tags (array of 3 tag strings), and image_prompt (string for a 512x512 character or location portrait). Valid JSON only.',
+            ],
+            'quest' => [
+                'request_type' => 'creative_quest',
+                'system' => 'You outline quests for a cooperative D&D group. Respond with JSON containing: title (string), summary (under 120 words), objectives (array of 3 short steps), complications (array of 2 twists), rewards (array of 2 ideas), and image_prompt (string for a 512x512 quest scene). Output valid JSON only.',
+            ],
         ],
     ],
 
@@ -49,9 +58,9 @@ return [
         'enabled' => env('AI_MOCKS_ENABLED', false),
         'path' => env('AI_MOCK_FIXTURE_PATH', 'tests/Fixtures/ai'),
         'fixtures' => [
-            'summary' => 'The chronicler notes that the party keeps watch while the poisoned grove recovers. Expect a fresh briefing soon.',
-            'dm_takeover' => 'The delegate recommends focusing on three beats: stabilize the grove, parley with the warden, and chart a retreat.',
-            'npc_dialogue' => '"The grove whispers of balance," the warden murmurs. "Bring the antidote and we shall bargain."',
+            'summary' => 'Stormbreak Vale thrived under vigilant spirits.',
+            'dm_takeover' => 'The delegate recommends focusing on three beats: stabilize the grove, parley with the warden, and chart a retreat. Tone: warm guardian.',
+            'npc_dialogue' => '[Captain Mirela] "Hold fast, friends. The winds favor honest hearts tonight."',
             'mentor_briefing' => [
                 'response' => "Fresh word from the Mentor: rally your healers, cleanse the grove, and celebrate the resilience you have shown.",
                 'payload' => [

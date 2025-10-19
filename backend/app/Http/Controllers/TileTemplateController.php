@@ -8,7 +8,6 @@ use App\Models\Group;
 use App\Models\TileTemplate;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -37,10 +36,9 @@ class TileTemplateController extends Controller
         $edgeProfile = $this->decodeJsonField($validated['edge_profile'] ?? null);
 
         $imagePath = Arr::get($validated, 'image_path');
-        $imageFile = $request->file('image_upload');
 
-        if ($imageFile) {
-            $imagePath = $imageFile->store('tile-templates', 'public');
+        if ($request->hasFile('image_upload')) {
+            $imagePath = $request->file('image_upload')->store('tile-templates/'.$group->id, 'public');
         }
 
         $group->tileTemplates()->create([
@@ -94,15 +92,10 @@ class TileTemplateController extends Controller
 
         $edgeProfile = $this->decodeJsonField($validated['edge_profile'] ?? null);
 
-        $imagePath = Arr::get($validated, 'image_path');
-        $imageFile = $request->file('image_upload');
+        $imagePath = Arr::get($validated, 'image_path', $tileTemplate->image_path);
 
-        if ($imageFile) {
-            if ($tileTemplate->image_path) {
-                Storage::disk('public')->delete($tileTemplate->image_path);
-            }
-
-            $imagePath = $imageFile->store('tile-templates', 'public');
+        if ($request->hasFile('image_upload')) {
+            $imagePath = $request->file('image_upload')->store('tile-templates/'.$group->id, 'public');
         }
 
         $tileTemplate->update([

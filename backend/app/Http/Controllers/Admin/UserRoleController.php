@@ -6,14 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UserRoleUpdateRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class UserRoleController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(): Response
     {
         Gate::authorize('manageUserRoles');
 
@@ -36,6 +35,8 @@ class UserRoleController extends Controller
 
     public function update(UserRoleUpdateRequest $request, User $user): RedirectResponse
     {
+        Gate::authorize('manageUserRoles');
+
         $validated = $request->validated();
 
         $user->forceFill([
@@ -46,12 +47,12 @@ class UserRoleController extends Controller
             $user->forceFill(['is_support_admin' => false])->save();
         }
 
-        if ($user->account_role === 'admin' && !$user->is_support_admin) {
+        if ($user->account_role === 'admin' && ! $user->is_support_admin) {
             $user->forceFill(['is_support_admin' => true])->save();
         }
 
         return redirect()
             ->route('admin.users.index')
-            ->with('success', sprintf('Role updated for %s.', $user->name));
+            ->with('success', sprintf('Updated role for %s.', $user->name));
     }
 }

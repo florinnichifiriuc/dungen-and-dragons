@@ -14,16 +14,20 @@ class GroupMapIdeaController extends Controller
 {
     public function __invoke(AiIdeaRequest $request, Group $group, Map $map, AiContentService $ai): JsonResponse
     {
-        $this->assertMapGroup($group, $map);
-        Gate::authorize('update', $map);
+        $this->authorize('update', $map);
+        Gate::authorize('view', $group);
 
         $result = $ai->draftMapPlan($map, (string) $request->input('prompt', ''), $request->user());
 
-        return response()->json($result);
-    }
-
-    protected function assertMapGroup(Group $group, Map $map): void
-    {
-        abort_unless($map->group_id === $group->id, 404);
+        return response()->json([
+            'idea' => $result['summary'],
+            'structured' => [
+                'summary' => $result['summary'],
+                'description' => null,
+                'fields' => $result['fields'],
+                'tips' => $result['tips'],
+                'image_prompt' => $result['image_prompt'],
+            ],
+        ]);
     }
 }

@@ -43,6 +43,7 @@ class HandleInertiaRequests extends Middleware
                     'theme',
                     'high_contrast',
                     'font_scale',
+                    'is_support_admin',
                 ]),
             ],
             'flash' => [

@@ -5,13 +5,6 @@ use App\Http\Controllers\AnalyticsEventController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Admin\BugReportController as AdminBugReportController;
 use App\Http\Controllers\Admin\UserRoleController;
-use App\Http\Controllers\Ai\CampaignLoreIdeaController;
-use App\Http\Controllers\Ai\CampaignQuestIdeaController;
-use App\Http\Controllers\Ai\CampaignTaskIdeaController;
-use App\Http\Controllers\Ai\GroupMapIdeaController;
-use App\Http\Controllers\Ai\GroupRegionIdeaController;
-use App\Http\Controllers\Ai\GroupTileTemplateIdeaController;
-use App\Http\Controllers\Ai\GroupWorldIdeaController;
 use App\Http\Controllers\BugReportController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CampaignDigestPreviewController;
@@ -23,6 +16,13 @@ use App\Http\Controllers\CampaignTaskController;
 use App\Http\Controllers\CampaignEntityController;
 use App\Http\Controllers\CampaignQuestController;
 use App\Http\Controllers\CampaignQuestUpdateController;
+use App\Http\Controllers\Ai\CampaignLoreIdeaController;
+use App\Http\Controllers\Ai\CampaignQuestIdeaController;
+use App\Http\Controllers\Ai\CampaignTaskIdeaController;
+use App\Http\Controllers\Ai\GroupMapIdeaController;
+use App\Http\Controllers\Ai\GroupRegionIdeaController;
+use App\Http\Controllers\Ai\GroupTileTemplateIdeaController;
+use App\Http\Controllers\Ai\GroupWorldIdeaController;
 use App\Http\Controllers\ConditionMentorBriefingModerationController;
 use App\Http\Controllers\ConditionTimerAcknowledgementController;
 use App\Http\Controllers\ConditionTimerSummaryController;
@@ -217,19 +217,14 @@ Route::middleware('auth')->group(function (): void {
     Route::post('bug-reports', [BugReportController::class, 'store'])->name('bug-reports.store');
     Route::get('bug-reports/{bugReport}', [BugReportController::class, 'show'])->name('bug-reports.show');
 
-    Route::prefix('admin')->name('admin.')->group(function (): void {
-        Route::middleware('can:viewAny', \App\Models\BugReport::class)->group(function (): void {
-            Route::get('bug-reports', [AdminBugReportController::class, 'index'])->name('bug-reports.index');
-            Route::get('bug-reports/export', [AdminBugReportController::class, 'export'])->name('bug-reports.export');
-            Route::get('bug-reports/{bugReport}', [AdminBugReportController::class, 'show'])->name('bug-reports.show');
-            Route::patch('bug-reports/{bugReport}', [AdminBugReportController::class, 'update'])->name('bug-reports.update');
-            Route::post('bug-reports/{bugReport}/comments', [AdminBugReportController::class, 'comment'])->name('bug-reports.comment');
-        });
-
-        Route::middleware('can:manageUserRoles')->group(function (): void {
-            Route::get('users', [UserRoleController::class, 'index'])->name('users.index');
-            Route::patch('users/{user}', [UserRoleController::class, 'update'])->name('users.update');
-        });
+    Route::prefix('admin')->name('admin.')->middleware('can:viewAny',\App\Models\BugReport::class)->group(function (): void {
+        Route::get('bug-reports', [AdminBugReportController::class, 'index'])->name('bug-reports.index');
+        Route::get('bug-reports/export', [AdminBugReportController::class, 'export'])->name('bug-reports.export');
+        Route::get('bug-reports/{bugReport}', [AdminBugReportController::class, 'show'])->name('bug-reports.show');
+        Route::patch('bug-reports/{bugReport}', [AdminBugReportController::class, 'update'])->name('bug-reports.update');
+        Route::post('bug-reports/{bugReport}/comments', [AdminBugReportController::class, 'comment'])->name('bug-reports.comment');
+        Route::get('users', [UserRoleController::class, 'index'])->name('users.index');
+        Route::patch('users/{user}', [UserRoleController::class, 'update'])->name('users.update');
     });
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });

@@ -18,6 +18,15 @@ class GroupRegionIdeaController extends Controller
 
         $result = $ai->draftRegion($group, (string) $request->input('prompt', ''), $request->user());
 
-        return response()->json($result);
+        return response()->json([
+            'idea' => $result['summary'],
+            'structured' => [
+                'summary' => $result['summary'],
+                'description' => $result['fields']['description'] ?? null,
+                'fields' => $result['fields'],
+                'tips' => $result['tips'],
+                'image_prompt' => $result['image_prompt'],
+            ],
+        ]);
     }
 }
