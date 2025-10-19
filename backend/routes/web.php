@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\AnalyticsEventController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Admin\BugReportController as AdminBugReportController;
+use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\BugReportController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CampaignDigestPreviewController;
@@ -47,6 +48,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\UserPreferenceController;
 use App\Http\Controllers\NotificationCenterController;
 use App\Http\Controllers\WorldController;
+use App\Http\Controllers\AiCreativeController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -65,6 +67,7 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
     Route::post('analytics/events', [AnalyticsEventController::class, 'store'])->name('analytics.events.store');
+    Route::post('ai/assist', AiCreativeController::class)->name('ai.assist');
     Route::get('/notifications', [NotificationCenterController::class, 'index'])->name('notifications.index');
     Route::patch('/notifications/{notification}/read', [NotificationCenterController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationCenterController::class, 'markAll'])->name('notifications.read-all');
@@ -208,6 +211,8 @@ Route::middleware('auth')->group(function (): void {
         Route::get('bug-reports/{bugReport}', [AdminBugReportController::class, 'show'])->name('bug-reports.show');
         Route::patch('bug-reports/{bugReport}', [AdminBugReportController::class, 'update'])->name('bug-reports.update');
         Route::post('bug-reports/{bugReport}/comments', [AdminBugReportController::class, 'comment'])->name('bug-reports.comment');
+        Route::get('users', [UserRoleController::class, 'index'])->name('users.index');
+        Route::patch('users/{user}', [UserRoleController::class, 'update'])->name('users.update');
     });
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });

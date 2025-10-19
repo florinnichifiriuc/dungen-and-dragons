@@ -18,7 +18,7 @@ export default function AppLayout({ children }: PropsWithChildren) {
     const { props } = usePage<{
         csrf_token?: string;
         flash?: { success?: string; error?: string };
-        auth?: { user?: { name: string } & PreferenceBag };
+        auth?: { user?: { name: string; is_support_admin?: boolean } & PreferenceBag };
         notifications?: { unread_count: number };
         preferences?: PreferenceBag;
     }>();
@@ -168,6 +168,14 @@ export default function AppLayout({ children }: PropsWithChildren) {
                                 )}
                             </Link>
                         )}
+                        {user?.is_support_admin && (
+                            <Link
+                                href={route('admin.users.index')}
+                                className={`${navLinkClass} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400`}
+                            >
+                                Support console
+                            </Link>
+                        )}
                         {user && (
                             <Link
                                 href={route('settings.preferences.edit')}
@@ -180,7 +188,12 @@ export default function AppLayout({ children }: PropsWithChildren) {
                     <div className="flex items-center gap-3 text-sm">
                         {user && (
                             <span className={isDarkMode ? 'text-zinc-400' : 'text-slate-600'} aria-live="polite">
-                                {user.name}
+                                <span className="font-medium">{user.name}</span>
+                                {user.is_support_admin && (
+                                    <span className="ml-2 rounded-full bg-indigo-500/20 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-100">
+                                        Support admin
+                                    </span>
+                                )}
                             </span>
                         )}
                         <form method="post" action={route('logout')}>
