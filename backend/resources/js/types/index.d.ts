@@ -7,6 +7,8 @@ declare module '@inertiajs/core' {
                 id: number;
                 name: string;
                 email: string;
+                account_role?: string | null;
+                is_support_admin?: boolean;
             } | null;
         };
         csrf_token?: string;

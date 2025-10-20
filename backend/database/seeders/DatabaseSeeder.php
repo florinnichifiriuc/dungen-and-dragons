@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -13,39 +13,63 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Demo Support Admin',
-            'email' => 'admin@example.com',
-            'password' => 'password',
-            'locale' => 'en',
-            'timezone' => 'UTC',
-            'theme' => 'dark',
-            'account_role' => 'admin',
-            'is_support_admin' => true,
+        $this->call([
+            AdminUserSeeder::class,
         ]);
 
-        User::factory()->create([
-            'name' => 'Demo GM',
-            'email' => 'gm@example.com',
-            'password' => 'password',
-            'locale' => 'en',
-            'timezone' => 'UTC',
-            'theme' => 'dark',
-            'account_role' => 'guide',
-        ]);
+        $this->seedDemoAccounts();
+    }
 
-        User::factory()->create([
-            'name' => 'Demo Player',
-            'email' => 'player@example.com',
-            'password' => 'password',
-            'locale' => 'ro',
-            'timezone' => 'Europe/Bucharest',
-            'theme' => 'light',
-            'high_contrast' => true,
-            'font_scale' => 110,
-            'account_role' => 'player',
-        ]);
+    protected function seedDemoAccounts(): void
+    {
+        $demoUsers = [
+            [
+                'email' => env('SEED_GM_EMAIL', 'gm@realm.test'),
+                'name' => env('SEED_GM_NAME', 'Demo GM'),
+                'password' => env('SEED_GM_PASSWORD', 'guide-secret'),
+                'locale' => 'en',
+                'timezone' => 'UTC',
+                'theme' => 'dark',
+                'account_role' => 'guide',
+                'is_support_admin' => false,
+            ],
+            [
+                'email' => env('SEED_PLAYER_EMAIL', 'player@realm.test'),
+                'name' => env('SEED_PLAYER_NAME', 'Demo Player'),
+                'password' => env('SEED_PLAYER_PASSWORD', 'player-secret'),
+                'locale' => 'ro',
+                'timezone' => 'Europe/Bucharest',
+                'theme' => 'light',
+                'high_contrast' => true,
+                'font_scale' => 110,
+                'account_role' => 'player',
+                'is_support_admin' => false,
+            ],
+        ];
+
+        foreach ($demoUsers as $demo) {
+            $user = User::query()->firstOrNew(['email' => $demo['email']]);
+
+            $user->fill([
+                'name' => $demo['name'],
+                'locale' => $demo['locale'],
+                'timezone' => $demo['timezone'],
+                'theme' => $demo['theme'],
+                'account_role' => $demo['account_role'],
+                'is_support_admin' => $demo['is_support_admin'],
+                'high_contrast' => $demo['high_contrast'] ?? false,
+                'font_scale' => $demo['font_scale'] ?? 100,
+            ]);
+
+            if (! $user->exists) {
+                $user->email_verified_at = now();
+            }
+
+            if (! Hash::check($demo['password'], (string) $user->password)) {
+                $user->password = Hash::make($demo['password']);
+            }
+
+            $user->save();
+        }
     }
 }

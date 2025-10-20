@@ -20,6 +20,7 @@ use App\Http\Controllers\Ai\CampaignLoreIdeaController;
 use App\Http\Controllers\Ai\CampaignQuestIdeaController;
 use App\Http\Controllers\Ai\CampaignTaskIdeaController;
 use App\Http\Controllers\Ai\GroupMapIdeaController;
+use App\Http\Controllers\Ai\GroupMapSeedIdeaController;
 use App\Http\Controllers\Ai\GroupRegionIdeaController;
 use App\Http\Controllers\Ai\GroupTileTemplateIdeaController;
 use App\Http\Controllers\Ai\GroupWorldIdeaController;
@@ -159,6 +160,7 @@ Route::middleware('auth')->group(function (): void {
     Route::resource('groups.maps', MapController::class)
         ->except(['index'])
         ->scoped();
+    Route::post('groups/{group}/maps/ai/plan', GroupMapSeedIdeaController::class)->name('groups.maps.ai.seed');
     Route::post('groups/{group}/maps/{map}/ai/plan', GroupMapIdeaController::class)->name('groups.maps.ai.plan');
     Route::put('groups/{group}/maps/{map}/fog', [MapController::class, 'updateFog'])->name('groups.maps.fog.update');
     Route::resource('groups.maps.tiles', MapTileController::class)

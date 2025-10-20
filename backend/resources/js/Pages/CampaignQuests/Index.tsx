@@ -1,4 +1,4 @@
-import { FormEvent } from 'react';
+import { FormEvent, useState } from 'react';
 
 import { Head, Link, useForm } from '@inertiajs/react';
 
@@ -6,6 +6,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AiIdeaPanel from '@/components/ai/AiIdeaPanel';
 
 type CampaignSummary = {
     id: number;
@@ -96,6 +97,15 @@ export default function CampaignQuestIndex({
         region: filters.region ?? '',
         include_archived: Boolean(filters.include_archived),
     });
+    const [aiPromptSeed, setAiPromptSeed] = useState('Rescue a kidnapped diplomat before the moon ritual ends.');
+    const [panelKey, setPanelKey] = useState(0);
+
+    const quickPrompts = [
+        'Investigate sabotage on the skyship docks',
+        'Negotiate peace between rival clans',
+        'Escort a caravan through cursed wetlands',
+        'Race against a rival guild for an ancient map',
+    ];
 
     const submitFilters = (event: FormEvent) => {
         event.preventDefault();
@@ -113,6 +123,11 @@ export default function CampaignQuestIndex({
             preserveScroll: true,
             replace: true,
         });
+    };
+
+    const handlePromptChip = (prompt: string) => {
+        setAiPromptSeed(prompt);
+        setPanelKey((value) => value + 1);
     };
 
     return (
@@ -234,6 +249,40 @@ export default function CampaignQuestIndex({
                 </div>
 
             </form>
+
+            <section className="mt-8 grid gap-6 rounded-xl border border-rose-500/40 bg-rose-500/10 p-6 shadow-inner shadow-black/30 lg:grid-cols-[1.6fr_1fr]">
+                <div className="space-y-3">
+                    <h2 className="text-lg font-semibold text-rose-100">Spin up quests fast</h2>
+                    <p className="text-sm text-rose-100/80">
+                        The quest steward turns short prompts into objectives, complications, rewards, and Automatic1111 prompts ready for map tiles or key art.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        {quickPrompts.map((prompt) => (
+                            <button
+                                key={prompt}
+                                type="button"
+                                onClick={() => handlePromptChip(prompt)}
+                                className="rounded-full border border-rose-400/50 bg-rose-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-50 hover:bg-rose-500/30"
+                            >
+                                {prompt}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <AiIdeaPanel
+                    key={panelKey}
+                    domain="quest"
+                    endpoint={route('campaigns.ai.quests', campaign.id)}
+                    title="Quest steward"
+                    description="Share a mission seed; receive structured quest details and a 512×512 prompt for map renders."
+                    defaultPrompt={aiPromptSeed}
+                    context={{
+                        campaign_title: campaign.title,
+                        region_filter: data.region,
+                        priority_filter: data.priority,
+                    }}
+                />
+            </section>
 
             {quests.length === 0 ? (
                 <div className="mt-6 rounded-xl border border-dashed border-zinc-800 bg-zinc-950/40 p-8 text-center text-sm text-zinc-400">
