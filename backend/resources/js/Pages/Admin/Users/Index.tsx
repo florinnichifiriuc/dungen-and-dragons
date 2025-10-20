@@ -64,6 +64,13 @@ export default function AdminUserIndex() {
                     <p className="text-sm text-zinc-500">
                         Assign roles to clarify who can configure campaign infrastructure or assist with support tasks.
                     </p>
+                    <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+                        <p>
+                            Tip: `php artisan db:seed` now provisions an <span className="font-semibold">Edgewatch Steward</span> admin using the
+                            <code className="mx-1 rounded bg-amber-500/20 px-1 py-0.5">SEED_ADMIN_*</code> values in your `.env`. Sign in as that steward to
+                            promote additional facilitators.
+                        </p>
+                    </div>
                 </header>
 
                 <div className="space-y-3">

@@ -61,3 +61,6 @@
 - Task 48 – Condition Timer Chronicle Integration (embed acknowledgements/timelines into recaps, exports, and AI briefings)
 - Task 49 – Condition Timer Summary Share Links (signed share tokens, public view, export references, management controls)
 - Task 50 – Condition Timer Escalation Notifications (preference-aware escalation journeys, quiet hours, notification center, and telemetry dispatch)
+- Task 92 – Role Stewardship & Seed Admin (seeded admin, dashboard mantle, admin UX/documentation)
+- Task 93 – Region Map Onboarding & AI Planning (orientation fixes, create-form preview, pre-create AI cartographer)
+- Task 94 – Narrative Assistant Enhancements (campaign/lore/quest AI helpers with quick prompts and docs)
