@@ -37,11 +37,13 @@ class HandleInertiaRequests extends Middleware
                     'id',
                     'name',
                     'email',
+                    'account_role',
                     'locale',
                     'timezone',
                     'theme',
                     'high_contrast',
                     'font_scale',
+                    'is_support_admin',
                 ]),
             ],
             'flash' => [

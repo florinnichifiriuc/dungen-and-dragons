@@ -27,3 +27,5 @@ Give campaign leads a dedicated quest log to track story arcs, tie them to regio
 ## Log
 - 2025-10-23 08:30 UTC – Planned quest log schema, policies, and UI composition informed by existing task board patterns.
 - 2025-10-23 11:45 UTC – Implemented migrations, controllers, Inertia pages, tests, and docs for the campaign quest log.
+- 2025-11-25 10:00 UTC – Enabled AI quest drafting with structured apply actions, endpoint coverage, and UX updates for guidance.
+- 2025-11-25 12:15 UTC – Smoke-tested quest AI helper after merge fix by running lint/tests to confirm prompt responses remain stable.

@@ -47,6 +47,7 @@ class TileTemplateUpdateRequest extends FormRequest
             'movement_cost' => ['required', 'integer', 'min:0', 'max:20'],
             'defense_bonus' => ['required', 'integer', 'min:0', 'max:20'],
             'image_path' => ['nullable', 'string', 'max:255'],
+            'image_upload' => ['nullable', 'image', 'max:5120'],
             'edge_profile' => ['nullable', 'json'],
             'world_id' => [
                 'nullable',

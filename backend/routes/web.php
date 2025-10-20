@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\AnalyticsEventController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Admin\BugReportController as AdminBugReportController;
+use App\Http\Controllers\Admin\UserRoleController;
 use App\Http\Controllers\BugReportController;
 use App\Http\Controllers\CampaignController;
 use App\Http\Controllers\CampaignDigestPreviewController;
@@ -15,6 +16,13 @@ use App\Http\Controllers\CampaignTaskController;
 use App\Http\Controllers\CampaignEntityController;
 use App\Http\Controllers\CampaignQuestController;
 use App\Http\Controllers\CampaignQuestUpdateController;
+use App\Http\Controllers\Ai\CampaignLoreIdeaController;
+use App\Http\Controllers\Ai\CampaignQuestIdeaController;
+use App\Http\Controllers\Ai\CampaignTaskIdeaController;
+use App\Http\Controllers\Ai\GroupMapIdeaController;
+use App\Http\Controllers\Ai\GroupRegionIdeaController;
+use App\Http\Controllers\Ai\GroupTileTemplateIdeaController;
+use App\Http\Controllers\Ai\GroupWorldIdeaController;
 use App\Http\Controllers\ConditionMentorBriefingModerationController;
 use App\Http\Controllers\ConditionTimerAcknowledgementController;
 use App\Http\Controllers\ConditionTimerSummaryController;
@@ -47,6 +55,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\UserPreferenceController;
 use App\Http\Controllers\NotificationCenterController;
 use App\Http\Controllers\WorldController;
+use App\Http\Controllers\AiCreativeController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -65,6 +74,7 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
     Route::post('analytics/events', [AnalyticsEventController::class, 'store'])->name('analytics.events.store');
+    Route::post('ai/assist', AiCreativeController::class)->name('ai.assist');
     Route::get('/notifications', [NotificationCenterController::class, 'index'])->name('notifications.index');
     Route::patch('/notifications/{notification}/read', [NotificationCenterController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationCenterController::class, 'markAll'])->name('notifications.read-all');
@@ -140,12 +150,16 @@ Route::middleware('auth')->group(function (): void {
         ->except(['index', 'show'])
         ->scoped();
     Route::resource('groups.regions', RegionController::class)->except(['index'])->scoped();
+    Route::post('groups/{group}/ai/worlds', GroupWorldIdeaController::class)->name('groups.ai.worlds');
+    Route::post('groups/{group}/ai/regions', GroupRegionIdeaController::class)->name('groups.ai.regions');
     Route::resource('groups.tile-templates', TileTemplateController::class)
         ->except(['index', 'show'])
         ->scoped();
+    Route::post('groups/{group}/ai/tile-templates', GroupTileTemplateIdeaController::class)->name('groups.ai.tile-templates');
     Route::resource('groups.maps', MapController::class)
         ->except(['index'])
         ->scoped();
+    Route::post('groups/{group}/maps/{map}/ai/plan', GroupMapIdeaController::class)->name('groups.maps.ai.plan');
     Route::put('groups/{group}/maps/{map}/fog', [MapController::class, 'updateFog'])->name('groups.maps.fog.update');
     Route::resource('groups.maps.tiles', MapTileController::class)
         ->only(['store', 'update', 'destroy'])
@@ -175,6 +189,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('campaigns/{campaign}/tasks/reorder', [CampaignTaskController::class, 'reorder'])->name('campaigns.tasks.reorder');
     Route::delete('campaigns/{campaign}/tasks/{task}', [CampaignTaskController::class, 'destroy'])->name('campaigns.tasks.destroy');
     Route::resource('campaigns.entities', CampaignEntityController::class);
+    Route::post('campaigns/{campaign}/ai/tasks', CampaignTaskIdeaController::class)->name('campaigns.ai.tasks');
+    Route::post('campaigns/{campaign}/ai/lore', CampaignLoreIdeaController::class)->name('campaigns.ai.lore');
+    Route::post('campaigns/{campaign}/ai/quests', CampaignQuestIdeaController::class)->name('campaigns.ai.quests');
     Route::resource('campaigns.quests', CampaignQuestController::class)->scoped();
     Route::post('campaigns/{campaign}/quests/{quest}/updates', [CampaignQuestUpdateController::class, 'store'])->name('campaigns.quests.updates.store');
     Route::delete('campaigns/{campaign}/quests/{quest}/updates/{update}', [CampaignQuestUpdateController::class, 'destroy'])->name('campaigns.quests.updates.destroy');
@@ -208,6 +225,8 @@ Route::middleware('auth')->group(function (): void {
         Route::get('bug-reports/{bugReport}', [AdminBugReportController::class, 'show'])->name('bug-reports.show');
         Route::patch('bug-reports/{bugReport}', [AdminBugReportController::class, 'update'])->name('bug-reports.update');
         Route::post('bug-reports/{bugReport}/comments', [AdminBugReportController::class, 'comment'])->name('bug-reports.comment');
+        Route::get('users', [UserRoleController::class, 'index'])->name('users.index');
+        Route::patch('users/{user}', [UserRoleController::class, 'update'])->name('users.update');
     });
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
