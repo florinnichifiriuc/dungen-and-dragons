@@ -16,6 +16,17 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
 
         User::factory()->create([
+            'name' => 'Demo Support Admin',
+            'email' => 'admin@example.com',
+            'password' => 'password',
+            'locale' => 'en',
+            'timezone' => 'UTC',
+            'theme' => 'dark',
+            'account_role' => 'admin',
+            'is_support_admin' => true,
+        ]);
+
+        User::factory()->create([
             'name' => 'Demo GM',
             'email' => 'gm@example.com',
             'password' => 'password',
@@ -35,17 +46,6 @@ class DatabaseSeeder extends Seeder
             'high_contrast' => true,
             'font_scale' => 110,
             'account_role' => 'player',
-        ]);
-
-        User::factory()->create([
-            'name' => 'Seed Admin',
-            'email' => 'admin@example.com',
-            'password' => 'password',
-            'locale' => 'en',
-            'timezone' => 'UTC',
-            'theme' => 'dark',
-            'account_role' => 'admin',
-            'is_support_admin' => true,
         ]);
     }
 }

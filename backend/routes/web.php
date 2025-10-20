@@ -55,6 +55,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\UserPreferenceController;
 use App\Http\Controllers\NotificationCenterController;
 use App\Http\Controllers\WorldController;
+use App\Http\Controllers\AiCreativeController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -73,6 +74,7 @@ Route::middleware('guest')->group(function (): void {
 Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', fn () => Inertia::render('Dashboard'))->name('dashboard');
     Route::post('analytics/events', [AnalyticsEventController::class, 'store'])->name('analytics.events.store');
+    Route::post('ai/assist', AiCreativeController::class)->name('ai.assist');
     Route::get('/notifications', [NotificationCenterController::class, 'index'])->name('notifications.index');
     Route::patch('/notifications/{notification}/read', [NotificationCenterController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [NotificationCenterController::class, 'markAll'])->name('notifications.read-all');
