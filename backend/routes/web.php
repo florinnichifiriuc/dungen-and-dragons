@@ -16,6 +16,13 @@ use App\Http\Controllers\CampaignTaskController;
 use App\Http\Controllers\CampaignEntityController;
 use App\Http\Controllers\CampaignQuestController;
 use App\Http\Controllers\CampaignQuestUpdateController;
+use App\Http\Controllers\Ai\CampaignLoreIdeaController;
+use App\Http\Controllers\Ai\CampaignQuestIdeaController;
+use App\Http\Controllers\Ai\CampaignTaskIdeaController;
+use App\Http\Controllers\Ai\GroupMapIdeaController;
+use App\Http\Controllers\Ai\GroupRegionIdeaController;
+use App\Http\Controllers\Ai\GroupTileTemplateIdeaController;
+use App\Http\Controllers\Ai\GroupWorldIdeaController;
 use App\Http\Controllers\ConditionMentorBriefingModerationController;
 use App\Http\Controllers\ConditionTimerAcknowledgementController;
 use App\Http\Controllers\ConditionTimerSummaryController;
@@ -143,12 +150,16 @@ Route::middleware('auth')->group(function (): void {
         ->except(['index', 'show'])
         ->scoped();
     Route::resource('groups.regions', RegionController::class)->except(['index'])->scoped();
+    Route::post('groups/{group}/ai/worlds', GroupWorldIdeaController::class)->name('groups.ai.worlds');
+    Route::post('groups/{group}/ai/regions', GroupRegionIdeaController::class)->name('groups.ai.regions');
     Route::resource('groups.tile-templates', TileTemplateController::class)
         ->except(['index', 'show'])
         ->scoped();
+    Route::post('groups/{group}/ai/tile-templates', GroupTileTemplateIdeaController::class)->name('groups.ai.tile-templates');
     Route::resource('groups.maps', MapController::class)
         ->except(['index'])
         ->scoped();
+    Route::post('groups/{group}/maps/{map}/ai/plan', GroupMapIdeaController::class)->name('groups.maps.ai.plan');
     Route::put('groups/{group}/maps/{map}/fog', [MapController::class, 'updateFog'])->name('groups.maps.fog.update');
     Route::resource('groups.maps.tiles', MapTileController::class)
         ->only(['store', 'update', 'destroy'])
@@ -178,6 +189,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('campaigns/{campaign}/tasks/reorder', [CampaignTaskController::class, 'reorder'])->name('campaigns.tasks.reorder');
     Route::delete('campaigns/{campaign}/tasks/{task}', [CampaignTaskController::class, 'destroy'])->name('campaigns.tasks.destroy');
     Route::resource('campaigns.entities', CampaignEntityController::class);
+    Route::post('campaigns/{campaign}/ai/tasks', CampaignTaskIdeaController::class)->name('campaigns.ai.tasks');
+    Route::post('campaigns/{campaign}/ai/lore', CampaignLoreIdeaController::class)->name('campaigns.ai.lore');
+    Route::post('campaigns/{campaign}/ai/quests', CampaignQuestIdeaController::class)->name('campaigns.ai.quests');
     Route::resource('campaigns.quests', CampaignQuestController::class)->scoped();
     Route::post('campaigns/{campaign}/quests/{quest}/updates', [CampaignQuestUpdateController::class, 'store'])->name('campaigns.quests.updates.store');
     Route::delete('campaigns/{campaign}/quests/{quest}/updates/{update}', [CampaignQuestUpdateController::class, 'destroy'])->name('campaigns.quests.updates.destroy');

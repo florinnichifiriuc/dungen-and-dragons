@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UserRoleUpdateRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -13,41 +14,45 @@ class UserRoleController extends Controller
 {
     public function index(): Response
     {
-        $this->authorizeSupportAdmin();
+        Gate::authorize('manageUserRoles');
 
         $users = User::query()
             ->orderBy('name')
-            ->get(['id', 'name', 'email', 'is_support_admin', 'created_at']);
+            ->get(['id', 'name', 'email', 'account_role', 'is_support_admin', 'created_at']);
 
         return Inertia::render('Admin/Users/Index', [
             'users' => $users->map(fn (User $user) => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'account_role' => $user->account_role,
                 'is_support_admin' => (bool) $user->is_support_admin,
                 'created_at' => $user->created_at?->toIso8601String(),
             ]),
+            'roles' => User::accountRoles(),
         ]);
     }
 
     public function update(UserRoleUpdateRequest $request, User $user): RedirectResponse
     {
-        $this->authorizeSupportAdmin();
+        Gate::authorize('manageUserRoles');
 
         $validated = $request->validated();
 
         $user->forceFill([
-            'is_support_admin' => $validated['is_support_admin'],
+            'account_role' => $validated['account_role'],
         ])->save();
 
-        return redirect()
-            ->back()
-            ->with('success', sprintf('Updated support access for %s.', $user->name));
-    }
+        if ($user->account_role !== 'admin' && $user->is_support_admin) {
+            $user->forceFill(['is_support_admin' => false])->save();
+        }
 
-    protected function authorizeSupportAdmin(): void
-    {
-        abort_unless($requestUser = request()->user(), 403);
-        abort_unless($requestUser->is_support_admin, 403);
+        if ($user->account_role === 'admin' && ! $user->is_support_admin) {
+            $user->forceFill(['is_support_admin' => true])->save();
+        }
+
+        return redirect()
+            ->route('admin.users.index')
+            ->with('success', sprintf('Updated role for %s.', $user->name));
     }
 }

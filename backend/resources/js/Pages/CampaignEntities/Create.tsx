@@ -399,6 +399,7 @@ export default function CampaignEntityCreate({
 
                 <AiIdeaPanel
                     domain="lore"
+                    endpoint={route('campaigns.ai.lore', campaign.id)}
                     title="Summon lore sparks"
                     description="Turn a name or tag into vivid codex copy, spoiler-safe secrets, and art prompts."
                     placeholder="Forgotten guardian of the Bramble Pass"

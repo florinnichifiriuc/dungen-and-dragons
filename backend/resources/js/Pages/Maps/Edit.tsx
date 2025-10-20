@@ -294,6 +294,7 @@ export default function MapEdit({ group, regions, map }: MapEditProps) {
 
                         <AiIdeaPanel
                             domain="region_map"
+                            endpoint={route('groups.maps.ai.plan', [group.id, map.id])}
                             title="Ask the AI cartographer"
                             description="Request layout beats, fog defaults, and an art prompt to jumpstart this region map."
                             context={{

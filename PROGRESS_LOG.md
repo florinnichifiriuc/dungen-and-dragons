@@ -109,6 +109,7 @@
 | 2025-11-24 13:55 | Demo Readiness Alignment | Reopened CI gating tasks, added pre-demo documentation backlog (setup guide, site map, API swagger, known issues), and scheduled manual Playwright cadence review ahead of the stakeholder rehearsal. |
 | 2025-11-24 15:05 | Demo Manual QA Cadence | Published the manual Playwright rehearsal checklist, linked it from the backlog, and reiterated coverage/lint spot checks required before demo sign-off. |
 | 2025-11-24 17:40 | Authorization & Navigation Hardening | Resolved group index authorize middleware regression, exposed campaign/group visibility flags via Inertia, and hid dashboard links for users lacking access to prevent 500/403 confusion. |
+| 2025-11-25 09:45 | AI Steward Rebase | Rebasing on main restored structured AI idea endpoints, admin role management console, and coverage ensuring fallback responses and tile uploads stay reliable. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.
 

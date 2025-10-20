@@ -304,6 +304,7 @@ export default function TaskBoard() {
 
                     <AiIdeaPanel
                         domain="campaign_tasks"
+                        endpoint={route('campaigns.ai.tasks', campaign.id)}
                         title="Ask the strategist"
                         description="Let the AI storyboard a backlog, align statuses, and prep art prompts for tokens."
                         placeholder="Secure the Bramble Pass, negotiate with the Wardens..."

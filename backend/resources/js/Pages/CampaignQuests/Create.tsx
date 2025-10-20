@@ -271,6 +271,7 @@ export default function CampaignQuestCreate({ campaign, available_statuses, avai
 
                 <AiIdeaPanel
                     domain="quest"
+                    endpoint={route('campaigns.ai.quests', campaign.id)}
                     title="Quest drafting assistant"
                     description="Feed a few beats and let the AI suggest objectives, complications, and art prompts."
                     placeholder="Escort refugees through the Bramble Pass"

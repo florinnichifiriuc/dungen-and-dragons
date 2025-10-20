@@ -225,8 +225,9 @@ export default function TileTemplateCreate({ group, worlds }: TileTemplateCreate
                         </div>
                     </form>
 
-                    <AiIdeaPanel
-                        domain="tile_template"
+                <AiIdeaPanel
+                    domain="tile_template"
+                    endpoint={route('groups.ai.tile-templates', group.id)}
                         title="AI tile architect"
                         description="Seed terrain ideas, connection hints, and art prompts without leaving the editor."
                         context={{

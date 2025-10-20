@@ -440,6 +440,7 @@ export default function CampaignEntityEdit({
 
                 <AiIdeaPanel
                     domain="lore"
+                    endpoint={route('campaigns.ai.lore', campaign.id)}
                     title="Refresh lore with AI"
                     description="Surface new secrets, update summaries, or pull an art prompt as the campaign shifts."
                     placeholder={`Reveal complications for ${entity.name}`}

@@ -295,6 +295,7 @@ export default function CampaignQuestEdit({ campaign, quest, available_statuses,
 
                 <AiIdeaPanel
                     domain="quest"
+                    endpoint={route('campaigns.ai.quests', campaign.id)}
                     title="Rework this quest"
                     description="Ask the AI to tighten objectives, add twists, or suggest art prompts as the campaign evolves."
                     placeholder={`Update complications for ${quest.title}`}

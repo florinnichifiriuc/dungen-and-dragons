@@ -45,6 +45,30 @@ export default function WorldEdit({ group, world }: WorldEditProps) {
         put(route('groups.worlds.update', [group.id, world.id]));
     };
 
+    const applyIdea = (result: AiIdeaResult) => {
+        const structured = result.structured ?? {};
+        const fields = (structured.fields ?? {}) as Record<string, unknown>;
+
+        if (typeof fields.name === 'string') {
+            setData('name', fields.name);
+        }
+
+        const summary = typeof structured.summary === 'string' ? structured.summary : fields.summary;
+        if (typeof summary === 'string') {
+            setData('summary', summary);
+        }
+
+        const description = typeof structured.description === 'string' ? structured.description : fields.description;
+        if (typeof description === 'string') {
+            setData('description', description);
+        }
+
+        const cadence = fields.default_turn_duration_hours ?? fields.turn_duration_hours;
+        if (typeof cadence === 'number' && Number.isFinite(cadence)) {
+            setData('default_turn_duration_hours', cadence);
+        }
+    };
+
     return (
         <AppLayout>
             <Head title={`Tend world · ${world.name}`} />
@@ -117,6 +141,7 @@ export default function WorldEdit({ group, world }: WorldEditProps) {
 
                 <AiIdeaPanel
                     domain="world"
+                    endpoint={route('groups.ai.worlds', group.id)}
                     title="Fresh inspiration"
                     description="Bring in short prompts or player feedback and let the AI refill your summary and lore."
                     context={{
@@ -128,17 +153,14 @@ export default function WorldEdit({ group, world }: WorldEditProps) {
                     }}
                     actions={[
                         {
+                            label: 'Apply to form',
+                            onApply: applyIdea,
+                        },
+                        {
                             label: 'Apply summary',
                             onApply: (result: AiIdeaResult) => {
                                 const structuredSummary = result.structured?.summary;
                                 setData('summary', typeof structuredSummary === 'string' ? structuredSummary : result.text);
-                            },
-                        },
-                        {
-                            label: 'Refresh lore notes',
-                            onApply: (result: AiIdeaResult) => {
-                                const structuredDescription = result.structured?.description;
-                                setData('description', typeof structuredDescription === 'string' ? structuredDescription : result.text);
                             },
                         },
                     ]}

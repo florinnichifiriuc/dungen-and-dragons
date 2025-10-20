@@ -58,9 +58,9 @@ return [
         'enabled' => env('AI_MOCKS_ENABLED', false),
         'path' => env('AI_MOCK_FIXTURE_PATH', 'tests/Fixtures/ai'),
         'fixtures' => [
-            'summary' => 'The chronicler notes that the party keeps watch while the poisoned grove recovers. Expect a fresh briefing soon.',
-            'dm_takeover' => 'The delegate recommends focusing on three beats: stabilize the grove, parley with the warden, and chart a retreat.',
-            'npc_dialogue' => '"The grove whispers of balance," the warden murmurs. "Bring the antidote and we shall bargain."',
+            'summary' => 'Stormbreak Vale thrived under vigilant spirits.',
+            'dm_takeover' => 'The delegate recommends focusing on three beats: stabilize the grove, parley with the warden, and chart a retreat. Tone: warm guardian.',
+            'npc_dialogue' => '[Captain Mirela] "Hold fast, friends. The winds favor honest hearts tonight."',
             'mentor_briefing' => [
                 'response' => "Fresh word from the Mentor: rally your healers, cleanse the grove, and celebrate the resilience you have shown.",
                 'payload' => [

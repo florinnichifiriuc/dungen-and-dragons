@@ -240,8 +240,9 @@ export default function TileTemplateEdit({ group, worlds, template }: TileTempla
                         </div>
                     </form>
 
-                    <AiIdeaPanel
-                        domain="tile_template"
+                <AiIdeaPanel
+                    domain="tile_template"
+                    endpoint={route('groups.ai.tile-templates', group.id)}
                         title="Revise with AI"
                         description="Let the assistant tune stats and edges for this tile while you focus on the map."
                         context={{

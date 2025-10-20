@@ -25,6 +25,7 @@ type AiIdeaPanelProps = {
     className?: string;
     actions?: AiIdeaAction[];
     defaultPrompt?: string;
+    endpoint: string;
 };
 
 type PageProps = {
@@ -40,6 +41,7 @@ export function AiIdeaPanel({
     className,
     actions = [],
     defaultPrompt = '',
+    endpoint,
 }: AiIdeaPanelProps) {
     const { props } = usePage<PageProps>();
     const csrfToken = props.csrf_token ?? document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
@@ -54,7 +56,7 @@ export function AiIdeaPanel({
         setError(null);
 
         try {
-            const response = await fetch(route('ai.assist'), {
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -64,7 +66,7 @@ export function AiIdeaPanel({
                 body: JSON.stringify({
                     domain,
                     prompt,
-                    context,
+                    ...(context ? { context } : {}),
                 }),
             });
 

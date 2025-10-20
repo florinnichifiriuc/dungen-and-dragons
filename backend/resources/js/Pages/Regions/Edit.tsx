@@ -215,6 +215,7 @@ export default function RegionEdit({ group, region, worlds, dungeonMasters }: Re
 
                 <AiIdeaPanel
                     domain="region"
+                    endpoint={route('groups.ai.regions', group.id)}
                     title="Reimagine this realm"
                     description="Send the latest hooks and have the AI refresh hazards, threads, and art prompts."
                     context={{

@@ -194,6 +194,7 @@ export default function RegionCreate({ group, worlds, defaults, dungeonMasters }
 
                 <AiIdeaPanel
                     domain="region"
+                    endpoint={route('groups.ai.regions', group.id)}
                     title="AI region designer"
                     description="Generate hazards, plot threads, and fog ideas while you configure assignments."
                     context={{

@@ -39,6 +39,30 @@ export default function WorldCreate({ group, defaults }: WorldCreateProps) {
         post(route('groups.worlds.store', group.id));
     };
 
+    const applyIdea = (result: AiIdeaResult) => {
+        const structured = result.structured ?? {};
+        const fields = (structured.fields ?? {}) as Record<string, unknown>;
+
+        if (typeof fields.name === 'string') {
+            setData('name', fields.name);
+        }
+
+        const summary = typeof structured.summary === 'string' ? structured.summary : fields.summary;
+        if (typeof summary === 'string') {
+            setData('summary', summary);
+        }
+
+        const description = typeof structured.description === 'string' ? structured.description : fields.description;
+        if (typeof description === 'string') {
+            setData('description', description);
+        }
+
+        const cadence = fields.default_turn_duration_hours ?? fields.turn_duration_hours;
+        if (typeof cadence === 'number' && Number.isFinite(cadence)) {
+            setData('default_turn_duration_hours', cadence);
+        }
+    };
+
     return (
         <AppLayout>
             <Head title={`Found a world · ${group.name}`} />
@@ -113,8 +137,9 @@ export default function WorldCreate({ group, defaults }: WorldCreateProps) {
 
                 <AiIdeaPanel
                     domain="world"
-                    title="Need a spark?"
-                    description="Let the AI sketch lore, turn hooks, and art prompts from just a few words."
+                    endpoint={route('groups.ai.worlds', group.id)}
+                    title="Summon a world seed"
+                    description="Feed the mentor a few themes or keywords. It will propose a name, summary, cadence, and art prompt you can apply instantly."
                     context={{
                         group_name: group.name,
                         name: data.name,
@@ -124,17 +149,14 @@ export default function WorldCreate({ group, defaults }: WorldCreateProps) {
                     }}
                     actions={[
                         {
+                            label: 'Apply to form',
+                            onApply: applyIdea,
+                        },
+                        {
                             label: 'Use as summary',
                             onApply: (result: AiIdeaResult) => {
                                 const structuredSummary = result.structured?.summary;
                                 setData('summary', typeof structuredSummary === 'string' ? structuredSummary : result.text);
-                            },
-                        },
-                        {
-                            label: 'Fill lore notes',
-                            onApply: (result: AiIdeaResult) => {
-                                const structuredDescription = result.structured?.description;
-                                setData('description', typeof structuredDescription === 'string' ? structuredDescription : result.text);
                             },
                         },
                     ]}

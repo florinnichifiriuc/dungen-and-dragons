@@ -18,6 +18,7 @@ use App\Models\CampaignEntity;
 use App\Models\SessionNote;
 use App\Models\TurnConfiguration;
 use App\Models\World;
+use App\Models\User;
 use App\Models\Map;
 use App\Models\MapTile;
 use App\Models\MapToken;
@@ -123,6 +124,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(CampaignQuest::class, CampaignQuestPolicy::class);
         Gate::policy(CampaignQuestUpdate::class, CampaignQuestUpdatePolicy::class);
         Gate::policy(BugReport::class, BugReportPolicy::class);
+
+        Gate::define('manageUserRoles', fn (User $user): bool => $user->isAdmin());
 
         Event::listen(AnalyticsEventDispatched::class, PersistAnalyticsEvent::class);
 
