@@ -1,4 +1,4 @@
-import { FormEvent } from 'react';
+import { FormEvent, useState } from 'react';
 
 import { Head, Link, useForm } from '@inertiajs/react';
 
@@ -6,6 +6,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AiIdeaPanel from '@/components/ai/AiIdeaPanel';
 
 type CampaignSummary = {
     id: number;
@@ -71,6 +72,15 @@ export default function CampaignEntityIndex({
         type: filters.type ?? '',
         tag: filters.tag ?? '',
     });
+    const [aiPromptSeed, setAiPromptSeed] = useState('Describe a legendary NPC guide with a mysterious agenda.');
+    const [panelKey, setPanelKey] = useState(0);
+
+    const quickPrompts = [
+        'Three factions vying for a magical relic',
+        'Recurring villain with a tragic past',
+        'A safe haven tavern with colorful staff',
+        'Ancient ruin guarded by elemental spirits',
+    ];
 
     const submitFilters = (event: FormEvent) => {
         event.preventDefault();
@@ -89,6 +99,11 @@ export default function CampaignEntityIndex({
             preserveScroll: true,
             replace: true,
         });
+    };
+
+    const handlePromptChip = (prompt: string) => {
+        setAiPromptSeed(prompt);
+        setPanelKey((value) => value + 1);
     };
 
     return (
@@ -180,6 +195,39 @@ export default function CampaignEntityIndex({
                     </Button>
                 </div>
             </form>
+
+            <section className="mt-8 grid gap-6 rounded-xl border border-indigo-800/60 bg-indigo-950/40 p-6 shadow-inner shadow-black/30 lg:grid-cols-[1.6fr_1fr]">
+                <div className="space-y-3">
+                    <h2 className="text-lg font-semibold text-indigo-100">Need a spark?</h2>
+                    <p className="text-sm text-indigo-200/80">
+                        Give the lore steward a few words and it will draft names, summaries, tags, and Automatic1111 prompts ready for 512×512 renders.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        {quickPrompts.map((prompt) => (
+                            <button
+                                key={prompt}
+                                type="button"
+                                onClick={() => handlePromptChip(prompt)}
+                                className="rounded-full border border-indigo-500/40 bg-indigo-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-100 hover:bg-indigo-500/20"
+                            >
+                                {prompt}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <AiIdeaPanel
+                    key={panelKey}
+                    domain="campaign_lore"
+                    endpoint={route('campaigns.ai.lore', campaign.id)}
+                    title="Lore steward"
+                    description="Seed it with moods or story beats; it replies with structured lore ready for the codex and an image prompt." 
+                    defaultPrompt={aiPromptSeed}
+                    context={{
+                        campaign_title: campaign.title,
+                        filters,
+                    }}
+                />
+            </section>
 
             <section className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
                 {entities.length === 0 ? (

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { InputError } from '@/components/InputError';
+import AiIdeaPanel, { AiIdeaResult } from '@/components/ai/AiIdeaPanel';
 
 type CampaignMember = {
     id: number;
@@ -98,6 +99,7 @@ const questPriorityStyles: Record<string, string> = {
 
 export default function CampaignShow({ campaign, available_roles }: CampaignShowProps) {
     const [copiedInvitationId, setCopiedInvitationId] = useState<number | null>(null);
+    const [aiTaskSuggestions, setAiTaskSuggestions] = useState<{ title: string; description?: string }[]>([]);
     const roleForm = useForm({
         assignee_type: 'user',
         assignee_id: '',
@@ -378,6 +380,74 @@ export default function CampaignShow({ campaign, available_roles }: CampaignShow
                 </section>
 
                 <section className="space-y-6">
+                    <article className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6 text-amber-100 shadow-inner shadow-amber-900/20">
+                        <header className="mb-3">
+                            <h2 className="text-lg font-semibold">Task board primer</h2>
+                            <p className="mt-1 text-sm text-amber-100/80">
+                                Track prep beats, player follow-ups, and session goals. Use the AI cartographer below to turn a few words into backlog cards.
+                            </p>
+                        </header>
+                        <div className="space-y-4">
+                            <AiIdeaPanel
+                                domain="campaign_tasks"
+                                endpoint={route('campaigns.ai.tasks', campaign.id)}
+                                title="AI backlog steward"
+                                description="Describe upcoming arcs or blockers. The steward will draft tasks and a prompt for Automatic1111 map renders if relevant."
+                                defaultPrompt={`Prep beats for ${campaign.title}`}
+                                context={{
+                                    campaign_title: campaign.title,
+                                    synopsis: campaign.synopsis,
+                                    region: campaign.region?.name,
+                                }}
+                                actions={[
+                                    {
+                                        label: 'Preview suggested cards',
+                                        onApply: (result: AiIdeaResult) => {
+                                            const structured = result.structured?.fields?.tasks;
+                                            if (Array.isArray(structured)) {
+                                                setAiTaskSuggestions(
+                                                    structured
+                                                        .slice(0, 5)
+                                                        .map((task) => ({
+                                                            title: typeof task.title === 'string' ? task.title : result.text,
+                                                            description: typeof task.description === 'string' ? task.description : undefined,
+                                                        }))
+                                                );
+                                            } else {
+                                                setAiTaskSuggestions([
+                                                    {
+                                                        title: result.text.slice(0, 120),
+                                                        description: result.text.length > 120 ? result.text : undefined,
+                                                    },
+                                                ]);
+                                            }
+                                        },
+                                    },
+                                ]}
+                            />
+                            {aiTaskSuggestions.length > 0 && (
+                                <div className="space-y-2 rounded-lg border border-amber-400/40 bg-amber-500/15 p-4 text-amber-100">
+                                    <h3 className="text-sm font-semibold uppercase tracking-wide">Staged cards</h3>
+                                    <ul className="space-y-2 text-sm">
+                                        {aiTaskSuggestions.map((task, index) => (
+                                            <li key={`${task.title}-${index}`} className="rounded-md border border-amber-400/30 bg-amber-500/10 p-3">
+                                                <p className="font-semibold">{task.title}</p>
+                                                {task.description && <p className="mt-1 text-xs text-amber-100/80">{task.description}</p>}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <Button
+                                        asChild
+                                        size="sm"
+                                        variant="outline"
+                                        className="mt-2 border-amber-300/60 text-amber-100 hover:bg-amber-500/20"
+                                    >
+                                        <Link href={route('campaigns.tasks.index', campaign.id)}>Open task board</Link>
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </article>
                     {canManage && (
                         <form onSubmit={submitRole} className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-6 shadow-inner shadow-black/40">
                         <header className="mb-4">

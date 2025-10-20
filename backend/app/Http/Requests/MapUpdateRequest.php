@@ -43,7 +43,7 @@ class MapUpdateRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:120'],
             'base_layer' => ['required', Rule::in(['hex', 'square', 'image'])],
-            'orientation' => ['required', Rule::in(['pointy', 'flat'])],
+            'orientation' => ['required', Rule::in(['pointy', 'flat', 'orthogonal', 'isometric', 'freeform'])],
             'width' => ['nullable', 'integer', 'min:1', 'max:200'],
             'height' => ['nullable', 'integer', 'min:1', 'max:200'],
             'gm_only' => ['sometimes', 'boolean'],
