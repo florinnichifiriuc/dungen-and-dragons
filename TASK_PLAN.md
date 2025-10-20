@@ -9,6 +9,16 @@
 ## In Progress
 - Task 84 – Unit Test Hardening Sprint (coverage gate replacement required after GitHub Actions removal).
 - Task 85 – End-to-End Regression Scenarios (manual Playwright runs pending automation alternative).
+
+## Newly Logged Feedback Tasks
+- [ ] Task 92 – Role Stewardship and Visibility.
+- [ ] Task 93 – Worldbuilding AI Companion.
+- [ ] Task 94 – Tile Template Media and AI Settings.
+- [ ] Task 95 – Region Map Canvas and AI Design.
+- [ ] Task 96 – Region Settings Orientation and Fog Clarity.
+- [ ] Task 97 – Campaign Task Board AI Coach.
+- [ ] Task 98 – Lore Codex AI Authoring.
+- [ ] Task 99 – Quest Log AI Assistant.
 ## Completed
 - Initial architectural plan updated for multi-group, turn-based world.
 - Task 1 – Project Bootstrap (Laravel + Inertia React scaffolding, tooling)

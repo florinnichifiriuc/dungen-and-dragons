@@ -111,6 +111,7 @@
 | 2025-11-24 17:40 | Authorization & Navigation Hardening | Resolved group index authorize middleware regression, exposed campaign/group visibility flags via Inertia, and hid dashboard links for users lacking access to prevent 500/403 confusion. |
 | 2025-11-25 09:45 | AI Steward Rebase | Rebasing on main restored structured AI idea endpoints, admin role management console, and coverage ensuring fallback responses and tile uploads stay reliable. |
 | 2025-11-25 12:15 | AI Steward Verification | Re-ran frontend linting and full Pest suite after conflict resolution; no regressions detected and AI helpers remain functional across task, lore, quest, and map flows. |
+| 2025-11-26 10:40 | Feedback Task Intake | Logged stakeholder feedback on role clarity, worldbuilding assistance, map UX, and AI authoring needs; created Tasks 92–99 and updated the roadmap to track implementation. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.
 
