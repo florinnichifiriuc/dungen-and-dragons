@@ -25,7 +25,7 @@ type AiIdeaPanelProps = {
     className?: string;
     actions?: AiIdeaAction[];
     defaultPrompt?: string;
-    endpoint?: string;
+    endpoint: string;
 };
 
 type PageProps = {
@@ -56,9 +56,7 @@ export function AiIdeaPanel({
         setError(null);
 
         try {
-            const target = endpoint ?? route('ai.assist');
-
-            const response = await fetch(target, {
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -66,7 +64,7 @@ export function AiIdeaPanel({
                     Accept: 'application/json',
                 },
                 body: JSON.stringify({
-                    ...(endpoint ? {} : { domain }),
+                    domain,
                     prompt,
                     ...(context ? { context } : {}),
                 }),
