@@ -21,9 +21,12 @@ Use this guide to bootstrap the transparency solution locally and understand the
 > **Tip:** `composer run setup` bootstraps install, env copy, key generation, migration, npm install, and production build in one command. 【F:backend/composer.json†L37-L57】
 
 ## Testing & Quality Commands
-- `php artisan test --coverage --min=80` – Manual coverage gate for Task 84 while CI automation is offline. 【F:Tasks/Week 10/Task 84 - Unit Test Hardening Sprint.md†L3-L15】
+- `git config core.hooksPath .githooks` – Opt-in to the local pre-push coverage gate (Task 84 replacement for the removed GitHub Action). The hook invokes `backend/bin/coverage-gate.sh` and blocks pushes below 80% coverage unless `SKIP_LOCAL_CI=1` is provided. 【F:.githooks/pre-push†L1-L23】【F:backend/bin/coverage-gate.sh†L1-L74】
+- `backend/bin/coverage-gate.sh` – Runs `php artisan test --coverage --min=80` with HTML/JSONL logging so coverage history is tracked in `storage/qa/coverage`. 【F:backend/bin/coverage-gate.sh†L1-L74】
 - `npm run lint` – Accessibility and TypeScript linting for transparency UI surfaces. 【F:backend/package.json†L6-L20】
-- `npm run test:e2e` – Playwright regression suite covering facilitator, player, and admin flows; run after seeding demo data. 【F:backend/package.json†L6-L20】【F:Tasks/Week 10/Task 85 - End-to-End Regression Scenarios.md†L3-L17】
+- `npm run test:e2e:report` – Playwright regression suite plus dashboard logging (Task 85 automation replacement). Generates `storage/qa/e2e/latest.json` and appends to history for dashboard reporting. 【F:backend/package.json†L6-L12】【F:backend/scripts/run-playwright.mjs†L1-L156】
+- `backend/bin/local-ci.sh` – Convenience script running the coverage gate, the Playwright report runner, and the QA dashboard summary in sequence for rehearsal sign-off. 【F:backend/bin/local-ci.sh†L1-L9】
+- `php artisan qa:dashboard` – Summarizes the latest coverage and Playwright history in the terminal, mirroring the removed CI dashboards. Use `--limit=10` for a larger window. 【F:backend/app/Console/Commands/QaDashboardCommand.php†L9-L152】
 - `php artisan dusk` – Browser-based regression checks (requires `php artisan serve`).
 
 ## Demo & Operations Commands

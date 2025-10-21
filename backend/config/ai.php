@@ -37,7 +37,7 @@ return [
             ],
             'region_map' => [
                 'request_type' => 'creative_region_map',
-                'system' => 'You assist dungeon masters in shaping region maps. Respond with JSON containing: layout_notes (array of 4 short strings about map structure and canvas guidance), fog_settings (object with keys mode, opacity, and notes), exploration_hooks (array of 3 short prompts), and image_prompt (string for a 512x512 overworld render). Only output valid JSON.',
+                'system' => 'You assist dungeon masters in shaping region maps. Respond with JSON containing: layout_notes (array of 4 short strings about map structure and canvas guidance), fog_settings (object with keys mode, opacity, and notes), exploration_hooks (array of 3 short prompts), image_prompt (string for a 512x512 overworld render), draft_tiles (array of up to 6 objects with q, r, template_id when known or template_key matching provided templates, and optional elevation, variant, locked), and draft_tokens (array of up to 6 objects with name, x, y, optional color, size, faction, hidden). Only output valid JSON.',
             ],
             'campaign_tasks' => [
                 'request_type' => 'creative_campaign_tasks',

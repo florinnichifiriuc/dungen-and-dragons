@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Minus, Plus, X } from 'lucide-react';
 
@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { getEcho } from '@/lib/realtime';
+import { MapCanvasBoard } from '@/components/maps/MapCanvasBoard';
+import { AiCompanionDrawer } from '@/components/ai/AiCompanionDrawer';
 
 type TileTemplateOption = {
     id: number;
@@ -172,6 +174,46 @@ type BatchAdjustmentPlan =
           value: number;
           expected: number;
       };
+
+type CanvasToolState =
+    | { mode: 'inspect' }
+    | { mode: 'terrain'; templateId: number | null }
+    | { mode: 'token' };
+
+type CanvasHighlight =
+    | { type: 'tile'; q: number; r: number }
+    | { type: 'token'; x: number; y: number; name?: string };
+
+type AiDraftTile = {
+    q: number;
+    r: number;
+    templateId?: number | null;
+    templateKey?: string | null;
+    templateName?: string | null;
+    elevation?: number | null;
+    variant?: string | null;
+    locked?: boolean;
+};
+
+type AiDraftToken = {
+    name?: string;
+    x: number;
+    y: number;
+    color?: string | null;
+    size?: string | null;
+    faction?: TokenFaction | null;
+    hidden?: boolean;
+};
+
+type AiPlan = {
+    summary: string;
+    layoutNotes: string[];
+    fogSettings?: { mode?: string; opacity?: number | string; notes?: string } | null;
+    explorationHooks: string[];
+    imagePrompt?: string | null;
+    draftTiles: AiDraftTile[];
+    draftTokens: AiDraftToken[];
+};
 
 const orderTiles = (items: MapTileSummary[]): MapTileSummary[] =>
     [...items].sort((a, b) => {
@@ -354,6 +396,9 @@ export default function MapShow({
         gm_note: '',
     });
 
+    const baseLayer = (map.base_layer ?? 'hex') as 'hex' | 'square' | 'image';
+    const mapOrientation = map.orientation === 'flat' ? 'flat' : 'pointy';
+
     const conditionOrder = useMemo(
         () => token_conditions.map((option) => option.value),
         [token_conditions]
@@ -364,6 +409,81 @@ export default function MapShow({
             return acc;
         }, {});
     }, [token_conditions]);
+
+    const terrainPalette = useMemo(() => {
+        const swatches = ['#38bdf8', '#f472b6', '#22d3ee', '#f97316', '#a855f7', '#4ade80', '#facc15', '#f9a8d4'];
+        const palette: Record<number, string> = {};
+        tile_templates.forEach((template, index) => {
+            palette[template.id] = swatches[index % swatches.length];
+        });
+
+        return palette;
+    }, [tile_templates]);
+
+    const aiHighlights = useMemo<CanvasHighlight[]>(() => {
+        if (!aiPlan) {
+            return [];
+        }
+
+        const tileHighlights = aiPlan.draftTiles.map<CanvasHighlight>((tile) => ({
+            type: 'tile',
+            q: tile.q,
+            r: tile.r,
+        }));
+
+        const tokenHighlights = aiPlan.draftTokens.map<CanvasHighlight>((token) => ({
+            type: 'token',
+            x: token.x,
+            y: token.y,
+            name: token.name,
+        }));
+
+        return [...tileHighlights, ...tokenHighlights];
+    }, [aiPlan]);
+
+    const templateLookupByName = useMemo(() => {
+        const map = new Map<string, TileTemplateOption>();
+        tile_templates.forEach((template) => {
+            map.set(template.name.toLowerCase(), template);
+            map.set(template.terrain_type.toLowerCase(), template);
+        });
+
+        return map;
+    }, [tile_templates]);
+
+    const aiContext = useMemo(
+        () => ({
+            title: map.title,
+            base_layer: map.base_layer,
+            orientation: map.orientation,
+            fog_data: {
+                hidden_tile_ids: hiddenTiles,
+                hidden_count: hiddenTiles.length,
+                total_tiles: liveTiles.length,
+            },
+            templates: tile_templates.slice(0, 18).map((template) => ({
+                id: template.id,
+                name: template.name,
+                terrain: template.terrain_type,
+            })),
+            tokens: liveTokens.slice(0, 18).map((token) => ({
+                name: token.name,
+                faction: token.faction,
+                x: token.x,
+                y: token.y,
+            })),
+        }),
+        [hiddenTiles, liveTiles, liveTokens, map.base_layer, map.orientation, map.title, tile_templates]
+    );
+
+    const selectedTile = useMemo(
+        () => liveTiles.find((tile) => tile.id === selectedTileId) ?? null,
+        [liveTiles, selectedTileId]
+    );
+    const selectedToken = useMemo(
+        () => liveTokens.find((token) => token.id === selectedTokenId) ?? null,
+        [liveTokens, selectedTokenId]
+    );
 
     const conditionOrderRef = useRef(conditionOrder);
 
@@ -377,6 +497,37 @@ export default function MapShow({
 
         return orderConditions(nextValues);
     };
+
+    const buildTokenPayload = useCallback(
+        (data: CreateTokenForm): Record<string, unknown> => {
+            const orderedConditions = orderConditions(data.status_conditions);
+            const durations = serializeConditionDurations(
+                data.status_condition_durations,
+                orderedConditions
+            );
+
+            return {
+                name: data.name,
+                x: Number(data.x),
+                y: Number(data.y),
+                color: data.color.trim() === '' ? null : data.color,
+                size: data.size,
+                faction: data.faction,
+                initiative: data.initiative === '' ? null : Number(data.initiative),
+                status_effects: data.status_effects.trim() === '' ? null : data.status_effects,
+                status_conditions: orderedConditions,
+                status_condition_durations: durations ?? null,
+                hit_points: data.hit_points === '' ? null : Number(data.hit_points),
+                temporary_hit_points:
+                    data.temporary_hit_points === '' ? null : Number(data.temporary_hit_points),
+                max_hit_points: data.max_hit_points === '' ? null : Number(data.max_hit_points),
+                z_index: data.z_index === '' ? 0 : Number(data.z_index),
+                hidden: data.hidden,
+                gm_note: data.gm_note.trim() === '' ? null : data.gm_note,
+            };
+        },
+        [orderConditions]
+    );
 
     const statusConditionsError =
         Object.entries(tokenForm.errors).find(([key]) => key.startsWith('status_conditions'))?.[1] ?? null;
@@ -403,6 +554,20 @@ export default function MapShow({
     const [batchProcessing, setBatchProcessing] = useState(false);
     const [batchSummary, setBatchSummary] = useState<string | null>(null);
     const [pendingBatchSummary, setPendingBatchSummary] = useState<string | null>(null);
+    const initialCanvasTemplateId =
+        typeof createForm.data.tile_template_id === 'number'
+            ? createForm.data.tile_template_id
+            : tile_templates[0]?.id ?? null;
+    const [canvasTool, setCanvasTool] = useState<CanvasToolState>({
+        mode: 'terrain',
+        templateId: initialCanvasTemplateId,
+    });
+    const [selectedTileId, setSelectedTileId] = useState<number | null>(null);
+    const [selectedTokenId, setSelectedTokenId] = useState<number | null>(null);
+    const [viewportResetSignal, setViewportResetSignal] = useState(0);
+    const [aiPlan, setAiPlan] = useState<AiPlan | null>(null);
+    const [aiSummary, setAiSummary] = useState('');
+    const [aiError, setAiError] = useState<string | null>(null);
 
     const fogBusy = fogPendingTileId !== null;
 
@@ -443,6 +608,24 @@ export default function MapShow({
             createForm.setData('tile_template_id', tile_templates[0].id);
         }
     }, [tile_templates]);
+
+    useEffect(() => {
+        const templateId =
+            typeof createForm.data.tile_template_id === 'number'
+                ? createForm.data.tile_template_id
+                : tile_templates[0]?.id ?? null;
+        setCanvasTool((current) => {
+            if (current.mode !== 'terrain') {
+                return current;
+            }
+
+            if (current.templateId === templateId) {
+                return current;
+            }
+
+            return { mode: 'terrain', templateId };
+        });
+    }, [createForm.data.tile_template_id, tile_templates]);
 
     useEffect(() => {
         const drafts: Record<number, TileDraft> = {};
@@ -612,6 +795,348 @@ export default function MapShow({
             echo.leave(channelName);
         };
     }, [group.id, map.id]);
+
+    const handleCanvasPlaceTerrain = useCallback(
+        (placement: { q: number; r: number; templateId?: number | null; elevation?: number | null; variant?: string | null; locked?: boolean }) => {
+            if (createForm.processing) {
+                return;
+            }
+
+            const templateId =
+                placement.templateId ??
+                (typeof createForm.data.tile_template_id === 'number'
+                    ? createForm.data.tile_template_id
+                    : null);
+
+            if (templateId === null) {
+                return;
+            }
+
+            const variantSource =
+                placement.variant !== undefined
+                    ? placement.variant
+                    : createForm.data.variant;
+            const variantValue =
+                variantSource === null || variantSource === undefined || variantSource === ''
+                    ? null
+                    : variantSource;
+
+            const payload = {
+                tile_template_id: templateId,
+                q: placement.q,
+                r: placement.r,
+                elevation:
+                    placement.elevation !== undefined && placement.elevation !== null
+                        ? placement.elevation
+                        : createForm.data.elevation ?? 0,
+                variant: variantValue,
+                locked:
+                    placement.locked !== undefined
+                        ? placement.locked
+                        : createForm.data.locked ?? false,
+            };
+
+            createForm.submit('post', route('groups.maps.tiles.store', [group.id, map.id]), {
+                data: payload,
+                preserveScroll: true,
+                onSuccess: () => {
+                    setSelectedTileId(null);
+                },
+            });
+        },
+        [createForm, group.id, map.id]
+    );
+
+    const handleCanvasPlaceToken = useCallback(
+        (placement: { x: number; y: number; draft?: Partial<CreateTokenForm> }) => {
+            if (tokenForm.processing) {
+                return;
+            }
+
+            const merged: CreateTokenForm = {
+                ...tokenForm.data,
+                ...placement.draft,
+                x: placement.x,
+                y: placement.y,
+            } as CreateTokenForm;
+
+            const resolvedName = (merged.name ?? '').trim();
+            if (resolvedName === '') {
+                return;
+            }
+
+            merged.name = resolvedName;
+
+            tokenForm.submit('post', route('groups.maps.tokens.store', [group.id, map.id]), {
+                data: buildTokenPayload(merged),
+                preserveScroll: true,
+                onSuccess: () => {
+                    setSelectedTokenId(null);
+                },
+                onFinish: () => {
+                    tokenForm.transform((original) => original);
+                },
+            });
+        },
+        [buildTokenPayload, group.id, map.id, tokenForm]
+    );
+
+    const handleCanvasTokenDrag = useCallback(
+        (tokenId: number, position: { x: number; y: number }) => {
+            setTokenEdits((drafts) => {
+                const current = drafts[tokenId];
+                if (!current) {
+                    return drafts;
+                }
+
+                return {
+                    ...drafts,
+                    [tokenId]: {
+                        ...current,
+                        x: position.x,
+                        y: position.y,
+                    },
+                };
+            });
+
+            setLiveTokens((tokensState) =>
+                orderTokens(
+                    tokensState.map((token) =>
+                        token.id === tokenId ? { ...token, x: position.x, y: position.y } : token
+                    )
+                )
+            );
+
+            setUpdatingToken(tokenId);
+            router.patch(
+                route('groups.maps.tokens.update', [group.id, map.id, tokenId]),
+                {
+                    x: position.x,
+                    y: position.y,
+                },
+                {
+                    preserveScroll: true,
+                    onFinish: () => setUpdatingToken(null),
+                }
+            );
+        },
+        [group.id, map.id]
+    );
+
+    const handleCanvasSelectTile = useCallback((tileId: number | null) => {
+        setSelectedTileId(tileId);
+    }, []);
+
+    const handleCanvasSelectToken = useCallback((tokenId: number | null) => {
+        setSelectedTokenId(tokenId);
+    }, []);
+
+    const handleAiPlanApply = useCallback(
+        (result: { text: string; structured?: Record<string, unknown> | null }) => {
+            const structured = (result.structured ?? {}) as Record<string, unknown>;
+            const layoutNotes = Array.isArray(structured.layout_notes)
+                ? structured.layout_notes.map((entry) => String(entry))
+                : [];
+            const explorationHooks = Array.isArray(structured.exploration_hooks)
+                ? structured.exploration_hooks.map((entry) => String(entry))
+                : [];
+            const fogSettings =
+                structured.fog_settings && typeof structured.fog_settings === 'object'
+                    ? (structured.fog_settings as { mode?: string; opacity?: number | string; notes?: string })
+                    : null;
+
+            const draftTilesRaw = Array.isArray(structured.draft_tiles)
+                ? structured.draft_tiles.slice(0, 24)
+                : [];
+            const draftTokensRaw = Array.isArray(structured.draft_tokens)
+                ? structured.draft_tokens.slice(0, 24)
+                : [];
+
+            const normalizedTiles: AiDraftTile[] = draftTilesRaw
+                .map((entry) => {
+                    if (typeof entry !== 'object' || entry === null) {
+                        return null;
+                    }
+
+                    const raw = entry as Record<string, unknown>;
+                    const q = Number(raw.q);
+                    const r = Number(raw.r);
+
+                    if (!Number.isFinite(q) || !Number.isFinite(r)) {
+                        return null;
+                    }
+
+                    let templateId: number | null = null;
+                    if (typeof raw.template_id === 'number') {
+                        templateId = raw.template_id;
+                    }
+
+                    const templateKey =
+                        typeof raw.template_key === 'string'
+                            ? raw.template_key
+                            : typeof raw.template === 'string'
+                            ? raw.template
+                            : typeof raw.template_name === 'string'
+                            ? raw.template_name
+                            : undefined;
+
+                    if (templateId === null && templateKey) {
+                        const candidate = templateLookupByName.get(templateKey.toLowerCase());
+                        if (candidate) {
+                            templateId = candidate.id;
+                        }
+                    }
+
+                    return {
+                        q,
+                        r,
+                        templateId,
+                        templateKey: templateKey ?? null,
+                        templateName:
+                            typeof raw.template_name === 'string' ? (raw.template_name as string) : null,
+                        elevation:
+                            raw.elevation !== undefined && raw.elevation !== null
+                                ? Number(raw.elevation)
+                                : null,
+                        variant: typeof raw.variant === 'string' ? (raw.variant as string) : null,
+                        locked: typeof raw.locked === 'boolean' ? (raw.locked as boolean) : undefined,
+                    } as AiDraftTile;
+                })
+                .filter((tile): tile is AiDraftTile => tile !== null);
+
+            const normalizedTokens: AiDraftToken[] = draftTokensRaw
+                .map((entry) => {
+                    if (typeof entry !== 'object' || entry === null) {
+                        return null;
+                    }
+
+                    const raw = entry as Record<string, unknown>;
+                    const x = Number(raw.x);
+                    const y = Number(raw.y);
+
+                    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+                        return null;
+                    }
+
+                    const faction =
+                        typeof raw.faction === 'string' && ['allied', 'hostile', 'neutral', 'hazard'].includes(raw.faction)
+                            ? (raw.faction as TokenFaction)
+                            : null;
+
+                    return {
+                        name: typeof raw.name === 'string' ? (raw.name as string) : undefined,
+                        x,
+                        y,
+                        color: typeof raw.color === 'string' ? (raw.color as string) : undefined,
+                        size: typeof raw.size === 'string' ? (raw.size as string) : undefined,
+                        faction,
+                        hidden: typeof raw.hidden === 'boolean' ? (raw.hidden as boolean) : undefined,
+                    } as AiDraftToken;
+                })
+                .filter((token): token is AiDraftToken => token !== null);
+
+            const plan: AiPlan = {
+                summary: result.text,
+                layoutNotes,
+                fogSettings,
+                explorationHooks,
+                imagePrompt: typeof structured.image_prompt === 'string' ? (structured.image_prompt as string) : null,
+                draftTiles: normalizedTiles,
+                draftTokens: normalizedTokens,
+            };
+
+            setAiPlan(plan);
+            setAiSummary(result.text);
+            setAiError(null);
+
+            if (
+                plan.layoutNotes.length === 0 &&
+                plan.draftTiles.length === 0 &&
+                plan.draftTokens.length === 0 &&
+                plan.summary.trim() === ''
+            ) {
+                setAiError('The steward could not suggest any placements. Share more about the terrain or encounters you need.');
+            }
+
+            if (plan.draftTiles.length > 0) {
+                const first = plan.draftTiles.find((tile) => tile.templateId !== null);
+                if (first?.templateId) {
+                    setCanvasTool({ mode: 'terrain', templateId: first.templateId });
+                    createForm.setData('tile_template_id', first.templateId);
+                }
+            }
+        },
+        [createForm, templateLookupByName]
+    );
+
+    const handleApplyAiTile = useCallback(
+        (tile: AiDraftTile) => {
+            handleCanvasPlaceTerrain({
+                q: tile.q,
+                r: tile.r,
+                templateId:
+                    tile.templateId ?? (canvasTool.mode === 'terrain' ? canvasTool.templateId : null),
+                elevation: tile.elevation ?? undefined,
+                variant: tile.variant ?? undefined,
+                locked: tile.locked,
+            });
+        },
+        [canvasTool, handleCanvasPlaceTerrain]
+    );
+
+    const handleApplyAiToken = useCallback(
+        (token: AiDraftToken) => {
+            handleCanvasPlaceToken({
+                x: token.x,
+                y: token.y,
+                draft: {
+                    name: token.name ?? tokenForm.data.name,
+                    color: token.color ?? tokenForm.data.color,
+                    size: (token.size as CreateTokenForm['size']) ?? tokenForm.data.size,
+                    faction: token.faction ?? tokenForm.data.faction,
+                    hidden: token.hidden ?? tokenForm.data.hidden,
+                },
+            });
+        },
+        [handleCanvasPlaceToken, tokenForm.data]
+    );
+
+    const clearAiPlan = useCallback(() => {
+        setAiPlan(null);
+        setAiSummary('');
+        setAiError(null);
+    }, []);
+
+    const triggerViewportReset = useCallback(() => {
+        setViewportResetSignal((value) => value + 1);
+    }, []);
+
+    const handleToolSelect = useCallback(
+        (mode: CanvasToolState['mode'], templateId?: number | null) => {
+            if (mode === 'terrain') {
+                const normalized =
+                    templateId ??
+                    (typeof createForm.data.tile_template_id === 'number'
+                        ? createForm.data.tile_template_id
+                        : tile_templates[0]?.id ?? null);
+
+                if (normalized !== null) {
+                    createForm.setData('tile_template_id', normalized);
+                }
+
+                setCanvasTool({ mode: 'terrain', templateId: normalized });
+                return;
+            }
+
+            if (mode === 'token') {
+                setCanvasTool({ mode: 'token' });
+                return;
+            }
+
+            setCanvasTool({ mode: 'inspect' });
+        },
+        [createForm, tile_templates]
+    );
 
     const handleCreate = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -1704,6 +2229,389 @@ export default function MapShow({
                         </div>
                     </div>
                 </div>
+
+                <section className="mx-auto w-full space-y-6 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-inner shadow-black/30">
+                    <div className="grid gap-6 xl:grid-cols-[260px_1fr_320px]">
+                        <aside className="space-y-6">
+                            <div>
+                                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-200">
+                                    Canvas tools
+                                </h2>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={canvasTool.mode === 'inspect' ? 'secondary' : 'outline'}
+                                        className={
+                                            canvasTool.mode === 'inspect'
+                                                ? 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700'
+                                                : 'border-zinc-700 text-zinc-300 hover:text-zinc-100'
+                                        }
+                                        onClick={() => handleToolSelect('inspect')}
+                                    >
+                                        Inspect
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={canvasTool.mode === 'terrain' ? 'secondary' : 'outline'}
+                                        className={
+                                            canvasTool.mode === 'terrain'
+                                                ? 'bg-indigo-500/20 text-indigo-100 hover:bg-indigo-500/30'
+                                                : 'border-indigo-500/50 text-indigo-200 hover:text-indigo-100'
+                                        }
+                                        onClick={() => handleToolSelect('terrain', canvasTool.mode === 'terrain' ? canvasTool.templateId : undefined)}
+                                    >
+                                        Terrain brush
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={canvasTool.mode === 'token' ? 'secondary' : 'outline'}
+                                        className={
+                                            canvasTool.mode === 'token'
+                                                ? 'bg-amber-500/20 text-amber-100 hover:bg-amber-500/30'
+                                                : 'border-amber-500/50 text-amber-200 hover:text-amber-100'
+                                        }
+                                        onClick={() => handleToolSelect('token')}
+                                    >
+                                        Token dropper
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="border-zinc-700 text-zinc-200 hover:text-zinc-50"
+                                        onClick={triggerViewportReset}
+                                    >
+                                        Center map
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                                        Terrain templates
+                                    </h3>
+                                    <span className="text-[11px] uppercase tracking-wide text-zinc-500">Drag or click</span>
+                                </div>
+                                <ul className="space-y-2">
+                                    {tile_templates.length === 0 ? (
+                                        <li className="rounded-lg border border-dashed border-zinc-700/60 bg-zinc-900/60 px-3 py-2 text-xs text-zinc-400">
+                                            Create tile templates to start painting this map.
+                                        </li>
+                                    ) : (
+                                        tile_templates.map((template) => {
+                                            const active =
+                                                canvasTool.mode === 'terrain' && canvasTool.templateId === template.id;
+
+                                            return (
+                                                <li key={template.id}>
+                                                    <button
+                                                        type="button"
+                                                        className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
+                                                            active
+                                                                ? 'border-indigo-500/60 bg-indigo-500/15 text-indigo-100 shadow-inner shadow-indigo-900/30'
+                                                                : 'border-zinc-700/60 bg-zinc-900/60 text-zinc-200 hover:border-indigo-500/50 hover:text-indigo-100'
+                                                        }`}
+                                                        draggable
+                                                        onDragStart={(event) => {
+                                                            event.dataTransfer.setData(
+                                                                'application/json',
+                                                                JSON.stringify({ kind: 'tile-template', templateId: template.id })
+                                                            );
+                                                            event.dataTransfer.effectAllowed = 'copy';
+                                                        }}
+                                                        onClick={() => handleToolSelect('terrain', template.id)}
+                                                    >
+                                                        <div>
+                                                            <p className="font-medium">{template.name}</p>
+                                                            <p className="text-xs uppercase tracking-wide text-zinc-400">
+                                                                {template.terrain_type}
+                                                            </p>
+                                                        </div>
+                                                        <span
+                                                            className="h-6 w-6 rounded-full border border-white/10"
+                                                            style={{ backgroundColor: terrainPalette[template.id] }}
+                                                        />
+                                                    </button>
+                                                </li>
+                                            );
+                                        })
+                                    )}
+                                </ul>
+                            </div>
+
+                            <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+                                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-300">
+                                    Placement defaults
+                                </h3>
+                                <div className="space-y-2">
+                                    <Label htmlFor="placement-elevation" className="text-[11px] uppercase tracking-wide text-zinc-500">
+                                        Elevation
+                                    </Label>
+                                    <Input
+                                        id="placement-elevation"
+                                        type="number"
+                                        value={createForm.data.elevation}
+                                        onChange={(event) => createForm.setData('elevation', Number(event.target.value))}
+                                        className="h-9 border border-zinc-700 bg-zinc-950 text-sm text-zinc-100"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="placement-variant" className="text-[11px] uppercase tracking-wide text-zinc-500">
+                                        Variant JSON
+                                    </Label>
+                                    <Textarea
+                                        id="placement-variant"
+                                        value={createForm.data.variant}
+                                        onChange={(event) => createForm.setData('variant', event.target.value)}
+                                        rows={2}
+                                        className="border border-zinc-700 bg-zinc-950 text-sm text-zinc-100"
+                                        placeholder='{"resource":"gold"}'
+                                    />
+                                </div>
+                                <label className="flex items-center gap-2 text-sm text-zinc-300">
+                                    <Checkbox
+                                        checked={!!createForm.data.locked}
+                                        onCheckedChange={(value) => createForm.setData('locked', value === true)}
+                                    />
+                                    Lock tiles after placement
+                                </label>
+                            </div>
+                        </aside>
+
+                        <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-2">
+                            <MapCanvasBoard
+                                baseLayer={baseLayer}
+                                orientation={mapOrientation}
+                                tiles={liveTiles}
+                                tokens={liveTokens}
+                                hiddenTileIds={hiddenTiles}
+                                selectedTileId={selectedTileId}
+                                selectedTokenId={selectedTokenId}
+                                tool={canvasTool.mode === 'terrain' ? { mode: 'terrain', templateId: canvasTool.templateId } : canvasTool}
+                                terrainPalette={terrainPalette}
+                                onPlaceTerrain={handleCanvasPlaceTerrain}
+                                onPlaceToken={handleCanvasPlaceToken}
+                                onTokenDrag={handleCanvasTokenDrag}
+                                onSelectTile={handleCanvasSelectTile}
+                                onSelectToken={handleCanvasSelectToken}
+                                onToggleFog={toggleTileVisibility}
+                                highlights={aiHighlights}
+                                resetSignal={viewportResetSignal}
+                            />
+                        </div>
+
+                        <aside className="space-y-6">
+                            <div className="space-y-4 rounded-xl border border-indigo-500/40 bg-indigo-500/10 p-4 shadow-inner shadow-indigo-900/20">
+                                <AiCompanionDrawer
+                                    domain="region_map"
+                                    title="Summon the cartographer"
+                                    description="Describe the vibe, biome, or encounter needs and the steward will draft layout notes for this map."
+                                    context={aiContext}
+                                    onApply={handleAiPlanApply}
+                                />
+                                {aiError && (
+                                    <p className="text-sm text-rose-300">{aiError}</p>
+                                )}
+                                {aiPlan ? (
+                                    <div className="space-y-3 text-sm text-indigo-100">
+                                        <p className="whitespace-pre-line text-indigo-100/90">{aiSummary}</p>
+                                        {aiPlan.layoutNotes.length > 0 && (
+                                            <div>
+                                                <h4 className="text-xs uppercase tracking-wide text-indigo-200/80">Layout notes</h4>
+                                                <ul className="mt-1 space-y-1 text-indigo-200/90">
+                                                    {aiPlan.layoutNotes.map((note, index) => (
+                                                        <li key={`${note}-${index}`} className="flex items-start gap-2">
+                                                            <span className="mt-1 h-1.5 w-1.5 rounded-full bg-indigo-300" aria-hidden="true" />
+                                                            <span>{note}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                        {aiPlan.fogSettings && (
+                                            <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2 text-xs text-indigo-200">
+                                                <p className="font-semibold uppercase tracking-wide">Fog guidance</p>
+                                                <p>Mode: {aiPlan.fogSettings.mode ?? 'unspecified'}</p>
+                                                {aiPlan.fogSettings.opacity !== undefined && (
+                                                    <p>Opacity: {aiPlan.fogSettings.opacity}</p>
+                                                )}
+                                                {aiPlan.fogSettings.notes && <p>{aiPlan.fogSettings.notes}</p>}
+                                            </div>
+                                        )}
+                                        {aiPlan.draftTiles.length > 0 && (
+                                            <div className="space-y-2">
+                                                <h4 className="text-xs uppercase tracking-wide text-indigo-200/80">
+                                                    Suggested terrain placements
+                                                </h4>
+                                                <ul className="space-y-2">
+                                                    {aiPlan.draftTiles.map((tile, index) => {
+                                                        const template = tile.templateId
+                                                            ? tile_templates.find((item) => item.id === tile.templateId)
+                                                            : null;
+
+                                                        return (
+                                                            <li
+                                                                key={`ai-tile-${tile.q}-${tile.r}-${index}`}
+                                                                className="flex items-center justify-between gap-3 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2"
+                                                            >
+                                                                <div>
+                                                                    <p className="text-xs uppercase tracking-wide text-indigo-100">
+                                                                        q {tile.q}, r {tile.r}
+                                                                    </p>
+                                                                    <p className="text-sm text-indigo-100/90">
+                                                                        {template ? template.name : tile.templateKey ?? 'Any template'}
+                                                                    </p>
+                                                                </div>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="border-indigo-400/50 text-xs uppercase tracking-wide text-indigo-100"
+                                                                    onClick={() => handleApplyAiTile(tile)}
+                                                                >
+                                                                    Place
+                                                                </Button>
+                                                            </li>
+                                                        );
+                                                    })}
+                                                </ul>
+                                            </div>
+                                        )}
+                                        {aiPlan.draftTokens.length > 0 && (
+                                            <div className="space-y-2">
+                                                <h4 className="text-xs uppercase tracking-wide text-indigo-200/80">
+                                                    Suggested entities
+                                                </h4>
+                                                <ul className="space-y-2">
+                                                    {aiPlan.draftTokens.map((token, index) => (
+                                                        <li
+                                                            key={`ai-token-${token.x}-${token.y}-${index}`}
+                                                            className="flex items-center justify-between gap-3 rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-3 py-2"
+                                                        >
+                                                            <div>
+                                                                <p className="text-sm text-indigo-100/90">
+                                                                    {token.name ?? 'Unnamed token'}
+                                                                </p>
+                                                                <p className="text-xs uppercase tracking-wide text-indigo-200/70">
+                                                                    x {token.x}, y {token.y}
+                                                                </p>
+                                                            </div>
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="border-amber-400/60 text-xs uppercase tracking-wide text-amber-100"
+                                                                onClick={() => handleApplyAiToken(token)}
+                                                            >
+                                                                Drop
+                                                            </Button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-xs uppercase tracking-wide text-indigo-200 hover:text-white"
+                                                onClick={clearAiPlan}
+                                            >
+                                                Clear steward notes
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-indigo-200/80">
+                                        Ask the steward to draft a region slice and apply the suggestions directly onto the board.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+                                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-300">
+                                    Selection summary
+                                </h3>
+                                {selectedTile ? (
+                                    <div className="space-y-2 rounded-lg border border-zinc-700/60 bg-zinc-900/70 p-3">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-semibold text-zinc-100">{selectedTile.template.name}</p>
+                                            <span className="text-xs uppercase tracking-wide text-zinc-400">
+                                                q {selectedTile.q}, r {selectedTile.r}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-zinc-400">
+                                            {selectedTile.template.terrain_type} · Elevation {selectedTile.elevation}
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                className="border-zinc-600 text-xs uppercase tracking-wide text-zinc-200"
+                                                onClick={() => toggleTileVisibility(selectedTile.id)}
+                                            >
+                                                {hiddenTiles.includes(selectedTile.id) ? 'Reveal to party' : 'Hide from party'}
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                className="border-amber-500/60 text-xs uppercase tracking-wide text-amber-200"
+                                                onClick={() => handleToggleLock(selectedTile)}
+                                            >
+                                                {selectedTile.locked ? 'Unlock' : 'Lock'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-zinc-400">Select a tile on the canvas to review its details.</p>
+                                )}
+
+                                {selectedToken ? (
+                                    <div className="space-y-2 rounded-lg border border-zinc-700/60 bg-zinc-900/70 p-3">
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-semibold text-zinc-100">{selectedToken.name}</p>
+                                            <span className="text-xs uppercase tracking-wide text-zinc-400">
+                                                x {selectedToken.x}, y {selectedToken.y}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-zinc-400">
+                                            {tokenFactionLabels[selectedToken.faction]} · Size {selectedToken.size}
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                className="border-amber-500/50 text-xs uppercase tracking-wide text-amber-200"
+                                                onClick={() => handleToggleTokenHidden(selectedToken)}
+                                            >
+                                                {selectedToken.hidden ? 'Reveal token' : 'Hide token'}
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-xs uppercase tracking-wide text-rose-200 hover:text-rose-100"
+                                                onClick={() => handleRemoveToken(selectedToken)}
+                                            >
+                                                Remove
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-zinc-400">Select a token to tweak faction, visibility, or remove it.</p>
+                                )}
+                            </div>
+                        </aside>
+                    </div>
+                </section>
 
                 {conditionTimerGroups.length > 0 && (
                     <section className="mx-auto max-w-4xl space-y-3 rounded-xl border border-indigo-500/40 bg-indigo-500/10 p-4 shadow-inner shadow-indigo-900/20">

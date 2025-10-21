@@ -77,6 +77,7 @@
 | 2025-11-10 15:20 | Offline Sync Reliability | Hardened queued acknowledgement metadata, offline analytics instrumentation, conflict UI polish, and Pest coverage for reconnect flows. |
 | 2025-11-10 18:40 | Localization & Accessibility Audit | Localized condition transparency surfaces, added jsx-a11y linting with `npm run lint`, refreshed QA checklist, and documented multilingual accessibility verification. |
 | 2025-11-11 14:20 | Condition Transparency Data Exports Docs | Documented export pipeline integration patterns, webhook payloads, governance guardrails, and synced meeting outcomes with PO/architect expectations. |
+| 2025-12-02 14:20 | Region Map Canvas | Delivered a canvas-first region map editor with drag-and-drop terrain, token placement, intuitive selection tools, and an AI steward that proposes draft tiles, fog settings, and entity drops directly onto the board. |
 
 | 2025-11-12 15:00 | PO & Focus Group Sync | Met with PO, QA, narrative, and focus group reps to capture consent feedback, planned preset bundles, extension telemetry, recap catch-up prompts, and QA playtest artifacts for Tasks 58–63. |
 | 2025-11-13 16:00 | Transparency Task Review Retro | Cross-discipline review of Tasks 1–63 deliverables, identified documentation refresh needs, planned transparency dossier, component library reuse, AI prompt manifest, and onboarding knowledge transfer series. |
@@ -113,6 +114,8 @@
 | 2025-11-25 12:15 | AI Steward Verification | Re-ran frontend linting and full Pest suite after conflict resolution; no regressions detected and AI helpers remain functional across task, lore, quest, and map flows. |
 | 2025-11-26 10:40 | Feedback Task Intake | Logged stakeholder feedback on role clarity, worldbuilding assistance, map UX, and AI authoring needs; created Tasks 92–99 and updated the roadmap to track implementation. |
 | 2025-11-26 14:45 | AI Stewardship & Map UX | Seeded the Edgewatch Steward admin, surfaced role mantles, extended map creation with preview + AI planning, and deployed quick-prompt assistants across campaign, lore, and quest dashboards with documentation updates. |
+| 2025-11-27 09:20 | Coverage Gate Local Automation | Added `.githooks/pre-push`, `backend/bin/coverage-gate.sh`, and QA dashboard logging so Task 84 enforces the 80% threshold without GitHub Actions. |
+| 2025-11-27 09:20 | Playwright Report Runner | Delivered `npm run test:e2e:report`, JSONL dashboards, and the `qa:dashboard` command restoring Task 85 nightly visibility while respecting the no–GitHub Actions constraint. |
 
 > Update this log as features move from backlog to completion. Keep entries in UTC and 24-hour time.
 

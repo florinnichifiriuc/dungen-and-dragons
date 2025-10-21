@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
+
+if [[ -n "${SKIP_LOCAL_CI:-}" ]]; then
+  echo "SKIP_LOCAL_CI detected; skipping local QA gate."
+  exit 0
+fi
+
+cd "$REPO_ROOT/backend"
+
+echo "[Task 84] Running local coverage gate before push..."
+if ! ./bin/coverage-gate.sh; then
+  cat <<'MSG'
+Coverage enforcement failed. Investigate the failing tests above.
+If an urgent push is required, coordinate with QA and re-run with:
+  SKIP_LOCAL_CI=1 git push --no-verify
+MSG
+  exit 1
+fi
+
+echo "Coverage gate succeeded."
