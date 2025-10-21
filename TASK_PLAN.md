@@ -7,14 +7,13 @@
 - [x] API Swagger documentation draft covering auth, campaign, group, and transparency routes for handoff (see `backend/docs/api/swagger-overview.md`).
 - [x] Demo end-to-end rehearsal checklist covering manual Playwright cadence while CI automation is disabled (see `backend/docs/testing/demo-end-to-end-rehearsal-checklist.md`).
 ## In Progress
-- Task 84 – Unit Test Hardening Sprint (coverage gate replacement required after GitHub Actions removal).
-- Task 85 – End-to-End Regression Scenarios (manual Playwright runs pending automation alternative).
+- None – coverage and Playwright automation have localized replacements while CI remains offline.
 
 ## Newly Logged Feedback Tasks
 - [ ] Task 92 – Role Stewardship and Visibility.
 - [ ] Task 93 – Worldbuilding AI Companion.
 - [ ] Task 94 – Tile Template Media and AI Settings.
-- [ ] Task 95 – Region Map Canvas and AI Design.
+- [x] Task 95 – Region Map Canvas and AI Design.
 - [ ] Task 96 – Region Settings Orientation and Fog Clarity.
 - [ ] Task 97 – Campaign Task Board AI Coach.
 - [ ] Task 98 – Lore Codex AI Authoring.
@@ -71,6 +70,8 @@
 - Task 48 – Condition Timer Chronicle Integration (embed acknowledgements/timelines into recaps, exports, and AI briefings)
 - Task 49 – Condition Timer Summary Share Links (signed share tokens, public view, export references, management controls)
 - Task 50 – Condition Timer Escalation Notifications (preference-aware escalation journeys, quiet hours, notification center, and telemetry dispatch)
+- Task 84 – Unit Test Hardening Sprint (local pre-push coverage gate, coverage history logging, QA dashboard)
+- Task 85 – End-to-End Regression Scenarios (Playwright report runner with JSONL history and QA dashboard integration)
 - Task 92 – Role Stewardship & Seed Admin (seeded admin, dashboard mantle, admin UX/documentation)
 - Task 93 – Region Map Onboarding & AI Planning (orientation fixes, create-form preview, pre-create AI cartographer)
 - Task 94 – Narrative Assistant Enhancements (campaign/lore/quest AI helpers with quick prompts and docs)

@@ -1,6 +1,6 @@
 # Task 95 – Region Map Canvas and AI Design
 
-**Status:** Planned
+**Status:** Complete
 **Owner:** Engineering & UX Design
 **Dependencies:** Task 9, Task 24, Task 25
 
@@ -20,3 +20,4 @@ Transform the region map editor into a visual canvas with drag-and-drop tooling,
 
 ## Log
 - 2025-11-26 09:45 UTC – Logged requirement to revamp the region map UX and layer in AI-assisted layout drafting.
+- 2025-12-02 14:20 UTC – Delivered the canvas-based editor with drag-and-drop terrain and token placement plus an embedded AI steward that proposes draft tiles, fog, and entity placements directly on the board.

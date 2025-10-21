@@ -1,6 +1,6 @@
 # Task 84 – Unit Test Hardening Sprint
 
-**Status:** In Progress
+**Status:** Completed
 **Owner:** Engineering
 **Dependencies:** Task 78
 
@@ -10,7 +10,7 @@ Audit and expand unit-level coverage for transparency services, policies, and UI
 ## Subtasks
 - [x] Identify critical services, policies, and utilities lacking coverage or relying on integration tests only.
 - [x] Author focused Pest unit tests leveraging the new AI mocks to validate edge cases and failure handling.
-- [ ] Add coverage gates to CI to block merges if baseline thresholds regress during the release window.
+- [x] Add coverage gates to CI to block merges if baseline thresholds regress during the release window.
 - [x] Document the manual coverage gate procedure and require `composer test` checks before every demo rehearsal until automation resumes.
 
 ## Notes
@@ -23,3 +23,4 @@ Audit and expand unit-level coverage for transparency services, policies, and UI
 - 2025-11-24 06:15 UTC – Wired GitHub Actions job to run `php artisan test --coverage --min=80` with an HTML report so coverage regressions fail CI.
 - 2025-11-24 13:45 UTC – Removed the GitHub Actions workflow per stakeholder request; coverage gating must be restored via an alternative (local or self-hosted) check before completion can be claimed.
 - 2025-11-24 15:00 UTC – Documented the manual coverage gate flow in the demo rehearsal checklist so teams still enforce the 80% threshold without CI.
+- 2025-11-27 09:20 UTC – Replaced the removed GitHub Action with a `.githooks/pre-push` coverage gate, Bash harness logging JSONL history, and a `qa:dashboard` command so enforcement and reporting run locally.

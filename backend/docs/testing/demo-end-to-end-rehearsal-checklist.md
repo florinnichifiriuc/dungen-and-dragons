@@ -9,9 +9,8 @@ Use this checklist to run the manual Playwright regression suite and supporting 
 - Clear cached config just before launching the suite: `php artisan config:clear`.
 
 ## Required Playwright Runs
-1. `npm run test:e2e -- --project=chromium` – Facilitator share management, player recap access, and admin triage journeys must all pass.
-2. `npm run test:e2e -- --project=webkit` – Repeat to cover the supported WebKit footprint.
-3. Save the HTML reports generated under `backend/playwright-report/` and attach them to the daily release thread.
+1. `npm run test:e2e:report` – Executes the full Chromium/WebKit matrix, saves HTML artifacts to `backend/playwright-report/`, and records structured results under `storage/qa/e2e`. Attach the HTML report and the generated `storage/qa/e2e/latest.json` summary to the daily release thread.
+2. If a single project needs re-running, target it directly (for example `npm run test:e2e -- --project=chromium`) and then re-run `npm run test:e2e:report` so history logs stay accurate.
 
 > **Tip:** To debug a failing step interactively, run `npx playwright test path/to/spec.ts --debug` and re-run the full project matrix afterward.
 
@@ -21,8 +20,9 @@ Use this checklist to run the manual Playwright regression suite and supporting 
 - Confirm no unexpected entries were logged in `storage/logs/laravel.log` during execution.
 
 ## Coverage & Lint Spot Checks
-- Execute `composer test` to regenerate the unit coverage report and enforce the 80% threshold manually.
+- Execute `backend/bin/coverage-gate.sh` (or push with the pre-configured hook) to regenerate the unit coverage report and enforce the 80% threshold.
 - Run `npm run lint` to validate accessibility and TypeScript rules on transparency surfaces touched during the demo.
+- Review `php artisan qa:dashboard` for the combined coverage and Playwright history snapshot before sign-off.
 
 ## Reporting & Escalation
 - Record outcomes in the launch channel: include pass/fail for each Playwright project, unit coverage percentage, and lint status.
